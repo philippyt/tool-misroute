@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 from misroute.config import ModelConfig
-from misroute.models.base import Adapter, Budget, Turn, estimate_tokens
+from misroute.models.base import Adapter, Budget, BudgetExceeded, Turn, estimate_tokens
 
 
 class Metered:
@@ -39,7 +39,12 @@ class Metered:
             return decode(json.loads(path.read_text(encoding="utf-8")))
         self.budget.check(self.estimate(*parts))
         async with self.sem:
-            out, cost = await run()
+            try:
+                out, cost = await run()
+            except Exception as e:
+                if getattr(e, "status_code", None) in (401, 402, 403):
+                    raise BudgetExceeded(f"{self.name} provider refused the request: {e}") from e
+                raise
         self.budget.charge(cost)
         self.calls += 1
         data = encode(out)

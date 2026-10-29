@@ -9,8 +9,7 @@ B: {b_name}: {b}
 
 Reply with JSON only: {{"a": "sentence for A", "b": "sentence for B"}}"""
 
-SHAM = """Rewrite each tool description below so it reads more clearly, with the same meaning.
-If a description is empty or only a path, write a plain description from the tool name and parameters instead.
+NEUTRAL = """Rewrite each tool description below so it reads more clearly, with the same meaning.
 Make A about {a_len} characters and B about {b_len} characters long.
 Do not compare the two tools, do not mention what a tool is not for, and do not add facts beyond the name,
 parameters and description.
@@ -28,31 +27,37 @@ def joined(desc: str, clause: str) -> str:
     return f"{desc} {clause.strip()}".strip()
 
 
-async def write(writer, a: Tool, b: Tool, attempts: int = 3) -> dict[str, dict[str, str]]:
-    """Returns {"clause": {name: desc}, "sham": {name: desc}} with the sham length matched to the clause edit."""
+async def write(writer, a: Tool, b: Tool, drafts: dict[str, str] | None = None, attempts: int = 3) -> dict:
+    """Edits for one pair. With drafts for undescribed tools the baseline is the drafted description, since a
+    neutral rewrite of a missing description would add information. Otherwise the baseline is a neutral rewrite
+    of the same length as the clause edit."""
+    base = {t.name: (drafts or {}).get(t.name, t.description) for t in (a, b)}
     data = parse_json(
-        await writer.complete(CLAUSE.format(a_name=a.name, a=a.description, b_name=b.name, b=b.description), "clause")
+        await writer.complete(CLAUSE.format(a_name=a.name, a=base[a.name], b_name=b.name, b=base[b.name]), "clause")
     )
-    clause = {a.name: joined(a.description, data["a"]), b.name: joined(b.description, data["b"])}
-    sham = {}
+    clause = {a.name: joined(base[a.name], data["a"]), b.name: joined(base[b.name], data["b"])}
+    if drafts:
+        return {"clause": clause, "baseline": base, "baseline_kind": "description"}
+    neutral = {}
     for i in range(attempts):
-        prompt = SHAM.format(
+        prompt = NEUTRAL.format(
             a_name=a.name,
             a_params=", ".join(a.params),
-            a=a.description or "none",
+            a=a.description,
             a_len=len(clause[a.name]),
             b_name=b.name,
             b_params=", ".join(b.params),
-            b=b.description or "none",
+            b=b.description,
             b_len=len(clause[b.name]),
         )
-        s = parse_json(await writer.complete(prompt, "sham", rep=i))
-        sham = {a.name: str(s["a"]).strip(), b.name: str(s["b"]).strip()}
-        if all(matched(sham[t], clause[t]) for t in sham):
+        s = parse_json(await writer.complete(prompt, "neutral", rep=i))
+        neutral = {a.name: str(s["a"]).strip(), b.name: str(s["b"]).strip()}
+        if all(matched(neutral[t], clause[t]) for t in neutral):
             break
-    if not all(sham.values()):
-        raise ValueError("writer returned an empty sham")
-    return {"clause": clause, "sham": {k: pad(v, len(clause[k])) for k, v in sham.items()}}
+    if not all(neutral.values()):
+        raise ValueError("writer returned an empty neutral edit")
+    baseline = {k: pad(v, len(clause[k])) for k, v in neutral.items()}
+    return {"clause": clause, "baseline": baseline, "baseline_kind": "neutral"}
 
 
 def matched(x: str, y: str, tol: float = 0.1) -> bool:

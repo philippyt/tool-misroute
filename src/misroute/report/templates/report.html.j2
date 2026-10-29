@@ -24,7 +24,7 @@ code { font-size: 12px; }
 </head>
 <body>
 <h1>misroute</h1>
-<p class="muted">Discover and probe point to where to look, fix compares a boundary clause against a sham edit of the same length</p>
+<p class="muted">Discover and probe point to where to look, fix compares a boundary clause with a neutral edit of the same length, or with a drafted description when a tool has none</p>
 
 {% if lint %}
 <h2>Descriptions</h2>
@@ -75,12 +75,12 @@ code { font-size: 12px; }
 {% endif %}
 
 {% if fix %}
-<h2>Fix against sham</h2>
-<table><tr><th>Pair</th><th>Model</th><th>Mode</th><th>Errors original, sham, clause</th><th>Fixed, broke</th><th>Holm p</th><th>Verdict</th></tr>
+<h2>Fix</h2>
+<table><tr><th>Pair</th><th>Model</th><th>Mode</th><th>Baseline</th><th>Errors original, baseline, with clause</th><th>Fixed, broke</th><th>Holm p</th><th>Verdict</th></tr>
 {% for r in fix.pairs %}<tr>
 <td>{% if r.write %}<span class="write">{{ r.pair }}</span>{% else %}{{ r.pair }}{% endif %}</td><td>{{ r.model }}</td><td>{{ r.mode }}</td>
-<td>{{ r.errors.original }}, {{ r.errors.sham }}, {{ r.errors.clause }} of {{ r.n }}</td><td>{{ r.fixed }}, {{ r.broke }}</td>
-<td>{{ r.get("p_holm")|pval }}</td><td class="{{ 'good' if 'beats' in r.verdict else ('bad' if 'worse' in r.verdict else '') }}">{{ r.verdict }}</td></tr>{% endfor %}
+<td>{{ r.baseline_kind }}</td><td>{{ r.errors.original }}, {{ r.errors.baseline }}, {{ r.errors.clause }} of {{ r.n }}</td><td>{{ r.fixed }}, {{ r.broke }}</td>
+<td>{{ r.get("p_holm")|pval }}</td><td class="{{ 'good' if 'helps' in r.verdict else ('bad' if 'hurts' in r.verdict else '') }}">{{ r.verdict }}</td></tr>{% endfor %}
 </table>
 <h3>Across pairs</h3>
 <table><tr><th>Model</th><th>Mode</th><th>Flagged pairs</th><th>Mean change in errors</th><th>Sign flip p</th><th></th></tr>
@@ -90,7 +90,7 @@ code { font-size: 12px; }
 {% for r in fix.pairs %}
 <p><b>{{ r.pair }}</b> <span class="muted">{{ r.model }} {{ r.mode }}</span></p>
 <table><tr><th>Condition</th><th>Description</th></tr>
-{% for cond in ("sham", "clause") %}{% for tool, text in r.edits[cond].items() %}<tr><td>{{ cond }}</td><td><code>{{ tool }}</code> {{ text }}</td></tr>{% endfor %}{% endfor %}
+{% for cond in ("baseline", "clause") %}{% for tool, text in r.edits[cond].items() %}<tr><td>{{ r.baseline_kind if cond == "baseline" else "with clause" }}</td><td><code>{{ tool }}</code> {{ text }}</td></tr>{% endfor %}{% endfor %}
 </table>
 <table><tr><th>Condition</th><th>Direction</th><th>Wrong</th><th>Hedge</th><th>Leak to other tools</th></tr>
 {% for cond, dirs in r.directions.items() %}{% for d, v in dirs.items() %}<tr><td>{{ cond }}</td><td>{{ d }}</td><td>{{ v.wrong|pct }}</td><td>{{ v.hedge|pct }}</td><td>{{ v.leak|pct }}{% if loop.first and r.leakage[cond] %} <span class="muted">{{ r.leakage[cond] }}</span>{% endif %}</td></tr>{% endfor %}{% endfor %}

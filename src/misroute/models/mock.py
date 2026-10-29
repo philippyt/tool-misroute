@@ -135,7 +135,7 @@ class MockAdapter:
             return json.dumps(
                 {"a": f"{CLAUSE} {' '.join(sorted(bag(b))[:3])}.", "b": f"{CLAUSE} {' '.join(sorted(bag(a))[:3])}."}
             )
-        if kind == "sham":
+        if kind == "neutral":
             a, b = field.get("A", ""), field.get("B", "")
             return json.dumps({"a": a + " Returns results.", "b": b + " Returns results."})
         if kind == "describe":

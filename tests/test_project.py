@@ -28,13 +28,13 @@ async def test_discover_probe_fix_report(project, tmp_path):
     fix = await project.fix(pairs=[("get_case_comments", "get_case_events"), ("update_case", "update_case_meta")])
     verdicts = {(r["pair"], r["mode"]): r for r in fix["pairs"]}
     good = verdicts[("get_case_comments|get_case_events", "json")]
-    assert good["flagged"] and good["verdict"] == "clause beats sham"
-    assert good["errors"]["clause"] < good["errors"]["sham"]
-    assert verdicts[("update_case|update_case_meta", "json")]["verdict"].startswith("no effect")
+    assert good["flagged"] and good["verdict"] == "clause helps" and good["baseline_kind"] == "neutral"
+    assert good["errors"]["clause"] < good["errors"]["baseline"]
+    assert verdicts[("update_case|update_case_meta", "json")]["verdict"].startswith("no difference")
     assert all(a["underpowered"] for a in fix["across"])
 
     html = render(project.store, tmp_path / "report.html").read_text(encoding="utf-8")
-    assert "clause beats sham" in html and "get_case_events" in html
+    assert "clause helps" in html and "get_case_events" in html
 
 
 async def test_ci_limits(project):

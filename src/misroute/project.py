@@ -19,7 +19,7 @@ from misroute.store.runs import Store
 from misroute.trial import Request, Trial
 
 Progress = Callable[[int], None]
-CONDS = ("original", "sham", "clause")
+CONDS = ("original", "baseline", "clause")
 
 
 def orders(tools: list[Tool], k: int) -> list[list[Tool]]:
@@ -323,8 +323,13 @@ class Project:
             pr = await self.pair_requests(by[a], by[b], tools)
             reqs = pr["a"] + pr["b"]
             slots = max(1, min(self.cfg.slots, round(trials / (2 * max(len(reqs), 1)))))
-            edits = await clause.write(writer, by[a], by[b])
-            conds = {"original": tools, **{k: replace_descriptions(tools, v) for k, v in edits.items()}}
+            drafts = await self.drafts([by[a], by[b]], tools)
+            edits = await clause.write(writer, by[a], by[b], drafts)
+            conds = {
+                "original": tools,
+                "baseline": replace_descriptions(tools, edits["baseline"]),
+                "clause": replace_descriptions(tools, edits["clause"]),
+            }
             cell_trials = []
             for name, ts in conds.items():
                 os_ = pair_orders(ts)
@@ -346,11 +351,21 @@ class Project:
         self.store.write("fix", result)
         return result
 
+    async def drafts(self, pair: list[Tool], tools: list[Tool]) -> dict[str, str]:
+        """Drafted descriptions for tools that lint flags, from the lint run when there is one."""
+        flagged = [t for t in pair if descriptions.classify(t)]
+        if not flagged:
+            return {}
+        known = (self.store.read("lint") or {}).get("drafts", {})
+        writer = self.role("writer")
+        return {t.name: known.get(t.name) or await descriptions.draft(writer, t, tools) for t in flagged}
+
     def verdict(self, a, b, model, mode, cell, edits, gate_p, by) -> dict:
         err = {c: {t.key: t.error for t in cell if t.condition == c} for c in CONDS}
-        fixed, broke, p = stats.mcnemar(err["sham"], err["clause"])
+        fixed, broke, p = stats.mcnemar(err["baseline"], err["clause"])
         return {
             "pair": f"{a}|{b}",
+            "baseline_kind": edits["baseline_kind"],
             "model": model,
             "mode": mode,
             "write": by[a].is_write or by[b].is_write,
@@ -372,20 +387,20 @@ class Project:
         for r, ph in zip(flagged, stats.holm([r["p"] for r in flagged]), strict=True):
             r["p_holm"] = ph
         for r in rows:
-            d = r["errors"]["clause"] - r["errors"]["sham"]
+            d = r["errors"]["clause"] - r["errors"]["baseline"]
             if not r["flagged"]:
                 r["verdict"] = "not flagged"
             elif r.get("p_holm", 1) < 0.05:
-                r["verdict"] = "clause beats sham" if d < 0 else "clause worse than sham"
+                r["verdict"] = "clause helps" if d < 0 else "clause hurts"
             else:
-                r["verdict"] = "no effect, consider a guard rule or merging the tools"
+                r["verdict"] = "no difference, consider a guard rule or merging the tools"
 
     @staticmethod
     def across(rows: list[dict]) -> list[dict]:
         out = []
         for key in sorted({(r["model"], r["mode"]) for r in rows}):
             rs = [r for r in rows if (r["model"], r["mode"]) == key and r["flagged"]]
-            d = [r["errors"]["clause"] - r["errors"]["sham"] for r in rs]
+            d = [r["errors"]["clause"] - r["errors"]["baseline"] for r in rs]
             out.append(
                 {
                     "model": key[0],

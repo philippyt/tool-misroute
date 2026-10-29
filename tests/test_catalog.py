@@ -29,8 +29,12 @@ def test_stub():
     assert stub(t).startswith("async def find(q: str, n: int | None = None) -> dict:")
 
 
-async def test_sham_for_missing_description(project):
+async def test_undescribed_tools_use_drafted_baseline(project):
+    pair = [Tool("get_attachment", ""), Tool("get_document", "GET /docs/{id}")]
+    drafts = await project.drafts(pair, pair)
+    assert set(drafts) == {"get_attachment", "get_document"}
     from misroute.fix.clause import write
 
-    edits = await write(project.role("writer"), Tool("get_attachment", ""), Tool("get_document", "GET /docs/{id}"))
-    assert all(edits["sham"].values()) and all(edits["clause"].values())
+    edits = await write(project.role("writer"), *pair, drafts)
+    assert edits["baseline_kind"] == "description" and edits["baseline"] == drafts
+    assert all(edits["clause"][k].startswith(drafts[k].rstrip(".")) for k in drafts)

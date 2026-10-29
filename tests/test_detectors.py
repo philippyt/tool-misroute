@@ -46,3 +46,23 @@ def test_read_first_is_not_a_wrong_pick():
     assert read_first(tr, tools)
     tr.failure = "read_first"
     assert not tr.wrong and tr.error
+
+
+async def test_provider_refusal_stops_cleanly(tmp_path):
+    import pytest
+    from misroute.config import ModelConfig
+    from misroute.models.base import Budget, BudgetExceeded
+    from misroute.store.cache import Metered
+
+    class Refused(Exception):
+        status_code = 402
+
+    class Broke:
+        name, family = "x", "x"
+
+        async def chat(self, user, tools, system=None):
+            raise Refused("out of credits")
+
+    m = Metered(Broke(), ModelConfig(name="x", provider="mock"), Budget(1), tmp_path)
+    with pytest.raises(BudgetExceeded):
+        await m.chat("hi", [])
