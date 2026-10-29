@@ -9,7 +9,7 @@ from misroute.models.base import BudgetExceeded
 from misroute.project import Project
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
-guard_app = typer.Typer(no_args_is_help=True)
+guard_app = typer.Typer(no_args_is_help=True, help="Protect production calls")
 app.add_typer(guard_app, name="guard")
 out = Console()
 
@@ -65,7 +65,7 @@ def run(proj: Project, coro, total: int):
 
 @app.command()
 def init(path: Path = Path("misroute.yaml")) -> None:
-    """Write an example config."""
+    """Write an example config"""
     if path.exists():
         raise typer.BadParameter(f"{path} exists")
     path.write_text(EXAMPLE, encoding="utf-8")
@@ -74,7 +74,7 @@ def init(path: Path = Path("misroute.yaml")) -> None:
 
 @app.command()
 def lint(config: Cfg = Path("misroute.yaml"), draft: bool = False) -> None:
-    """Flag missing, name only and path only descriptions."""
+    """Flag missing, name only and path only descriptions"""
     proj = Project.from_yaml(config)
     res = asyncio.run(proj.lint(draft))
     out.print(f"{res['tools']} tools, {len(res['findings'])} with weak descriptions")
@@ -87,7 +87,7 @@ def lint(config: Cfg = Path("misroute.yaml"), draft: bool = False) -> None:
 
 @app.command()
 def discover(config: Cfg = Path("misroute.yaml"), models: Names = None, modes: Names = None, yes: Yes = False) -> None:
-    """Find risky tools from model behaviour."""
+    """Find risky tools from model behaviour"""
     proj = Project.from_yaml(config)
     ms, md = split(models), split(modes)
     calls, cost = asyncio.run(proj.discover_cost(ms or [m.name for m in proj.cfg.models], md or list(proj.cfg.modes)))
@@ -111,7 +111,7 @@ def probe(
     modes: Names = None,
     yes: Yes = False,
 ) -> None:
-    """Harder requests on the risky pairs."""
+    """Harder requests on the risky pairs"""
     proj = Project.from_yaml(config)
     n_pairs = len(pair) if pair else top
     ms = split(models) or [m.name for m in proj.cfg.models]
@@ -142,7 +142,7 @@ def fix(
     modes: Names = None,
     yes: Yes = False,
 ) -> None:
-    """Test a boundary clause against a sham edit."""
+    """Test a boundary clause against a sham edit"""
     proj = Project.from_yaml(config)
     trials = 24 if cheap else trials
     n_pairs = len(pair) if pair else top
@@ -176,7 +176,7 @@ def fix(
 
 @app.command()
 def report(config: Cfg = Path("misroute.yaml"), output: Path = Path("report.html")) -> None:
-    """Write a self contained HTML report."""
+    """Write a self contained HTML report"""
     from misroute.report.html import render
 
     proj = Project.from_yaml(config)
@@ -185,7 +185,7 @@ def report(config: Cfg = Path("misroute.yaml"), output: Path = Path("report.html
 
 @app.command()
 def ci(config: Cfg = Path("misroute.yaml"), models: Names = None, modes: Names = None) -> None:
-    """Run discover and exit non zero when limits are exceeded."""
+    """Run discover and exit non zero when limits are exceeded"""
     proj = Project.from_yaml(config)
     try:
         asyncio.run(proj.discover(split(models), split(modes)))
@@ -200,7 +200,7 @@ def ci(config: Cfg = Path("misroute.yaml"), models: Names = None, modes: Names =
 
 @guard_app.command("serve")
 def guard_serve(config: Cfg = Path("misroute.yaml")) -> None:
-    """Run as an MCP proxy over stdio in front of the configured server."""
+    """Run as an MCP proxy over stdio in front of the configured server"""
     from misroute.guard.proxy import serve
 
     proj = Project.from_yaml(config)
@@ -209,7 +209,7 @@ def guard_serve(config: Cfg = Path("misroute.yaml")) -> None:
 
 @guard_app.command("confirm")
 def guard_confirm(call_id: str, config: Cfg = Path("misroute.yaml")) -> None:
-    """Approve a held call."""
+    """Approve a held call"""
     from misroute.config import load
     from misroute.guard.wrapper import approve
 

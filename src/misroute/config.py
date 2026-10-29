@@ -38,12 +38,6 @@ class ModelConfig(BaseModel):
     def model_id(self) -> str:
         return self.model or self.name
 
-    @property
-    def paid(self) -> bool:
-        return self.provider not in ("mock",) and not (self.base_url or "").startswith(
-            ("http://localhost", "http://127")
-        )
-
 
 class Limits(BaseModel):
     max_wrong_rate: float | None = None
