@@ -1,0 +1,66 @@
+import asyncio
+import hashlib
+import json
+from pathlib import Path
+from typing import Any
+from misroute.config import ModelConfig
+from misroute.models.base import Adapter, Budget, Turn, estimate_tokens
+
+
+class Metered:
+    """Wraps an adapter with a disk cache, a concurrency limit and budget checks."""
+
+    def __init__(self, adapter: Adapter, cfg: ModelConfig, budget: Budget, root: str | Path):
+        self.inner = adapter
+        self.cfg = cfg
+        self.name = adapter.name
+        self.family = adapter.family
+        self.budget = budget
+        self.dir = Path(root) / "cache" / cfg.name
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.sem = asyncio.Semaphore(cfg.concurrency)
+        self.calls = 0
+        self.hits = 0
+
+    def price(self, tokens_in: int, tokens_out: int) -> float:
+        return (tokens_in * (self.cfg.price_in or 0) + tokens_out * (self.cfg.price_out or 0)) / 1e6
+
+    def estimate(self, *parts: Any) -> float:
+        return self.price(estimate_tokens(*parts), self.cfg.max_tokens // 4)
+
+    def _path(self, *parts: Any) -> Path:
+        key = json.dumps([self.cfg.model_id, self.cfg.options, *parts], sort_keys=True, default=str)
+        return self.dir / (hashlib.sha256(key.encode()).hexdigest()[:32] + ".json")
+
+    async def _cached(self, parts: tuple, run, encode, decode):
+        path = self._path(*parts)
+        if path.exists():
+            self.hits += 1
+            return decode(json.loads(path.read_text(encoding="utf-8")))
+        self.budget.check(self.estimate(*parts))
+        async with self.sem:
+            out, cost = await run()
+        self.budget.charge(cost)
+        self.calls += 1
+        path.write_text(json.dumps(encode(out)), encoding="utf-8")
+        return out
+
+    async def chat(self, user: str, tools: list[dict[str, Any]], system: str | None = None, rep: int = 0) -> Turn:
+        async def run():
+            t = await self.inner.chat(user, tools, system)
+            return t, self.price(t.tokens_in, t.tokens_out)
+
+        return await self._cached(("chat", user, tools, system, rep), run, Turn.to_json, Turn.from_json)
+
+    async def complete(self, prompt: str, kind: str | None = None, rep: int = 0) -> str:
+        async def run():
+            text = await self.inner.complete(prompt, kind)
+            return text, self.price(estimate_tokens(prompt), estimate_tokens(text))
+
+        return await self._cached(("complete", prompt, kind, rep), run, lambda x: x, lambda x: x)
+
+    async def score_names(self, user: str, tools: list[dict[str, Any]]) -> dict[str, float] | None:
+        async def run():
+            return await self.inner.score_names(user, tools), 0.0
+
+        return await self._cached(("score", user, tools), run, lambda x: x, lambda x: x)
