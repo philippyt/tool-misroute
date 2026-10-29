@@ -3,10 +3,9 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from misroute.detectors.confusion import wrong_pairs
 from misroute.detectors.hedge import co_calls
-from misroute.detectors.nearmiss import NearMiss
 from misroute.trial import Trial
 
-WEIGHTS = {"wrong": 1.0, "hedge": 1.0, "near": 0.5, "removal": 0.25}
+WEIGHTS = {"wrong": 1.0, "hedge": 1.0, "removal": 0.25}
 WRITE_WEIGHT = 2.0
 
 
@@ -17,6 +16,7 @@ class Spot:
     score: float = 0.0
     write: bool = False
     signals: dict[str, float] = field(default_factory=dict)
+    gate_failed: bool = False
     where: set[str] = field(default_factory=set)
 
     @property
@@ -31,9 +31,9 @@ class Spot:
 
 def rank(
     trials: list[Trial],
-    near: list[tuple[str, NearMiss]],
     removal: Mapping[str, Mapping[str, int]],
     writes: set[str],
+    gate_failed: set[tuple[str, str]] | None = None,
 ) -> list[Spot]:
     spots: dict[tuple[str, str], Spot] = {}
 
@@ -60,11 +60,6 @@ def rank(
             s = spot(a, b)
             s.signals["hedge"] = max(s.signals.get("hedge", 0), c / max(n.get(a, 0) + n.get(b, 0), 1))
             s.where.add(where)
-    for where, nm in near:
-        if nm.rival:
-            s = spot(nm.tool, nm.rival)
-            s.signals["near"] = max(s.signals.get("near", 0), nm.score)
-            s.where.add(where)
     for tool, dest in removal.items():
         total = sum(dest.values())
         for other, c in dest.items():
@@ -72,5 +67,6 @@ def rank(
                 s = spot(tool, other)
                 s.signals["removal"] = c / total
     for s in spots.values():
+        s.gate_failed = (s.a, s.b) in (gate_failed or set())
         s.score = sum(WEIGHTS[k] * v for k, v in s.signals.items())
     return sorted(spots.values(), key=lambda s: (-s.score * (WRITE_WEIGHT if s.write else 1), s.pair))

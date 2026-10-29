@@ -180,15 +180,19 @@ class Project:
                 noise[m], found = nearmiss.from_repeats(ts)
                 near += [(f"{m} json", x) for x in found]
         writes = {t.name for t in tools if t.is_write}
-        spots = rank.rank(trials, near, {}, writes)
+        gated = await asyncio.to_thread(gate.screen, tools, reqs)
+        failed = {(min(a, b), max(a, b)) for a, b, _ in gated}
+        spots = rank.rank(trials, {}, writes, failed)
         cand = list(dict.fromkeys(n for s in spots[:removal_top] for n in (s.a, s.b)))[:removal_top]
         removed = await self.removal(cand, reqs, models_, tools)
         moved = removal.neighbours(removed)
-        spots = rank.rank(trials, near, moved, writes)
+        spots = rank.rank(trials, moved, writes, failed)
         result = self.summarize(trials, tools, models_, modes)
         result.update(
             spots=[s.to_json() for s in spots],
             noise=noise,
+            near_misses=[{"where": w, **asdict(n)} for w, n in near],
+            gate_failed=[list(g) for g in gated],
             removal={k: dict(v) for k, v in moved.items()},
             short={k: len(v) for k, v in reqs.items() if len(v) < self.cfg.requests_per_tool},
             catalog=catalog_hash(tools),

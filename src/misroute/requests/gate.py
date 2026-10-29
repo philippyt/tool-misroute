@@ -1,6 +1,7 @@
 import itertools
 import math
 import re
+from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 from misroute.server.catalog import Tool
 from misroute.trial import Request
@@ -9,6 +10,7 @@ ALNUM = re.compile(r"[a-z0-9\xe6\xf8\xe5]")
 ALPHA = 0.10
 EXACT_MAX = 5000
 SAMPLES = 300
+SCREEN_SAMPLES = 100
 
 
 def pieces(text: str) -> set[str]:
@@ -51,7 +53,9 @@ def lopo(x: np.ndarray, y: np.ndarray, groups: np.ndarray) -> float:
     return float((preds == y).mean())
 
 
-def gate(a: Tool, b: Tool, reqs_a: list[Request], reqs_b: list[Request], seed: int = 0) -> float:
+def gate(
+    a: Tool, b: Tool, reqs_a: list[Request], reqs_b: list[Request], seed: int = 0, samples: int = SAMPLES
+) -> float:
     """Permutation p that surface overlap and length cannot tell the two request sets apart (thesis Eq 3.11)."""
     refs = [
         pieces(a.name.replace("_", " ")),
@@ -72,14 +76,32 @@ def gate(a: Tool, b: Tool, reqs_a: list[Request], reqs_b: list[Request], seed: i
     label = np.array([0] * len(reqs_a) + [1] * len(reqs_b))
     real = lopo(x, label[groups], groups)
     k = len(reqs_a)
-    if math.comb(n, k) <= EXACT_MAX:
+    if math.comb(n, k) <= EXACT_MAX and samples >= SAMPLES:
         combos = itertools.combinations(range(n), k)
     else:
         rng = np.random.default_rng(seed)
-        combos = (rng.choice(n, k, replace=False) for _ in range(SAMPLES))
+        combos = (rng.choice(n, k, replace=False) for _ in range(samples))
     nulls = []
     for c in combos:
         lab = np.ones(n, int)
         lab[list(c)] = 0
         nulls.append(lopo(x, lab[groups], groups))
     return float(np.mean(np.array(nulls) >= real - 1e-12))
+
+
+def _screen(job: tuple) -> tuple[str, str, float]:
+    a, b, ra, rb = job
+    return a.name, b.name, gate(a, b, ra, rb, samples=SCREEN_SAMPLES)
+
+
+def screen(tools: list[Tool], reqs: dict[str, list[Request]]) -> list[tuple[str, str, float]]:
+    """Sampled gate on every tool pair. Returns the pairs whose request sets surface cues can tell apart."""
+    jobs = [
+        (a, b, reqs.get(a.name, []), reqs.get(b.name, []))
+        for i, a in enumerate(tools)
+        for b in tools[i + 1 :]
+        if reqs.get(a.name) and reqs.get(b.name)
+    ]
+    with ProcessPoolExecutor() as ex:
+        results = list(ex.map(_screen, jobs, chunksize=8))
+    return [r for r in results if r[2] <= ALPHA]

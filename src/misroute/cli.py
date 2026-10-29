@@ -93,12 +93,21 @@ def discover(config: Cfg = Path("misroute.yaml"), models: Names = None, modes: N
     calls, cost = asyncio.run(proj.discover_cost(ms or [m.name for m in proj.cfg.models], md or list(proj.cfg.modes)))
     confirm(cost, calls, yes)
     res = run(proj, proj.discover(ms, md), calls)
-    t = table("tool", "sibling", "score", "signals", "seen in")
+    t = table("tool", "sibling", "score", "signals", "seen in", "gate")
     for s in res["spots"][:15]:
         style = "red" if s["write"] else ""
         sig = "  ".join(f"{k} {v:.2f}" for k, v in s["signals"].items())
-        t.add_row(s["a"], s["b"], f"{s['score']:.2f}", sig, ", ".join(s["where"]), style=style)
+        gate = "failed" if s["gate_failed"] else ""
+        t.add_row(s["a"], s["b"], f"{s['score']:.2f}", sig, ", ".join(s["where"]), gate, style=style)
     out.print(t)
+    if res["gate_failed"]:
+        out.print(
+            f"{len(res['gate_failed'])} tool pairs have request sets that surface words can tell apart", style="yellow"
+        )
+    if res["near_misses"]:
+        out.print("near misses, unvalidated, not in the ranking", style="dim")
+        for n in res["near_misses"][:10]:
+            out.print(f"  {n['tool']}  {n['rival']}  {n['score']:.2f}  {n['where']} {n['source']}", style="dim")
     for tool, n in res["short"].items():
         out.print(f"{tool}: validator kept {n} of {proj.cfg.requests_per_tool} requests", style="yellow")
     out.print(f"spent ${res['spent']:.2f}, results in {proj.store.root}")

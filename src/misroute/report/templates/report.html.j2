@@ -38,13 +38,21 @@ code { font-size: 12px; }
 
 {% if discover %}
 <h2>Risky spots</h2>
-<table><tr><th>Pair</th><th>Score</th><th>Signals</th><th>Seen in</th></tr>
+<table><tr><th>Pair</th><th>Score</th><th>Signals</th><th>Seen in</th><th>Gate</th></tr>
 {% for s in discover.spots[:25] %}<tr>
 <td>{% if s.write %}<span class="write">{{ s.a }} and {{ s.b }}</span>{% else %}{{ s.a }} and {{ s.b }}{% endif %}</td>
 <td>{{ "%.2f"|format(s.score) }}</td>
 <td>{% for k, v in s.signals.items() %}{{ k }} {{ v|pct }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
-<td class="muted">{{ s.where|join(", ") }}</td></tr>{% endfor %}
+<td class="muted">{{ s.where|join(", ") }}</td><td class="bad">{{ "failed" if s.gate_failed }}</td></tr>{% endfor %}
 </table>
+{% if discover.gate_failed %}<p class="muted">{{ discover.gate_failed|length }} tool pairs have request sets that surface words can tell apart, so confusion between them may be underestimated</p>{% endif %}
+{% if discover.near_misses %}
+<h3>Near misses</h3>
+<p class="muted">Unvalidated and left out of the ranking</p>
+<table><tr><th>Tool</th><th>Rival</th><th>Share</th><th>Where</th><th>Source</th></tr>
+{% for n in discover.near_misses[:20] %}<tr><td>{{ n.tool }}</td><td>{{ n.rival }}</td><td>{{ n.score|pct }}</td><td>{{ n.where }}</td><td>{{ n.source }}</td></tr>{% endfor %}
+</table>
+{% endif %}
 
 <h2>Confusion</h2>
 {% for c in discover.cells %}
