@@ -124,12 +124,10 @@ def probe(
 ) -> None:
     """Harder requests on the risky pairs"""
     proj = Project.from_yaml(config)
-    n_pairs = len(pair) if pair else top
     ms = split(models) or [m.name for m in proj.cfg.models]
-    md = split(modes) or proj.cfg.modes
-    calls = n_pairs * 4 * proj.cfg.requests_per_tool * 2 * 2 * len(ms) * len(md)
-    tools = asyncio.run(proj.tools())
-    confirm(sum(proj.estimate(calls // len(ms), m, tools) for m in ms), calls, yes)
+    md = split(modes) or list(proj.cfg.modes)
+    calls, cost = asyncio.run(proj.cost("probe", ms, md, len(pair) if pair else top))
+    confirm(cost, calls, yes)
     res = run(proj, proj.probe(top, pairs(pair), ms, md), calls)
     t = table("requests for", "sibling", "model", "mode", "wrong", "hedge", "leak", "gate p")
     for r in res["rows"]:
@@ -156,12 +154,10 @@ def fix(
     """Test a boundary clause against a sham edit"""
     proj = Project.from_yaml(config)
     trials = 24 if cheap else trials
-    n_pairs = len(pair) if pair else top
     ms = split(models) or [m.name for m in proj.cfg.models]
-    md = split(modes) or proj.cfg.modes
-    calls = n_pairs * trials * 3 * len(ms) * len(md)
-    tools = asyncio.run(proj.tools())
-    confirm(sum(proj.estimate(calls // len(ms), m, tools) for m in ms), calls, yes)
+    md = split(modes) or list(proj.cfg.modes)
+    calls, cost = asyncio.run(proj.cost("fix", ms, md, len(pair) if pair else top, trials))
+    confirm(cost, calls, yes)
     res = run(proj, proj.fix(top, pairs(pair), ms, md, trials), calls)
     t = table("tool", "sibling", "model", "mode", "original", "sham", "clause", "p", "verdict")
     for r in res["pairs"]:

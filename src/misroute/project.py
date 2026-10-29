@@ -134,6 +134,17 @@ class Project:
         a = self.adapter(model)
         return n_calls * a.estimate("x" * 200, [t.spec() for t in tools])
 
+    async def cost(
+        self, phase: str, models_: list[str], modes: list, n_pairs: int = 3, trials: int = 96
+    ) -> tuple[int, float]:
+        if phase == "discover":
+            return await self.discover_cost(models_, modes)
+        tools = await self.tools()
+        per_model = (
+            n_pairs * len(modes) * (4 * self.cfg.requests_per_tool * 2 * 2 if phase == "probe" else trials * len(CONDS))
+        )
+        return per_model * len(models_), sum(self.estimate(per_model, m, tools) for m in models_)
+
     def repeats(self, model: str, mode: str) -> int:
         mc = self.cfg.model(model)
         return 1 if mc.scoring or mode == "code" else self.cfg.repeats
