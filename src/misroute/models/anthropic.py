@@ -48,5 +48,8 @@ class AnthropicAdapter:
     async def complete(self, prompt: str, kind: str | None = None) -> str:
         return (await self.chat(prompt, [])).text
 
+    async def complete_turn(self, prompt: str) -> Turn:
+        return await self.chat(prompt, [])
+
     async def score_names(self, user: str, tools: list[dict[str, Any]]) -> dict[str, float] | None:
         return None

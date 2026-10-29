@@ -17,13 +17,15 @@ class Turn:
     tokens_in: int = 0
     tokens_out: int = 0
     raw: str = ""
+    cost: float | None = None
 
     def to_json(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
     def from_json(cls, d: dict[str, Any]) -> "Turn":
-        return cls([Call(**c) for c in d["calls"]], d["text"], d["tokens_in"], d["tokens_out"], d.get("raw", ""))
+        calls = [Call(**c) for c in d["calls"]]
+        return cls(calls, d["text"], d["tokens_in"], d["tokens_out"], d.get("raw", ""), d.get("cost"))
 
 
 class Adapter(Protocol):

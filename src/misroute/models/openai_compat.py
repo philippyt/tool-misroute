@@ -48,8 +48,9 @@ class OpenAICompatAdapter:
             "model": self.cfg.model_id,
             "messages": self._messages(user, system),
             "max_tokens": self.cfg.max_tokens,
-            "temperature": self.cfg.options.get("temperature", 0),
         }
+        if (temp := self.cfg.options.get("temperature", 0)) is not None:
+            kw["temperature"] = temp
         if tools:
             kw["tools"] = to_openai(tools)
         if extra := self.cfg.options.get("extra"):
@@ -64,10 +65,15 @@ class OpenAICompatAdapter:
                 if "name" in d:
                     calls.append(Call(d["name"], d.get("arguments") or {}))
         usage = resp.usage
-        return Turn(calls, text, usage.prompt_tokens if usage else 0, usage.completion_tokens if usage else 0)
+        cost = (usage.model_extra or {}).get("cost") if usage else None
+        tin, tout = (usage.prompt_tokens, usage.completion_tokens) if usage else (0, 0)
+        return Turn(calls, text, tin, tout, cost=float(cost) if cost is not None else None)
 
     async def complete(self, prompt: str, kind: str | None = None) -> str:
         return (await self.chat(prompt, [])).text
+
+    async def complete_turn(self, prompt: str) -> Turn:
+        return await self.chat(prompt, [])
 
     async def _prefill_logprob(self, user: str, tools: list[dict[str, Any]], prefill: str) -> float:
         resp = await self.client.chat.completions.create(

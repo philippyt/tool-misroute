@@ -48,12 +48,15 @@ class Metered:
     async def chat(self, user: str, tools: list[dict[str, Any]], system: str | None = None, rep: int = 0) -> Turn:
         async def run():
             t = await self.inner.chat(user, tools, system)
-            return t, self.price(t.tokens_in, t.tokens_out)
+            return t, t.cost if t.cost is not None else self.price(t.tokens_in, t.tokens_out)
 
         return await self._cached(("chat", user, tools, system, rep), run, Turn.to_json, Turn.from_json)
 
     async def complete(self, prompt: str, kind: str | None = None, rep: int = 0) -> str:
         async def run():
+            if (turn := getattr(self.inner, "complete_turn", None)) is not None:
+                t: Turn = await turn(prompt)
+                return t.text, t.cost if t.cost is not None else self.price(t.tokens_in, t.tokens_out)
             text = await self.inner.complete(prompt, kind)
             return text, self.price(estimate_tokens(prompt), estimate_tokens(text))
 
