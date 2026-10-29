@@ -190,6 +190,7 @@ class Project:
             spots=[s.to_json() for s in spots],
             noise=noise,
             removal={k: dict(v) for k, v in moved.items()},
+            short={k: len(v) for k, v in reqs.items() if len(v) < self.cfg.requests_per_tool},
             catalog=catalog_hash(tools),
             spent=self.budget.spent,
         )

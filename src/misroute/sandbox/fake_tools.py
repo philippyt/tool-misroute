@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass, field
 from typing import Any
 from misroute.server.catalog import Tool
@@ -42,7 +43,8 @@ class FakeTools:
     def result(self, tool: Tool, args: dict[str, Any]) -> Any:
         cp = cursor_param(tool)
         if cp:
-            page = int(str(args.get(cp) or "1").lstrip("p") or 1)
+            digits = re.search(r"p(\d+)$", str(args.get(cp) or ""))
+            page = int(digits.group(1)) if digits else 1
             items = [{"id": f"{tool.name}_{page}_{i}", "value": i} for i in range(3)]
             return {"items": items, "next_cursor": f"p{page + 1}" if page < PAGES else None}
         if tool.output_schema:

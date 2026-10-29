@@ -99,6 +99,8 @@ def discover(config: Cfg = Path("misroute.yaml"), models: Names = None, modes: N
         sig = "  ".join(f"{k} {v:.2f}" for k, v in s["signals"].items())
         t.add_row(s["a"], s["b"], f"{s['score']:.2f}", sig, ", ".join(s["where"]), style=style)
     out.print(t)
+    for tool, n in res["short"].items():
+        out.print(f"{tool}: validator kept {n} of {proj.cfg.requests_per_tool} requests", style="yellow")
     out.print(f"spent ${res['spent']:.2f}, results in {proj.store.root}")
 
 

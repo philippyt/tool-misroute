@@ -1,8 +1,11 @@
 import pytest
 from misroute.detectors.codemode import classify
+from misroute.models.base import Call, Turn
+from misroute.modes import code_mode
 from misroute.sandbox.fake_tools import FakeTools
 from misroute.sandbox.monty_runner import Sandbox
 from misroute.server.catalog import Tool
+from misroute.trial import Trial
 
 TOOLS = [
     Tool("get_product", "Product price.", {"properties": {"id": {"type": "string"}}, "required": ["id"]}),
@@ -27,3 +30,22 @@ async def test_failures(code, expected):
     async with Sandbox(max_processes=1) as box:
         res = await box.run(code, fakes.functions())
     assert classify(code, res, fakes.log, TOOLS) == expected
+
+
+async def test_pasted_stub_still_measures_choice():
+    class Pasted:
+        async def chat(self, user, tools, system=None, rep=0):
+            code = "async def get_product(id: str) -> dict:\n    '''Product price.'''\n    ...\n"
+            code += "r = await get_product('a')\nr"
+            return Turn([Call("run_code", {"code": code})])
+
+    async with Sandbox(max_processes=1) as box:
+        t = await code_mode.run(Pasted(), box, Trial("m", "code", "get_product", "r", "x"), TOOLS)
+    assert t.failure == "stub_copied" and t.calls == ["get_product"]
+
+
+async def test_odd_cursor_is_logged():
+    fakes = FakeTools(TOOLS)
+    async with Sandbox(max_processes=1) as box:
+        res = await box.run("r = await list_lines(cursor={'page': 2})\nr", fakes.functions())
+    assert res.error is None and fakes.names() == ["list_lines"]
