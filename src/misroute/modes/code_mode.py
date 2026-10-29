@@ -1,5 +1,6 @@
 import ast
 from misroute.detectors.codemode import classify
+from misroute.modes.json_mode import read_first
 from misroute.modes.stubs import run_code_tool
 from misroute.sandbox.fake_tools import FakeTools
 from misroute.sandbox.monty_runner import Sandbox
@@ -42,6 +43,8 @@ async def run(adapter, sandbox: Sandbox, trial: Trial, tools: list[Tool], single
     res = await sandbox.run(code, fakes.functions())
     trial.calls = fakes.names()
     trial.failure = classify(code, res, fakes.log, tools)
+    if trial.failure is None and read_first(trial, tools):
+        trial.failure = "read_first"
     stripped = strip_stubs(code, {t.name for t in tools}) if trial.failure == "faked" else None
     if stripped:
         again = FakeTools(tools)

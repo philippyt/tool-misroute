@@ -47,7 +47,7 @@ class Trial:
 
     @property
     def wrong(self) -> bool:
-        return self.chosen is not None and self.chosen != self.target
+        return self.chosen is not None and self.chosen != self.target and self.failure != "read_first"
 
     @property
     def error(self) -> bool:

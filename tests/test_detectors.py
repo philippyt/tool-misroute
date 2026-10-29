@@ -35,3 +35,14 @@ def test_reads_before_a_write_are_wrong_not_hedge():
     tr = t("update_meta", ["get_events", "get_comments"])
     assert tr.wrong and not tr.hedge
     assert not co_calls([tr])
+
+
+def test_read_first_is_not_a_wrong_pick():
+    from misroute.modes.json_mode import read_first
+    from misroute.server.catalog import Tool
+
+    tools = [Tool("update_meta"), Tool("get_events"), Tool("get_comments")]
+    tr = t("update_meta", ["get_events"])
+    assert read_first(tr, tools)
+    tr.failure = "read_first"
+    assert not tr.wrong and tr.error
