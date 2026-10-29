@@ -220,7 +220,7 @@ A coding agent that edits tool descriptions can check its own edits:
 
 ```console
 $ misroute check --tool get_case_comments --description "Written comments on a case. Not for status changes." --json --max-cost 1
-{"schema_version": 1, "command": "check", "verdict": "better", "trials": 96, "held_out": true, ...}
+{"schema_version": 1, "command": "check", "verdict": "better | worse | no_difference | insufficient_data", "trials": <int>, "held_out": true, "cost_usd": <float>, ...}
 ```
 
 Requests are split into a tuning set and a held out set. The verdict uses only the held out set, and after three verdicts on the same tool it is spent until you pass `--refresh`, so an agent cannot tune a description to the test requests. Verdicts are `better`, `worse`, `no_difference` or `insufficient_data`.
