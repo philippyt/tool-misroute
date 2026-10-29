@@ -10,6 +10,7 @@ Mode = Literal["json", "code"]
 class ServerConfig(BaseModel):
     url: str | None = None
     command: list[str] | None = None
+    openapi: str | None = None
     auth: str | None = None
     headers: dict[str, str] = Field(default_factory=dict)
     env: dict[str, str] = Field(default_factory=dict)
@@ -18,8 +19,8 @@ class ServerConfig(BaseModel):
 
     @model_validator(mode="after")
     def _one_target(self):
-        if bool(self.url) == bool(self.command):
-            raise ValueError("server needs exactly one of url or command")
+        if sum(map(bool, (self.url, self.command, self.openapi))) != 1:
+            raise ValueError("server needs exactly one of url, command or openapi")
         return self
 
 

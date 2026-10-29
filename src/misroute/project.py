@@ -12,8 +12,9 @@ from misroute.models.base import Budget
 from misroute.modes import code_mode, json_mode
 from misroute.requests import gate, generate, validate
 from misroute.sandbox.monty_runner import Sandbox
+from misroute.server import openapi
 from misroute.server.catalog import Tool, catalog_hash, replace_descriptions
-from misroute.server.connect import connect, list_tools
+from misroute.server.connect import connect, keep, list_tools
 from misroute.store.cache import Metered
 from misroute.store.runs import Store
 from misroute.trial import Request, Trial
@@ -61,9 +62,13 @@ class Project:
 
     async def tools(self) -> list[Tool]:
         if self._tools is None:
-            async with connect(self.server) as client:
-                cfg = self.cfg.server
-                self._tools = await list_tools(client, cfg.include_tools, cfg.exclude_tools)
+            cfg = self.cfg.server
+            if cfg.openapi and self.server is cfg:
+                found = openapi.tools(cfg.openapi)
+                self._tools = [t for t in found if keep(t.name, cfg.include_tools, cfg.exclude_tools)]
+            else:
+                async with connect(self.server) as client:
+                    self._tools = await list_tools(client, cfg.include_tools, cfg.exclude_tools)
         return self._tools
 
     async def catalog(self) -> str:

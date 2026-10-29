@@ -46,3 +46,35 @@ def test_tool_filter():
     assert keep("list_issues", ["*issue*"], [])
     assert not keep("list_commits", ["*issue*"], [])
     assert not keep("delete_issue", ["*issue*"], ["delete_*"])
+
+
+def test_openapi_tools(tmp_path):
+    import json
+    from misroute.server.openapi import tools
+
+    spec = {
+        "openapi": "3.0.0",
+        "paths": {
+            "/api/items/{id}": {
+                "get": {
+                    "operationId": "Items_Get",
+                    "parameters": [{"name": "id", "in": "path", "required": True, "schema": {"type": "string"}}],
+                }
+            },
+            "/api/items": {
+                "post": {
+                    "operationId": "Items_Create",
+                    "summary": "Create an item.",
+                    "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Item"}}}},
+                }
+            },
+            "/api/items/geo": {"post": {"operationId": "Items_GetAsGeoJson"}},
+        },
+        "components": {"schemas": {"Item": {"type": "object", "properties": {"name": {"type": "string"}}}}},
+    }
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(spec))
+    by = {t.name: t for t in tools(path)}
+    assert by["Items_Get"].description == "GET /api/items/{id}" and by["Items_Get"].required == ["id"]
+    assert by["Items_Create"].is_write and by["Items_Create"].params["body"]["properties"]["name"]
+    assert not by["Items_GetAsGeoJson"].is_write
