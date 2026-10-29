@@ -43,7 +43,7 @@ class Trial:
 
     @property
     def hedge(self) -> bool:
-        return len(set(self.calls)) > 1
+        return self.target in self.calls and len(set(self.calls)) > 1
 
     @property
     def wrong(self) -> bool:

@@ -27,6 +27,8 @@ def classify(code: str, res: RunResult, log: list[Record], tools: list[Tool]) ->
         return "faked"
     if res.error_type == "NameError":
         return "unknown_function"
+    if res.error_type == "NotImplementedError":
+        return "sandbox_limit"
     if res.error:
         return "runtime_error"
     if not log:

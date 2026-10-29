@@ -3,13 +3,12 @@ from misroute.trial import Trial
 
 
 def co_calls(trials: list[Trial]) -> Counter:
-    """Unordered tool pairs called together in one turn or program."""
+    """Pairs of the target and another tool called with it in one turn or program."""
     out: Counter = Counter()
     for t in trials:
-        names = sorted(set(t.calls))
-        for i, a in enumerate(names):
-            for b in names[i + 1 :]:
-                out[(a, b)] += 1
+        if t.hedge:
+            for other in set(t.calls) - {t.target}:
+                out[(min(t.target, other), max(t.target, other))] += 1
     return out
 
 

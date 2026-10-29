@@ -29,3 +29,9 @@ def test_near_miss_from_repeats():
     pooled, found = from_repeats(stable + shaky)
     assert 0 < pooled < 1
     assert [m.tool for m in found] == ["a"] and found[0].rival == "b"
+
+
+def test_reads_before_a_write_are_wrong_not_hedge():
+    tr = t("update_meta", ["get_events", "get_comments"])
+    assert tr.wrong and not tr.hedge
+    assert not co_calls([tr])
