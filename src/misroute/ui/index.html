@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>misroute</title>
+<style>
+:root { --bg: #fbfbfa; --fg: #1d1d1b; --muted: #6b6b66; --line: #e3e2de; --card: #fff; --accent: #2b5fd9; --bad: #c0392b; --good: #2e7d4f; }
+@media (prefers-color-scheme: dark) { :root { --bg: #161615; --fg: #ecebe8; --muted: #9a9a94; --line: #2c2c2a; --card: #1e1e1d; --accent: #7aa2ff; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, sans-serif; }
+header { display: flex; align-items: center; gap: 24px; padding: 12px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+header b { font-size: 16px; }
+nav button { background: none; border: 0; color: var(--muted); font: inherit; padding: 6px 2px; margin-right: 14px; cursor: pointer; border-bottom: 2px solid transparent; }
+nav button.on { color: var(--fg); border-color: var(--accent); }
+#status { margin-left: auto; color: var(--muted); font-size: 13px; }
+main { padding: 16px; max-width: 1100px; margin: 0 auto; }
+section { display: none; } section.on { display: block; }
+iframe { width: 100%; height: calc(100vh - 110px); border: 1px solid var(--line); border-radius: 6px; background: var(--card); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
+select, input { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
+.row { display: flex; gap: 16px; flex-wrap: wrap; }
+.checks label { display: inline-flex; gap: 6px; color: var(--fg); font-size: 14px; margin-right: 12px; }
+button.primary { background: var(--accent); color: #fff; border: 0; border-radius: 4px; padding: 7px 14px; font: inherit; cursor: pointer; margin-top: 14px; margin-right: 8px; }
+button.primary:disabled { opacity: .5; cursor: default; }
+button.ghost { background: none; border: 1px solid var(--line); color: var(--fg); border-radius: 4px; padding: 7px 14px; font: inherit; cursor: pointer; margin-top: 14px; }
+progress { width: 100%; height: 8px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; }
+.muted { color: var(--muted); } .bad { color: var(--bad); } .good { color: var(--good); }
+code { font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <b>misroute</b>
+  <nav>
+    <button data-tab="results" class="on">Results</button>
+    <button data-tab="run">Run</button>
+    <button data-tab="guard">Guard</button>
+  </nav>
+  <span id="status"></span>
+</header>
+<main>
+  <section id="results" class="on"><iframe id="report" src="/report" title="report"></iframe></section>
+
+  <section id="run">
+    <div class="card">
+      <div class="row">
+        <div><label for="phase">Phase</label>
+          <select id="phase"><option>lint</option><option selected>discover</option><option>probe</option><option>fix</option></select></div>
+        <div><label for="top">Pairs</label><input id="top" type="number" value="3" min="1" style="width:80px"></div>
+        <div><label for="trials">Trials per condition</label><input id="trials" type="number" value="96" min="8" step="8" style="width:100px"></div>
+      </div>
+      <label>Models</label><div class="checks" id="models"></div>
+      <label>Modes</label><div class="checks" id="modes"></div>
+      <button class="ghost" id="estimate">Estimate</button>
+      <button class="primary" id="start" disabled>Start</button>
+      <p id="estimateText" class="muted"></p>
+    </div>
+    <div class="card" id="progressCard" hidden>
+      <div class="row" style="justify-content:space-between"><span id="progressText"></span><span id="spentText" class="muted"></span></div>
+      <progress id="progress" value="0" max="1"></progress>
+      <p id="runError" class="bad"></p>
+    </div>
+  </section>
+
+  <section id="guard">
+    <div class="card">
+      <h3 style="margin-top:0">Held writes</h3>
+      <table><thead><tr><th>Tool</th><th>After</th><th>Arguments</th><th></th></tr></thead><tbody id="held"></tbody></table>
+      <p id="heldEmpty" class="muted">Nothing held</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Recent events</h3>
+      <table><thead><tr><th>Kind</th><th>Tool</th><th>Sibling</th><th>When</th></tr></thead><tbody id="events"></tbody></table>
+    </div>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const post = (url, body) => fetch(url, { method: "POST", headers: { "content-type": "application/json", "x-misroute": "1" }, body: JSON.stringify(body) }).then((r) => r.json());
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+let wasRunning = false;
+
+function show(tab) {
+  document.querySelectorAll("nav button, section").forEach((x) => x.classList.toggle("on", x.id === tab || x.dataset.tab === tab));
+  if (tab === "guard") loadGuard();
+}
+document.querySelectorAll("nav button").forEach((b) => b.onclick = () => { location.hash = b.dataset.tab; });
+window.onhashchange = () => show(location.hash.slice(1) || "results");
+
+function body() {
+  const picked = (id) => [...$(id).querySelectorAll("input:checked")].map((i) => i.value);
+  return { phase: $("phase").value, top: +$("top").value, trials: +$("trials").value, models: picked("models"), modes: picked("modes") };
+}
+
+$("estimate").onclick = async () => {
+  const r = await post("/api/estimate", body());
+  $("estimateText").textContent = r.error ? r.error : `${r.calls} model calls, est $${r.cost.toFixed(2)}`;
+  $("start").disabled = !!r.error;
+};
+["phase", "top", "trials"].forEach((id) => $(id).onchange = () => { $("start").disabled = true; $("estimateText").textContent = ""; });
+
+$("start").onclick = async () => {
+  const r = await post("/api/run", body());
+  if (r.error) { $("estimateText").textContent = r.error; return; }
+  $("start").disabled = true;
+  poll();
+};
+
+async function poll() {
+  const s = await fetch("/api/state").then((r) => r.json());
+  if (!$("models").children.length) {
+    $("models").innerHTML = s.models.map((m) => `<label><input type="checkbox" value="${esc(m.name)}" ${m.tested ? "checked" : ""}>${esc(m.name)}</label>`).join("");
+    $("modes").innerHTML = ["json", "code"].map((m) => `<label><input type="checkbox" value="${m}" ${s.modes.includes(m) ? "checked" : ""}>${m}</label>`).join("");
+    document.querySelectorAll("#models input, #modes input").forEach((i) => i.onchange = () => { $("start").disabled = true; });
+  }
+  $("status").textContent = s.running ? `${s.phase} running` : (s.phase ? `${s.phase} ${s.error ? "stopped" : "done"}` : `budget $${s.budget.toFixed(2)}`);
+  if (s.phase) {
+    $("progressCard").hidden = false;
+    $("progress").max = Math.max(s.total, 1);
+    $("progress").value = Math.min(s.done, s.total);
+    $("progressText").textContent = `${s.phase} ${s.done} of about ${s.total} calls`;
+    $("spentText").textContent = `spent $${s.spent.toFixed(2)}`;
+    $("runError").textContent = s.error || "";
+  }
+  if (wasRunning && !s.running) $("report").src = "/report";
+  wasRunning = s.running;
+  if (s.running) setTimeout(poll, 1000);
+}
+
+async function loadGuard() {
+  const g = await fetch("/api/guard").then((r) => r.json());
+  $("held").innerHTML = g.held.map((h) => `<tr><td>${esc(h.tool)}</td><td>${esc(h.other)}</td><td><code>${esc(JSON.stringify(h.args))}</code></td>
+    <td>${h.approved ? '<span class="good">approved</span>' : `<button class="ghost" style="margin:0" data-id="${esc(h.id)}">Approve</button>`}</td></tr>`).join("");
+  $("heldEmpty").hidden = g.held.length > 0;
+  $("held").querySelectorAll("button").forEach((b) => b.onclick = async () => { await post("/api/guard/approve", { id: b.dataset.id }); loadGuard(); });
+  $("events").innerHTML = g.events.slice().reverse().map((e) => `<tr><td class="${e.kind === "hold" || e.kind === "hedge" ? "bad" : ""}">${esc(e.kind)}</td>
+    <td>${esc(e.tool)}</td><td>${esc(e.other)}</td><td class="muted">${new Date(e.at * 1000).toLocaleTimeString()}</td></tr>`).join("");
+}
+
+show(location.hash.slice(1) || "results");
+poll();
+</script>
+</body>
+</html>

@@ -90,7 +90,7 @@ def discover(config: Cfg = Path("misroute.yaml"), models: Names = None, modes: N
     """Find risky tools from model behaviour"""
     proj = Project.from_yaml(config)
     ms, md = split(models), split(modes)
-    calls, cost = asyncio.run(proj.discover_cost(ms or [m.name for m in proj.cfg.models], md or list(proj.cfg.modes)))
+    calls, cost = asyncio.run(proj.discover_cost(ms or proj.cfg.tested(), md or list(proj.cfg.modes)))
     confirm(cost, calls, yes)
     res = run(proj, proj.discover(ms, md), calls)
     t = table("tool", "sibling", "score", "signals", "seen in", "gate")
@@ -124,7 +124,7 @@ def probe(
 ) -> None:
     """Harder requests on the risky pairs"""
     proj = Project.from_yaml(config)
-    ms = split(models) or [m.name for m in proj.cfg.models]
+    ms = split(models) or proj.cfg.tested()
     md = split(modes) or list(proj.cfg.modes)
     calls, cost = asyncio.run(proj.cost("probe", ms, md, len(pair) if pair else top))
     confirm(cost, calls, yes)
@@ -151,15 +151,15 @@ def fix(
     modes: Names = None,
     yes: Yes = False,
 ) -> None:
-    """Test a boundary clause against a sham edit"""
+    """Test a boundary clause against a neutral edit or a drafted description"""
     proj = Project.from_yaml(config)
     trials = 24 if cheap else trials
-    ms = split(models) or [m.name for m in proj.cfg.models]
+    ms = split(models) or proj.cfg.tested()
     md = split(modes) or list(proj.cfg.modes)
     calls, cost = asyncio.run(proj.cost("fix", ms, md, len(pair) if pair else top, trials))
     confirm(cost, calls, yes)
     res = run(proj, proj.fix(top, pairs(pair), ms, md, trials), calls)
-    t = table("tool", "sibling", "model", "mode", "original", "sham", "clause", "p", "verdict")
+    t = table("tool", "sibling", "model", "mode", "original", "baseline", "with clause", "p", "verdict")
     for r in res["pairs"]:
         e = r["errors"]
         p = r.get("p_holm")
@@ -168,7 +168,7 @@ def fix(
             r["model"],
             r["mode"],
             str(e["original"]),
-            str(e["sham"]),
+            f"{e['baseline']} {r['baseline_kind']}",
             str(e["clause"]),
             "" if p is None else f"{p:.3f}",
             r["verdict"],
@@ -203,6 +203,28 @@ def ci(config: Cfg = Path("misroute.yaml"), models: Names = None, modes: Names =
     for b in bad:
         out.print(f"[red]{b}[/red]")
     raise typer.Exit(1 if bad else 0)
+
+
+@app.command()
+def ui(config: Cfg = Path("misroute.yaml"), port: int = 8765) -> None:
+    """Open the local web interface"""
+    from misroute.ui.app import serve
+
+    out.print(f"http://127.0.0.1:{port}")
+    serve(config, port)
+
+
+@app.command()
+def site(
+    results: Annotated[list[str], typer.Argument(help="name=workdir")],
+    output: Path = Path("site"),
+    title: str = "misroute results",
+) -> None:
+    """Build a static results site from one or more workdirs"""
+    from misroute.site.build import build
+
+    pairs = [(r.split("=", 1)[0], Path(r.split("=", 1)[1])) for r in results]
+    out.print(f"wrote {build(pairs, output, title)}")
 
 
 @guard_app.command("serve")

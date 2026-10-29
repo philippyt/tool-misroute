@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }}</title>
+<style>
+:root { --bg: #fbfbfa; --fg: #1d1d1b; --muted: #6b6b66; --line: #e3e2de; --card: #fff; --accent: #2b5fd9; --bad: #c0392b; }
+@media (prefers-color-scheme: dark) { :root { --bg: #161615; --fg: #ecebe8; --muted: #9a9a94; --line: #2c2c2a; --card: #1e1e1d; --accent: #7aa2ff; } }
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 system-ui, sans-serif; margin: 0 auto; max-width: 980px; padding: 32px 16px; }
+h1 { font-size: 26px; margin: 0 0 6px; } h2 { font-size: 18px; margin: 0 0 4px; }
+a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+.muted { color: var(--muted); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 18px; margin: 18px 0; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+th, td { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: left; font-variant-numeric: tabular-nums; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; }
+.write { color: var(--bad); }
+</style>
+</head>
+<body>
+<h1>{{ title }}</h1>
+<p class="muted">Which tools agents confuse on public MCP servers, measured from model behaviour with misroute, built {{ built }}</p>
+<p class="muted">Requests are generated and validated by models, so results are screening, not proof. Each server page has the full report</p>
+
+{% for e in entries %}
+<div class="card">
+  <h2><a href="{{ e.slug }}.html">{{ e.name }}</a></h2>
+  <p class="muted">{% if e.tools %}{{ e.tools }} tools, {{ e.weak }} with weak descriptions{% endif %}{% if e.gate_failed %}, {{ e.gate_failed }} pairs flagged by the surface gate{% endif %}</p>
+  {% if e.cells %}
+  <div class="scroll"><table><tr><th>Model</th><th>Mode</th><th>Trials</th><th>Wrong tool</th><th>Called both</th><th>Called both, write tools</th></tr>
+  {% for c in e.cells %}<tr><td>{{ c.model }}</td><td>{{ c.mode }}</td><td>{{ c.trials }}</td><td>{{ c.wrong_rate|pct }}</td><td>{{ c.hedge_rate|pct }}</td><td>{{ c.write_hedge_rate|pct }}</td></tr>{% endfor %}
+  </table></div>
+  {% endif %}
+  {% if e.spots %}
+  <div class="scroll"><table><tr><th>Most confused pairs</th><th>Signals</th></tr>
+  {% for s in e.spots %}<tr><td class="{{ 'write' if s.write }}">{{ s.a }} and {{ s.b }}</td><td class="muted">{% for k, v in s.signals.items() %}{{ k }} {{ v|pct }}{% if not loop.last %}, {% endif %}{% endfor %}</td></tr>{% endfor %}
+  </table></div>
+  {% endif %}
+  {% if e.fix %}
+  <div class="scroll"><table><tr><th>Boundary clause against baseline</th><th>Flagged pairs</th><th>Mean change in errors</th></tr>
+  {% for a in e.fix %}<tr><td>{{ a.model }} {{ a.mode }}</td><td>{{ a.pairs }}</td><td>{{ "%+.2f"|format(a.mean_diff) }}</td></tr>{% endfor %}
+  </table></div>
+  {% endif %}
+</div>
+{% endfor %}
+</body>
+</html>
