@@ -40,9 +40,9 @@ class Guard:
 
             self.tracer = trace.get_tracer("misroute.guard")
 
-    def _log(self, kind: str, **data: Any) -> None:
+    def _log(self, entry: str, **data: Any) -> None:
         with self.log_path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps({"at": time.time(), "kind": kind, **data}, default=str) + "\n")
+            f.write(json.dumps({"at": time.time(), "type": entry, **data}, default=str) + "\n")
 
     def approved(self) -> set[str]:
         return set(json.loads(self.approved_path.read_text())) if self.approved_path.exists() else set()
