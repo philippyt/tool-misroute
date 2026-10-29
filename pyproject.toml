@@ -1,0 +1,62 @@
+[project]
+name = "misroute"
+version = "0.1.0"
+description = "Find the tools your agent confuses and test fixes against a sham"
+authors = [
+    { name = "philippyt", email = "philipaha@proton.me" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=2.3.0",
+    "duckdb>=2.0.0",
+    "jinja2>=3.1.6",
+    "mcp>=2.3.0",
+    "numpy>=2.4.6",
+    "openai>=3.41.0",
+    "pydantic>=2.14.2",
+    "pydantic-monty>=1.4.0",
+    "pyyaml>=6.0.3",
+    "rich>=15.0.0",
+    "scipy>=1.17.1",
+    "typer>=0.27.3",
+]
+
+[project.optional-dependencies]
+otel = [
+    "opentelemetry-sdk>=1.45.2",
+]
+
+[project.scripts]
+misroute = "misroute.cli:app"
+
+[build-system]
+requires = ["uv_build>=0.10.3,<0.11.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1",
+    "ruff>=0.17.3",
+    "ty>=0.0.95",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003", "SIM905"]
+
+[tool.ruff.lint.isort]
+no-lines-before = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = ["live: needs a running model endpoint"]
+addopts = "-m 'not live'"
+
+[tool.ty.environment]
+python-version = "3.11"
