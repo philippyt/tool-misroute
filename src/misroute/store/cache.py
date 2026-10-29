@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 from misroute.config import ModelConfig
-from misroute.models.base import Adapter, Budget, BudgetExceeded, Turn, estimate_tokens
+from misroute.models.base import Adapter, Budget, BudgetExceeded, Messages, Turn, estimate_tokens
 
 
 class Metered:
@@ -52,7 +52,7 @@ class Metered:
             path.write_text(json.dumps(data), encoding="utf-8")
         return out
 
-    async def chat(self, user: str, tools: list[dict[str, Any]], system: str | None = None, rep: int = 0) -> Turn:
+    async def chat(self, user: Messages, tools: list[dict[str, Any]], system: str | None = None, rep: int = 0) -> Turn:
         async def run():
             t = await self.inner.chat(user, tools, system)
             return t, t.cost if t.cost is not None else self.price(t.tokens_in, t.tokens_out)

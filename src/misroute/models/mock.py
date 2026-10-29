@@ -3,7 +3,7 @@ import json
 import re
 from typing import Any
 from misroute.config import ModelConfig
-from misroute.models.base import Call, Turn
+from misroute.models.base import Call, Messages, Turn, as_messages
 from misroute.server.catalog import words
 
 STOP = set(
@@ -94,12 +94,20 @@ class MockAdapter:
             out[name.strip()] = 1 if ann.startswith(("int", "float")) else True if ann.startswith("bool") else "x"
         return out
 
-    async def chat(self, user: str, tools: list[dict[str, Any]], system: str | None = None) -> Turn:
+    async def chat(self, user: Messages, tools: list[dict[str, Any]], system: str | None = None) -> Turn:
+        msgs = as_messages(user)
+        text = msgs[0]["content"]
+        later = len(msgs) > 1
         if len(tools) == 1 and tools[0]["name"] == "run_code":
-            return self.code_turn(user, tools[0]["description"])
+            return Turn(text="done") if later else self.code_turn(text, tools[0]["description"])
         if not tools:
-            return Turn(text=await self.complete(user))
-        return Turn([Call(n) for n in self.route(user, tools)], tokens_in=len(user) // 4, tokens_out=20)
+            return Turn(text=await self.complete(text))
+        chosen = self.route(text, tools)
+        reads = self.opts.get("read_first", {}).get(chosen[0])
+        if later:
+            return Turn([Call(n, id=f"m{i}") for i, n in enumerate(chosen)]) if reads else Turn(text="done")
+        names = reads or chosen
+        return Turn([Call(n, id=f"m{i}") for i, n in enumerate(names)], tokens_in=len(text) // 4, tokens_out=20)
 
     def code_turn(self, user: str, description: str) -> Turn:
         stubs = {m[0]: (m[1], m[2]) for m in STUB.findall(description)}

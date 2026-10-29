@@ -57,7 +57,9 @@ def create(proj: Project) -> MCPServer:
         annotations=PAID,
         structured_output=True,
     )
-    async def check_description(tool: str, description: str, max_cost: float = 1.0, refresh: bool = False) -> dict[str, Any]:
+    async def check_description(
+        tool: str, description: str, max_cost: float = 1.0, refresh: bool = False
+    ) -> dict[str, Any]:
         _, cost = checker.estimate(
             proj, 2 + len(checker.neighbours(proj, tool)), proj.cfg.tested(), ["json"], await proj.tools()
         )

@@ -5,7 +5,7 @@ import re
 from typing import Any
 import openai
 from misroute.config import ModelConfig
-from misroute.models.base import Call, Turn
+from misroute.models.base import Call, Messages, Turn, as_messages
 
 INLINE_CALL = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.S)
 DEFAULT_PREFIX = '<tool_call>\n{"name": "'
@@ -39,11 +39,26 @@ class OpenAICompatAdapter:
         key = os.environ.get(cfg.api_key_env, "") if cfg.api_key_env else "none"
         self.client = openai.AsyncOpenAI(base_url=cfg.base_url, api_key=key or "none", max_retries=5)
 
-    def _messages(self, user: str, system: str | None) -> list[dict[str, Any]]:
-        msgs: list[dict[str, Any]] = [{"role": "system", "content": system}] if system else []
-        return [*msgs, {"role": "user", "content": user}]
+    def _messages(self, user: Messages, system: str | None) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = [{"role": "system", "content": system}] if system else []
+        for m in as_messages(user):
+            if m["role"] == "user":
+                out.append({"role": "user", "content": m["content"]})
+            elif m["role"] == "assistant":
+                calls = [
+                    {
+                        "id": c["id"],
+                        "type": "function",
+                        "function": {"name": c["name"], "arguments": json.dumps(c["args"])},
+                    }
+                    for c in m["calls"]
+                ]
+                out.append({"role": "assistant", "content": m.get("text") or None, "tool_calls": calls})
+            else:
+                out += [{"role": "tool", "tool_call_id": r["id"], "content": r["content"]} for r in m["results"]]
+        return out
 
-    async def chat(self, user: str, tools: list[dict[str, Any]], system: str | None = None) -> Turn:
+    async def chat(self, user: Messages, tools: list[dict[str, Any]], system: str | None = None) -> Turn:
         kw: dict[str, Any] = {
             "model": self.cfg.model_id,
             "messages": self._messages(user, system),
@@ -57,13 +72,13 @@ class OpenAICompatAdapter:
             kw["extra_body"] = extra
         resp = await self.client.chat.completions.create(**kw)
         msg = resp.choices[0].message
-        calls = [Call(c.function.name, parse_args(c.function.arguments)) for c in msg.tool_calls or []]
+        calls = [Call(c.function.name, parse_args(c.function.arguments), c.id) for c in msg.tool_calls or []]
         text = msg.content or ""
         if not calls:
             for m in INLINE_CALL.finditer(text):
                 d = parse_args(m.group(1))
                 if "name" in d:
-                    calls.append(Call(d["name"], d.get("arguments") or {}))
+                    calls.append(Call(d["name"], d.get("arguments") or {}, f"inline{len(calls)}"))
         usage = resp.usage
         cost = (usage.model_extra or {}).get("cost") if usage else None
         tin, tout = (usage.prompt_tokens, usage.completion_tokens) if usage else (0, 0)

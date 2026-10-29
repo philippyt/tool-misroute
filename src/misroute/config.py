@@ -66,6 +66,7 @@ class Config(BaseModel):
     slots: int = 4
     rotations: int = 3
     repeats: int = 3
+    max_turns: int = 1
     real_requests: str | None = None
     workdir: str = ".misroute"
     limits: Limits = Field(default_factory=Limits)

@@ -94,6 +94,7 @@ Every command takes `--json`, and paid commands take `--yes`, `--max-cost` and `
 | Local UI | API and pages checked in a browser, not yet used on a real project |
 | Guard proxy | tested against a local test server only |
 | check, ci with changed tools, serve-mcp | tested with a mock model only |
+| Multi turn mode | tested with a mock model only |
 
 ## Features
 
@@ -200,8 +201,11 @@ validator: opus-eu                      # checks them
 writer: local                           # writes clauses and neutral edits
 
 modes: [json, code]
+max_turns: 3                            # feed fake results back so a read before a write is followed to the write
 budget_usd: 5.00
 ```
+
+With `max_turns: 1`, the default, a write request answered only with reads is labelled read first and kept apart from wrong picks. With more turns misroute returns recorded fake results and judges the first write the model makes.
 
 Results are saved in `.misroute/`: a DuckDB database you can query with SQL, JSONL transcripts of every run, and a response cache.
 

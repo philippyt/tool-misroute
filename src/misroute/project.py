@@ -125,9 +125,9 @@ class Project:
                 adapter = self.adapter(t.model)
                 ts = tools_for(t)
                 if t.mode == "code":
-                    await code_mode.run(adapter, box, t, ts)
+                    await code_mode.run(adapter, box, t, ts, self.cfg.max_turns)
                 else:
-                    await json_mode.run(adapter, t, ts)
+                    await json_mode.run(adapter, t, ts, self.cfg.max_turns)
                     if adapter.cfg.scoring:
                         t.probs = await adapter.score_names(t.text, [x.spec() for x in ts])
                 self.progress(1)

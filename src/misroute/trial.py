@@ -33,17 +33,23 @@ class Trial:
     pair: str = ""
     calls: list[str] = field(default_factory=list)
     rerun: list[str] | None = None
+    decisive: list[str] | None = None
     failure: str | None = None
     probs: dict[str, float] | None = None
     detail: str = ""
 
     @property
+    def picks(self) -> list[str]:
+        """Calls that decide the choice: all calls in one turn, or the turn with the first write in multi turn runs."""
+        return self.decisive if self.decisive is not None else self.calls
+
+    @property
     def chosen(self) -> str | None:
-        return self.calls[0] if self.calls else None
+        return self.picks[0] if self.picks else None
 
     @property
     def hedge(self) -> bool:
-        return self.target in self.calls and len(set(self.calls)) > 1
+        return self.target in self.picks and len(set(self.picks)) > 1
 
     @property
     def wrong(self) -> bool:

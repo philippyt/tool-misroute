@@ -2,7 +2,7 @@ import os
 from typing import Any
 import anthropic
 from misroute.config import ModelConfig
-from misroute.models.base import Call, Turn
+from misroute.models.base import Call, Messages, Turn, as_messages
 
 
 def client(cfg: ModelConfig) -> Any:
@@ -17,6 +17,21 @@ def client(cfg: ModelConfig) -> Any:
     return anthropic.AsyncAnthropic(api_key=key, **kw)
 
 
+def to_anthropic(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out = []
+    for m in messages:
+        if m["role"] == "user":
+            out.append({"role": "user", "content": m["content"]})
+        elif m["role"] == "assistant":
+            blocks = [{"type": "text", "text": m["text"]}] if m.get("text") else []
+            blocks += [{"type": "tool_use", "id": c["id"], "name": c["name"], "input": c["args"]} for c in m["calls"]]
+            out.append({"role": "assistant", "content": blocks})
+        else:
+            results = [{"type": "tool_result", "tool_use_id": r["id"], "content": r["content"]} for r in m["results"]]
+            out.append({"role": "user", "content": results})
+    return out
+
+
 class AnthropicAdapter:
     family = "anthropic"
 
@@ -25,11 +40,11 @@ class AnthropicAdapter:
         self.name = cfg.name
         self.client = client(cfg)
 
-    async def chat(self, user: str, tools: list[dict[str, Any]], system: str | None = None) -> Turn:
+    async def chat(self, user: Messages, tools: list[dict[str, Any]], system: str | None = None) -> Turn:
         kw: dict[str, Any] = {
             "model": self.cfg.model_id,
             "max_tokens": self.cfg.max_tokens,
-            "messages": [{"role": "user", "content": user}],
+            "messages": to_anthropic(as_messages(user)),
         }
         if tools:
             kw["tools"] = tools
@@ -40,7 +55,7 @@ class AnthropicAdapter:
         calls, text = [], []
         for b in resp.content:
             if b.type == "tool_use":
-                calls.append(Call(b.name, dict(b.input or {})))
+                calls.append(Call(b.name, dict(b.input or {}), b.id))
             elif b.type == "text":
                 text.append(b.text)
         return Turn(calls, "".join(text), resp.usage.input_tokens, resp.usage.output_tokens)

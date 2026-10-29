@@ -8,6 +8,15 @@ from typing import Any, Protocol
 class Call:
     name: str
     args: dict[str, Any] = field(default_factory=dict)
+    id: str = ""
+
+
+Messages = str | list[dict[str, Any]]
+"""A user prompt, or a conversation in neutral form: user content, assistant text with calls, tool results."""
+
+
+def as_messages(user: Messages) -> list[dict[str, Any]]:
+    return [{"role": "user", "content": user}] if isinstance(user, str) else user
 
 
 @dataclass
@@ -32,7 +41,7 @@ class Adapter(Protocol):
     name: str
     family: str
 
-    async def chat(self, user: str, tools: list[dict[str, Any]], system: str | None = None) -> Turn: ...
+    async def chat(self, user: Messages, tools: list[dict[str, Any]], system: str | None = None) -> Turn: ...
 
     async def complete(self, prompt: str, kind: str | None = None) -> str: ...
 
