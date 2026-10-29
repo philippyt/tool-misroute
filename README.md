@@ -26,6 +26,12 @@ Or with pip:
 $ pip install misroute
 ```
 
+Behind a corporate package index, point pip at PyPI directly:
+
+```console
+$ pip install misroute --index-url https://pypi.org/simple/
+```
+
 ## Quick start
 
 Example output from the bundled test server, run with Claude Opus 5.5 through OpenRouter pinned to the Anthropic provider:
@@ -82,7 +88,8 @@ Every command takes `--json`, and paid commands take `--yes`, `--max-cost` and `
 | Feature | Status |
 |---|---|
 | lint, discover, probe and fix in JSON and code mode | tested on Opus 5.5 through OpenRouter and on a local model through Ollama |
-| OpenAI compatible adapter | tested on OpenRouter and Ollama |
+| OpenAI compatible adapter | tested on OpenRouter, Ollama and an OpenAI style company relay |
+| Azure OpenAI adapter | client construction tested, not yet run against a real deployment |
 | Native Anthropic, Foundry and Bedrock adapters | not yet tested against real endpoints |
 | Near misses | experimental, not yet validated, kept out of the ranking |
 | Local UI | API and pages checked in a browser, not yet used on a real project |
@@ -201,6 +208,23 @@ budget_usd: 5.00
 ```
 
 With `max_turns: 1`, the default, a write request answered only with reads is labelled read first and kept apart from wrong picks. With more turns misroute returns recorded fake results and judges the first write the model makes.
+
+Azure OpenAI, where the model is your deployment name:
+
+```yaml
+models:
+  - name: gpt-eu
+    provider: azure-openai
+    base_url: https://your-resource.openai.azure.com
+    model: your-deployment-name
+    api_key_env: AZURE_OPENAI_API_KEY   # or options: {entra: true} with pip install misroute[azure]
+    price_in: 2
+    price_out: 8
+    options:
+      api_version: "2024-10-21"
+```
+
+To test from an OpenAPI file without an MCP server in front, use `server: {openapi: api.json}`. Operations without a summary get their method and path as the description, as most OpenAPI to MCP converters do.
 
 Results are saved in `.misroute/`: a DuckDB database you can query with SQL, JSONL transcripts of every run, and a response cache.
 

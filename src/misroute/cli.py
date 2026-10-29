@@ -76,14 +76,14 @@ def load(opts: Opts, config: Path) -> Project:
 
 
 def gate(opts: Opts, calls: int, cost: float) -> None:
-    estimate = {"estimate": {"calls": calls, "cost_usd": round(cost, 4)}}
+    estimate = {"estimate": {"calls": calls, "cost_usd": round(cost, 4), "upper_bound": True}}
     if opts.estimate_only:
-        emit(opts, estimate, lambda: out.print(f"{calls} model calls, est ${cost:.2f}"), OK)
+        emit(opts, estimate, lambda: out.print(f"up to {calls} model calls, up to ${cost:.2f}"), OK)
         raise typer.Exit(OK)
     if opts.max_cost is not None and cost > opts.max_cost:
         fail(opts, f"estimate ${cost:.2f} is above max cost ${opts.max_cost:.2f}")
     if not opts.json:
-        out.print(f"{calls} model calls, est ${cost:.2f}")
+        out.print(f"up to {calls} model calls, up to ${cost:.2f}")
     if cost > 0 and not opts.yes and opts.max_cost is None:
         if not sys.stdin.isatty():
             fail(opts, "paid run without a terminal, pass --yes or --max-cost")
@@ -134,6 +134,11 @@ def lint(config: Cfg = Path("misroute.yaml"), draft: bool = False, json_: Json =
 
     def text() -> None:
         out.print(f"{res['tools']} tools, {len(res['findings'])} with weak descriptions")
+        if not res["findings"]:
+            out.print(
+                "lint only checks each description on its own, run discover to see which tools they fail to separate",
+                style="dim",
+            )
         for f in res["findings"]:
             flag = " [red]write[/red]" if f["write"] else ""
             out.print(f"  {f['tool']}  {f['issue']}{flag}")
@@ -171,28 +176,35 @@ def discover(
     res = run(opts, proj, proj.discover(ms, md), calls)
 
     def text() -> None:
-        t = table("tool", "sibling", "score", "signals", "seen in", "gate")
+        t = table("tool", "sibling", "score", "signals", "direction", "seen in", "note")
         for s in res["spots"][:15]:
             sig = "  ".join(f"{k} {v:.2f}" for k, v in s["signals"].items())
-            gate_ = "failed" if s["gate_failed"] else ""
-            t.add_row(
-                s["a"],
-                s["b"],
-                f"{s['score']:.2f}",
-                sig,
-                ", ".join(s["where"]),
-                gate_,
-                style="red" if s["write"] else "",
-            )
+            d = s["directions"]
+            dirs = f"{d.get(s['a'] + '>' + s['b'], 0)} to {d.get(s['b'] + '>' + s['a'], 0)}" if d else ""
+            note = ", ".join(x for x, on in (("gate failed", s["gate_failed"]), ("few requests", s["thin"])) if on)
+            row = (s["a"], s["b"], f"{s['score']:.2f}", sig, dirs, ", ".join(s["where"]), note)
+            t.add_row(*row, style="red" if s["write"] else "")
         out.print(t)
+        for c in res["cells"]:
+            for tool, rate in c.get("unanswered", {}).items():
+                out.print(f"{c['model']} {c['mode']}: {tool} answered without a tool call in {rate:.0%} of trials")
         if res["gate_failed"]:
             out.print(f"{len(res['gate_failed'])} tool pairs have request sets that surface words can tell apart")
         if res["near_misses"]:
             out.print("near misses, unvalidated, not in the ranking", style="dim")
             for n in res["near_misses"][:10]:
                 out.print(f"  {n['tool']}  {n['rival']}  {n['score']:.2f}  {n['where']} {n['source']}", style="dim")
-        for tool, n in res["short"].items():
-            out.print(f"{tool}: validator kept {n} of {proj.cfg.requests_per_tool} requests", style="yellow")
+        for tool, s in res["short"].items():
+            picked = ", ".join(f"{k} {v}" for k, v in sorted(s["validator_picked"].items(), key=lambda kv: -kv[1]))
+            out.print(f"{tool}: validator kept {s['kept']} of {proj.cfg.requests_per_tool} requests", style="yellow")
+            if picked:
+                out.print(f"  it picked instead: {picked}", style="yellow")
+        if res["short"]:
+            out.print(
+                "When the validator picks a sibling, the two descriptions may not separate the tools, which is itself "
+                "a finding. When it picks nothing, try a different generator or add real requests with real_requests",
+                style="dim",
+            )
         out.print(f"spent ${res['spent']:.2f}, results in {proj.store.root}")
 
     emit(opts, res, text)

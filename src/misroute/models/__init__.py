@@ -7,7 +7,7 @@ def build(cfg: ModelConfig) -> Adapter:
         from misroute.models.mock import MockAdapter
 
         return MockAdapter(cfg)
-    if cfg.provider == "openai-compatible":
+    if cfg.provider in ("openai-compatible", "azure-openai"):
         from misroute.models.openai_compat import OpenAICompatAdapter
 
         return OpenAICompatAdapter(cfg)

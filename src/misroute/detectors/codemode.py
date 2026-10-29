@@ -58,3 +58,11 @@ def rerun_choice(trials: list) -> dict[str, float] | None:
         "right": sum(f == t.target for f, t in zip(first, ts, strict=True)) / len(ts),
         "wrong": sum(f not in (None, t.target) for f, t in zip(first, ts, strict=True)) / len(ts),
     }
+
+
+def unanswered(trials: list, threshold: float = 0.2) -> dict[str, float]:
+    """Tools whose requests the model often answered without calling any tool."""
+    by: dict[str, list] = {}
+    for t in trials:
+        by.setdefault(t.target, []).append(t.failure in ("no_tool_call", "no_code"))
+    return {k: sum(v) / len(v) for k, v in sorted(by.items()) if v and sum(v) / len(v) >= threshold}

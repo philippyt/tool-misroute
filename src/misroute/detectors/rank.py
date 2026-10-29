@@ -17,6 +17,8 @@ class Spot:
     write: bool = False
     signals: dict[str, float] = field(default_factory=dict)
     gate_failed: bool = False
+    thin: bool = False
+    directions: dict[str, int] = field(default_factory=dict)
     where: set[str] = field(default_factory=set)
 
     @property
@@ -55,6 +57,8 @@ def rank(
         for (target, chosen), c in wrong_pairs(ts).items():
             s = spot(target, chosen)
             s.signals["wrong"] = max(s.signals.get("wrong", 0), c / n[target])
+            key = f"{target}>{chosen}"
+            s.directions[key] = s.directions.get(key, 0) + c
             s.where.add(where)
         for (a, b), c in co_calls(ts).items():
             s = spot(a, b)

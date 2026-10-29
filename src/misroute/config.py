@@ -3,7 +3,7 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, Field, model_validator
 
-Provider = Literal["anthropic", "anthropic-foundry", "bedrock", "openai-compatible", "mock"]
+Provider = Literal["anthropic", "anthropic-foundry", "bedrock", "openai-compatible", "azure-openai", "mock"]
 Mode = Literal["json", "code"]
 
 

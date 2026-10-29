@@ -37,7 +37,23 @@ class OpenAICompatAdapter:
         self.name = cfg.name
         self.family = cfg.options.get("family", "openai")
         key = os.environ.get(cfg.api_key_env, "") if cfg.api_key_env else "none"
-        self.client = openai.AsyncOpenAI(base_url=cfg.base_url, api_key=key or "none", max_retries=5)
+        if cfg.provider == "azure-openai":
+            if not cfg.base_url:
+                raise ValueError("azure-openai needs base_url, the resource endpoint")
+            auth: dict[str, Any] = {"api_key": key} if key and key != "none" else {}
+            if cfg.options.get("entra"):
+                from azure.identity import DefaultAzureCredential, get_bearer_token_provider  # ty: ignore[unresolved-import]
+
+                scope = "https://cognitiveservices.azure.com/.default"
+                auth = {"azure_ad_token_provider": get_bearer_token_provider(DefaultAzureCredential(), scope)}
+            self.client = openai.AsyncAzureOpenAI(
+                azure_endpoint=cfg.base_url,
+                api_version=cfg.options.get("api_version", "2024-10-21"),
+                max_retries=5,
+                **auth,
+            )
+        else:
+            self.client = openai.AsyncOpenAI(base_url=cfg.base_url, api_key=key or "none", max_retries=5)
 
     def _messages(self, user: Messages, system: str | None) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = [{"role": "system", "content": system}] if system else []

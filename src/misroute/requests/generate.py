@@ -7,13 +7,16 @@ from misroute.trial import Request
 
 GOAL = """Write requests that a user of an AI agent would send, where the right tool to answer is the one below.
 Write each request from the user's goal. Do not reuse the tool's name or the distinctive words of its description.
-Vary the wording and length. Every request must contain the placeholder {{slot}} exactly once, standing for one
-concrete value such as a record id, customer, repository or place, so the request is complete when it is filled in.
+Vary the wording and length. Only ask for what this tool can actually return, judging by its description, parameters
+and output. Do not ask for aggregates, statistics or data the tool does not hold.
+Every request must contain the placeholder {{slot}} exactly once, standing for one concrete value such as a record id,
+customer, repository or place, so the request is complete when it is filled in.
 Also give {slots} realistic values for that placeholder.
 
 Tool: {name}
 Description: {description}
 Parameters: {params}
+Returns: {returns}
 Count: {count}
 
 Reply with JSON only: {{"slot_kind": "...", "slots": ["..."], "requests": ["..."]}}"""
@@ -44,6 +47,7 @@ async def generate(
         name=tool.name,
         description=tool.description or "none",
         params=list(tool.params),
+        returns=json.dumps(tool.output_schema)[:1500] if tool.output_schema else "not documented",
         count=count,
         slots=slots,
         sibling_name=sibling.name if sibling else "",

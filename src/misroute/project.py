@@ -1,4 +1,5 @@
 import asyncio
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import asdict
 from pathlib import Path
@@ -46,6 +47,7 @@ class Project:
         self._adapters: dict[str, Metered] = {}
         self._tools: list[Tool] | None = None
         self.progress: Progress = lambda n: None
+        self.rejected: dict[str, Counter] = {}
 
     @classmethod
     def from_yaml(cls, path: str | Path, **kw: Any) -> "Project":
@@ -102,7 +104,8 @@ class Project:
                 reqs = await generate.generate(gen, tool, n, self.cfg.slots, sibling, attempt)
             except (ValueError, KeyError, TypeError):
                 continue
-            ok, _ = await validate.keep_valid(val, reqs, tools)
+            ok, picks = await validate.keep_valid(val, reqs, tools)
+            self.rejected.setdefault(tool.name, Counter()).update(p or "(no tool)" for p in picks)
             kept += [r for r in ok if r.id not in {k.id for k in kept}]
             if len(kept) >= n:
                 break
@@ -209,6 +212,8 @@ class Project:
         removed = await self.removal(cand, reqs, models_, tools)
         moved = removal.neighbours(removed)
         spots = rank.rank(trials, moved, writes, failed)
+        for s in spots:
+            s.thin = min(len(reqs.get(s.a, [])), len(reqs.get(s.b, []))) < 2
         result = self.summarize(trials, tools, models_, modes)
         result.update(
             spots=[s.to_json() for s in spots],
@@ -216,7 +221,7 @@ class Project:
             near_misses=[{"where": w, **asdict(n)} for w, n in near],
             gate_failed=[list(g) for g in gated],
             removal={k: dict(v) for k, v in moved.items()},
-            short={k: len(v) for k, v in reqs.items() if len(v) < self.cfg.requests_per_tool},
+            short=self.shortfall(reqs),
             catalog=catalog_hash(tools),
             spent=self.budget.spent,
         )
@@ -225,6 +230,18 @@ class Project:
         result["run"] = run
         self.store.write("discover", result)
         return result
+
+    def shortfall(self, reqs: dict[str, list[Request]]) -> dict[str, dict]:
+        """Tools whose generated requests the validator mostly rejected, with the tools it picked instead."""
+        saved = self.store.read("rejections") or {}
+        saved.update({k: dict(v) for k, v in self.rejected.items()})
+        saved.pop("schema_version", None)
+        self.store.write("rejections", saved)
+        return {
+            k: {"kept": len(v), "validator_picked": saved.get(k, {})}
+            for k, v in reqs.items()
+            if len(v) < self.cfg.requests_per_tool
+        }
 
     async def removal(self, cand: list[str], reqs: dict[str, list[Request]], models_: list[str], tools: list[Tool]):
         trials = []
@@ -253,6 +270,7 @@ class Project:
                         "write_hedge_rate": hedge.hedge_rate(ts, writes),
                         "failures": codemode.rates(ts, mode),
                         "stub_rerun": codemode.rerun_choice(ts),
+                        "unanswered": codemode.unanswered(ts),
                         "matrix": {k: dict(v) for k, v in confusion.matrix(ts).items()},
                     }
                 )
