@@ -27,3 +27,10 @@ def test_stub():
         "find", "Find things.", {"properties": {"q": {"type": "string"}, "n": {"type": "integer"}}, "required": ["q"]}
     )
     assert stub(t).startswith("async def find(q: str, n: int | None = None) -> dict:")
+
+
+async def test_sham_for_missing_description(project):
+    from misroute.fix.clause import write
+
+    edits = await write(project.role("writer"), Tool("get_attachment", ""), Tool("get_document", "GET /docs/{id}"))
+    assert all(edits["sham"].values()) and all(edits["clause"].values())
