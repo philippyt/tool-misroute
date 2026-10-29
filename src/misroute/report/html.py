@@ -20,6 +20,12 @@ def heatmap(matrix: dict[str, dict[str, int]]) -> dict[str, Any]:
 
 
 def render(store: Store, out: str | Path) -> Path:
+    path = Path(out)
+    path.write_text(html(store), encoding="utf-8")
+    return path
+
+
+def html(store: Store) -> str:
     env = Environment(loader=PackageLoader("misroute.report"), autoescape=select_autoescape())
     env.filters["heat"] = heat
     env.filters["pct"] = lambda v: f"{100 * (v or 0):.1f}%"
@@ -28,9 +34,6 @@ def render(store: Store, out: str | Path) -> Path:
     if discover:
         for c in discover["cells"]:
             c["heat"] = heatmap(c["matrix"])
-    html = env.get_template("report.html.j2").render(
+    return env.get_template("report.html.j2").render(
         lint=store.read("lint"), discover=discover, probe=store.read("probe"), fix=store.read("fix")
     )
-    path = Path(out)
-    path.write_text(html, encoding="utf-8")
-    return path
