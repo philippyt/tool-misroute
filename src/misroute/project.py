@@ -226,6 +226,7 @@ class Project:
                         "hedge_rate": hedge.hedge_rate(ts),
                         "write_hedge_rate": hedge.hedge_rate(ts, writes),
                         "failures": codemode.rates(ts, mode),
+                        "stub_rerun": codemode.rerun_choice(ts),
                         "matrix": {k: dict(v) for k, v in confusion.matrix(ts).items()},
                     }
                 )

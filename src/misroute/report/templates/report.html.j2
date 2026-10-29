@@ -50,6 +50,7 @@ code { font-size: 12px; }
 {% for c in discover.cells %}
 <h3>{{ c.model }} {{ c.mode }}</h3>
 <p class="muted">{{ c.trials }} trials, wrong {{ c.wrong_rate|pct }}, hedge {{ c.hedge_rate|pct }}, write hedge {{ c.write_hedge_rate|pct }}{% for k, v in c.failures.items() %}, {{ k }} {{ v|pct }}{% endfor %}</p>
+{% if c.stub_rerun %}<p class="muted">Rerun of {{ c.stub_rerun.trials }} programs with pasted stubs removed, for the intended choice only: right {{ c.stub_rerun.right|pct }}, wrong {{ c.stub_rerun.wrong|pct }}</p>{% endif %}
 <div class="scroll"><table class="heat"><tr><th>request for</th>{% for col in c.heat.cols %}<th class="rot">{{ col }}</th>{% endfor %}</tr>
 {% for row in c.heat.cells %}<tr><th>{{ c.heat.rows[loop.index0] }}</th>{% for col, n, share, diag in row %}<td class="{{ 'diag' if diag }}" style="background: {{ (0 if diag else share)|heat }}">{{ n or "" }}</td>{% endfor %}</tr>{% endfor %}
 </table></div>

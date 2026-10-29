@@ -32,6 +32,7 @@ class Trial:
     condition: str = "original"
     pair: str = ""
     calls: list[str] = field(default_factory=list)
+    rerun: list[str] | None = None
     failure: str | None = None
     probs: dict[str, float] | None = None
     detail: str = ""

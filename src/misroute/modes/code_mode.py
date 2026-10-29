@@ -15,7 +15,7 @@ def is_stub(node: ast.AST) -> bool:
 
 
 def strip_stubs(code: str, names: set[str]) -> str | None:
-    """Drop pasted stubs of real tools so the program calls the real ones. None when nothing was a pasted stub."""
+    """Drop pasted stubs of real tools, for recording the intended choice only. None when nothing was a pasted stub."""
     try:
         tree = ast.parse(code)
     except SyntaxError:
@@ -40,13 +40,13 @@ async def run(adapter, sandbox: Sandbox, trial: Trial, tools: list[Tool], single
     code = str(code_calls[0].args.get("code", ""))
     fakes = FakeTools(tools)
     res = await sandbox.run(code, fakes.functions())
-    failure = classify(code, res, fakes.log, tools)
-    stripped = strip_stubs(code, {t.name for t in tools}) if failure == "faked" else None
-    if stripped:
-        fakes = FakeTools(tools)
-        res = await sandbox.run(stripped, fakes.functions())
-        failure = "stub_copied"
     trial.calls = fakes.names()
-    trial.failure = failure
+    trial.failure = classify(code, res, fakes.log, tools)
+    stripped = strip_stubs(code, {t.name for t in tools}) if trial.failure == "faked" else None
+    if stripped:
+        again = FakeTools(tools)
+        await sandbox.run(stripped, again.functions())
+        trial.failure = "stub_copied"
+        trial.rerun = again.names()
     trial.detail = code[:600] + ("\n# " + res.error[:200] if res.error else "")
     return trial

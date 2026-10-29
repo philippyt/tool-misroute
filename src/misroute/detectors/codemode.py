@@ -31,6 +31,9 @@ def classify(code: str, res: RunResult, log: list[Record], tools: list[Tool]) ->
         return "runtime_error"
     if not log:
         return "no_call"
+    for status in ("invented", "reused"):
+        if any(r.cursor == status for r in log):
+            return f"{status}_cursor"
     if unused_pagination(log, by_name):
         return "unused_pagination"
     return None
@@ -40,3 +43,16 @@ def rates(trials: list, mode: str = "code") -> dict[str, float]:
     ts = [t for t in trials if t.mode == mode]
     c = Counter(t.failure for t in ts if t.failure)
     return {k: v / len(ts) for k, v in sorted(c.items())} if ts else {}
+
+
+def rerun_choice(trials: list) -> dict[str, float] | None:
+    """Tool choice recovered by rerunning programs without pasted stubs. Reported apart from the real outcome."""
+    ts = [t for t in trials if t.rerun is not None]
+    if not ts:
+        return None
+    first = [t.rerun[0] if t.rerun else None for t in ts]
+    return {
+        "trials": len(ts),
+        "right": sum(f == t.target for f, t in zip(first, ts, strict=True)) / len(ts),
+        "wrong": sum(f not in (None, t.target) for f, t in zip(first, ts, strict=True)) / len(ts),
+    }
