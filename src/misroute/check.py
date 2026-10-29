@@ -19,7 +19,7 @@ def neighbours(proj, name: str, limit: int = 3) -> list[str]:
     found = proj.store.read("discover") or {}
     out = [s["b"] if s["a"] == name else s["a"] for s in found.get("spots", []) if name in (s["a"], s["b"])]
     out += list((found.get("removal") or {}).get(name, {}))
-    return [n for n in dict.fromkeys(out) if n not in (name, "(none)")][:limit]
+    return [n for n in dict.fromkeys(out) if n != name and not n.startswith("(")][:limit]
 
 
 def rates(trials: list[Trial], focus: set[str]) -> dict[str, Any]:

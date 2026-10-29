@@ -66,3 +66,17 @@ async def test_provider_refusal_stops_cleanly(tmp_path):
     m = Metered(Broke(), ModelConfig(name="x", provider="mock"), Budget(1), tmp_path)
     with pytest.raises(BudgetExceeded):
         await m.chat("hi", [])
+
+
+def test_unknown_and_removed_tools_are_not_pairs():
+    from misroute.detectors.rank import rank
+    from misroute.detectors.removal import REMOVED, neighbours
+
+    made_up = t("a", ["a_typo"])
+    made_up.failure = "unknown_tool"
+    assert not made_up.wrong
+    gone = t("a", ["a"])
+    gone.condition = "removed:a"
+    moved = neighbours([gone])
+    assert moved == {"a": {REMOVED: 1}}
+    assert rank([made_up], moved, set()) == []

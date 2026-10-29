@@ -63,7 +63,7 @@ def rank(
     for tool, dest in removal.items():
         total = sum(dest.values())
         for other, c in dest.items():
-            if other != "(none)" and c / total >= 0.5:
+            if not other.startswith("(") and c / total >= 0.5:
                 s = spot(tool, other)
                 s.signals["removal"] = c / total
     for s in spots.values():
