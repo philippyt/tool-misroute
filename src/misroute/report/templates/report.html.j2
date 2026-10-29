@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>misroute report</title>
+<style>
+:root { --bg: #fbfbfa; --fg: #1d1d1b; --muted: #6b6b66; --line: #e3e2de; --bad: #c0392b; --good: #2e7d4f; --card: #fff; }
+@media (prefers-color-scheme: dark) { :root { --bg: #161615; --fg: #ecebe8; --muted: #9a9a94; --line: #2c2c2a; --card: #1e1e1d; } }
+body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, sans-serif; margin: 0 auto; max-width: 1100px; padding: 24px 16px; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 17px; margin: 32px 0 8px; } h3 { font-size: 14px; margin: 20px 0 6px; }
+.muted { color: var(--muted); }
+table { border-collapse: collapse; width: 100%; margin: 6px 0 12px; background: var(--card); }
+th, td { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: left; vertical-align: top; }
+th { font-weight: 600; color: var(--muted); font-size: 12px; }
+.scroll { overflow-x: auto; }
+.heat td { text-align: center; min-width: 34px; font-variant-numeric: tabular-nums; }
+.heat td.diag { outline: 1px solid var(--line); }
+.heat th.rot { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; }
+.write { color: var(--bad); font-weight: 600; }
+.good { color: var(--good); } .bad { color: var(--bad); }
+code { font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>misroute</h1>
+<p class="muted">Screening results point to where to look. Fix verdicts compare the clause against a sham edit of the same length.</p>
+
+{% if lint %}
+<h2>Descriptions</h2>
+<p class="muted">{{ lint.tools }} tools, {{ lint.findings|length }} with weak descriptions</p>
+{% if lint.findings %}
+<table><tr><th>Tool</th><th>Issue</th><th>Draft for review</th></tr>
+{% for f in lint.findings %}<tr><td>{% if f.write %}<span class="write">{{ f.tool }}</span>{% else %}{{ f.tool }}{% endif %}</td><td>{{ f.issue }}</td><td>{{ lint.drafts.get(f.tool, "") }}</td></tr>{% endfor %}
+</table>
+{% endif %}
+{% endif %}
+
+{% if discover %}
+<h2>Risky spots</h2>
+<table><tr><th>Pair</th><th>Score</th><th>Signals</th><th>Seen in</th></tr>
+{% for s in discover.spots[:25] %}<tr>
+<td>{% if s.write %}<span class="write">{{ s.a }} and {{ s.b }}</span>{% else %}{{ s.a }} and {{ s.b }}{% endif %}</td>
+<td>{{ "%.2f"|format(s.score) }}</td>
+<td>{% for k, v in s.signals.items() %}{{ k }} {{ v|pct }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+<td class="muted">{{ s.where|join(", ") }}</td></tr>{% endfor %}
+</table>
+
+<h2>Confusion</h2>
+{% for c in discover.cells %}
+<h3>{{ c.model }} {{ c.mode }}</h3>
+<p class="muted">{{ c.trials }} trials, wrong {{ c.wrong_rate|pct }}, hedge {{ c.hedge_rate|pct }}, write hedge {{ c.write_hedge_rate|pct }}{% for k, v in c.failures.items() %}, {{ k }} {{ v|pct }}{% endfor %}</p>
+<div class="scroll"><table class="heat"><tr><th>request for</th>{% for col in c.heat.cols %}<th class="rot">{{ col }}</th>{% endfor %}</tr>
+{% for row in c.heat.cells %}<tr><th>{{ c.heat.rows[loop.index0] }}</th>{% for col, n, share, diag in row %}<td class="{{ 'diag' if diag }}" style="background: {{ (0 if diag else share)|heat }}">{{ n or "" }}</td>{% endfor %}</tr>{% endfor %}
+</table></div>
+{% endfor %}
+{% endif %}
+
+{% if probe %}
+<h2>Probe</h2>
+<table><tr><th>Pair</th><th>Model</th><th>Mode</th><th>Direction</th><th>Wrong</th><th>Hedge</th><th>Leak</th><th>Borrowed words wrong</th><th>Gate p</th></tr>
+{% for r in probe.rows %}{% for d, v in r.directions.items() %}<tr>
+<td>{% if r.write %}<span class="write">{{ r.pair }}</span>{% else %}{{ r.pair }}{% endif %}</td><td>{{ r.model }}</td><td>{{ r.mode }}</td><td>{{ d }}</td>
+<td>{{ v.wrong|pct }}</td><td class="{{ 'bad' if r.write and v.hedge > 0 }}">{{ v.hedge|pct }}</td><td>{{ v.leak|pct }}</td><td>{{ r.borrowed_wrong|pct }}</td><td>{{ r.gate_p|pval }}</td></tr>{% endfor %}{% endfor %}
+</table>
+{% endif %}
+
+{% if fix %}
+<h2>Fix against sham</h2>
+<table><tr><th>Pair</th><th>Model</th><th>Mode</th><th>Errors original, sham, clause</th><th>Fixed, broke</th><th>Holm p</th><th>Verdict</th></tr>
+{% for r in fix.pairs %}<tr>
+<td>{% if r.write %}<span class="write">{{ r.pair }}</span>{% else %}{{ r.pair }}{% endif %}</td><td>{{ r.model }}</td><td>{{ r.mode }}</td>
+<td>{{ r.errors.original }}, {{ r.errors.sham }}, {{ r.errors.clause }} of {{ r.n }}</td><td>{{ r.fixed }}, {{ r.broke }}</td>
+<td>{{ r.get("p_holm")|pval }}</td><td class="{{ 'good' if 'beats' in r.verdict else ('bad' if 'worse' in r.verdict else '') }}">{{ r.verdict }}</td></tr>{% endfor %}
+</table>
+<h3>Across pairs</h3>
+<table><tr><th>Model</th><th>Mode</th><th>Flagged pairs</th><th>Mean change in errors</th><th>Sign flip p</th><th></th></tr>
+{% for a in fix.across %}<tr><td>{{ a.model }}</td><td>{{ a.mode }}</td><td>{{ a.pairs }}</td><td>{{ "%+.2f"|format(a.mean_diff) }}</td><td>{{ a.p|pval }}</td><td class="muted">{{ "under 5 pairs, cannot reach p below 0.05" if a.underpowered }}</td></tr>{% endfor %}
+</table>
+<h3>Edits and where errors went</h3>
+{% for r in fix.pairs %}
+<p><b>{{ r.pair }}</b> <span class="muted">{{ r.model }} {{ r.mode }}</span></p>
+<table><tr><th>Condition</th><th>Description</th></tr>
+{% for cond in ("sham", "clause") %}{% for tool, text in r.edits[cond].items() %}<tr><td>{{ cond }}</td><td><code>{{ tool }}</code> {{ text }}</td></tr>{% endfor %}{% endfor %}
+</table>
+<table><tr><th>Condition</th><th>Direction</th><th>Wrong</th><th>Hedge</th><th>Leak to other tools</th></tr>
+{% for cond, dirs in r.directions.items() %}{% for d, v in dirs.items() %}<tr><td>{{ cond }}</td><td>{{ d }}</td><td>{{ v.wrong|pct }}</td><td>{{ v.hedge|pct }}</td><td>{{ v.leak|pct }}{% if loop.first and r.leakage[cond] %} <span class="muted">{{ r.leakage[cond] }}</span>{% endif %}</td></tr>{% endfor %}{% endfor %}
+</table>
+{% endfor %}
+{% endif %}
+</body>
+</html>
