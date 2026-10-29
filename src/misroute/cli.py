@@ -31,7 +31,7 @@ MaxCost = Annotated[float | None, typer.Option("--max-cost", help="refuse runs e
 EstimateOnly = Annotated[bool, typer.Option("--estimate-only", help="print the estimate and exit")]
 
 EXAMPLE = """server:
-  command: [uv, run, python, -m, misroute.testing.fake_server]
+  command: ["{python}", -m, misroute.testing.fake_server]
 models:
   - name: mock
     provider: mock
@@ -121,7 +121,7 @@ def init(path: Path = Path("misroute.yaml")) -> None:
     """Write an example config"""
     if path.exists():
         raise typer.BadParameter(f"{path} exists")
-    path.write_text(EXAMPLE, encoding="utf-8")
+    path.write_text(EXAMPLE.replace("{python}", Path(sys.executable).as_posix()), encoding="utf-8")
     out.print(f"wrote {path}")
 
 

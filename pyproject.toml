@@ -1,11 +1,24 @@
 [project]
 name = "misroute"
-version = "0.1.0"
-description = "Find the tools your agent confuses and test fixes against a sham"
+version = "0.2.0"
+description = "Find the tools your agent confuses and test whether a fix helps, against a neutral edit"
 authors = [
     { name = "philippyt", email = "philipaha@proton.me" }
 ]
 requires-python = ">=3.11"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["mcp", "agents", "llm", "tool-use", "evaluation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+]
 dependencies = [
     "anthropic>=2.3.0",
     "duckdb>=2.0.0",

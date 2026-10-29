@@ -17,19 +17,13 @@ misroute connects to any MCP server, writes test requests for every tool, and ru
 ## Installation
 
 ```console
-$ uv tool install git+https://github.com/philippyt/tool-misroute
+$ uv tool install misroute
 ```
 
 Or with pip:
 
 ```console
-$ pip install git+https://github.com/philippyt/tool-misroute
-```
-
-Or with Docker:
-
-```console
-$ docker run -v "$PWD:/work" ghcr.io/philippyt/misroute discover
+$ pip install misroute
 ```
 
 ## Quick start
