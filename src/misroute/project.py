@@ -90,7 +90,10 @@ class Project:
         gen, val = self.role("generator"), self.role("validator")
         n, kept = self.cfg.requests_per_tool, []
         for attempt in range(3):
-            reqs = await generate.generate(gen, tool, n, self.cfg.slots, sibling, attempt)
+            try:
+                reqs = await generate.generate(gen, tool, n, self.cfg.slots, sibling, attempt)
+            except (ValueError, KeyError, TypeError):
+                continue
             ok, _ = await validate.keep_valid(val, reqs, tools)
             kept += [r for r in ok if r.id not in {k.id for k in kept}]
             if len(kept) >= n:

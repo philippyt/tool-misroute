@@ -42,7 +42,9 @@ class Metered:
             out, cost = await run()
         self.budget.charge(cost)
         self.calls += 1
-        path.write_text(json.dumps(encode(out)), encoding="utf-8")
+        data = encode(out)
+        if data not in ("", None) and not (isinstance(data, dict) and not data["calls"] and not data["text"]):
+            path.write_text(json.dumps(data), encoding="utf-8")
         return out
 
     async def chat(self, user: str, tools: list[dict[str, Any]], system: str | None = None, rep: int = 0) -> Turn:
