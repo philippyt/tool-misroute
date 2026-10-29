@@ -77,6 +77,11 @@ class Config(BaseModel):
                 return m
         raise KeyError(f"unknown model {name}")
 
+    def tested(self) -> list[str]:
+        """Models under test: every model not configured only as generator, validator or writer."""
+        roles = {self.generator, self.validator, self.writer} - {None}
+        return [m.name for m in self.models if m.name not in roles] or [m.name for m in self.models]
+
     def role(self, role: str) -> ModelConfig:
         name = getattr(self, role) or self.models[0].name
         return self.model(name)

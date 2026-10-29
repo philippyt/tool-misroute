@@ -2,12 +2,13 @@ from collections import Counter, defaultdict
 from misroute.trial import Trial
 
 NONE = "(none)"
+READ_FIRST = "(read first)"
 
 
 def matrix(trials: list[Trial]) -> dict[str, Counter]:
     out: dict[str, Counter] = defaultdict(Counter)
     for t in trials:
-        out[t.target][t.chosen or NONE] += 1
+        out[t.target][READ_FIRST if t.failure == "read_first" else t.chosen or NONE] += 1
     return dict(out)
 
 

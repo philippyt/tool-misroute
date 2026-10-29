@@ -178,7 +178,7 @@ class Project:
         return calls, cost
 
     async def discover(self, models_: list[str] | None = None, modes: list[str] | None = None, removal_top: int = 5):
-        models_ = models_ or [m.name for m in self.cfg.models]
+        models_ = models_ or self.cfg.tested()
         modes = modes or list(self.cfg.modes)
         tools = await self.tools()
         rots = orders(tools, self.cfg.rotations)
@@ -276,7 +276,7 @@ class Project:
         return out
 
     async def probe(self, top: int = 5, pairs=None, models_=None, modes=None, slots: int = 2) -> dict:
-        models_ = models_ or [m.name for m in self.cfg.models]
+        models_ = models_ or self.cfg.tested()
         modes = modes or list(self.cfg.modes)
         tools = await self.tools()
         by = {t.name: t for t in tools}
@@ -313,7 +313,7 @@ class Project:
         return result
 
     async def fix(self, top: int = 3, pairs=None, models_=None, modes=None, trials: int = 96) -> dict:
-        models_ = models_ or [m.name for m in self.cfg.models]
+        models_ = models_ or self.cfg.tested()
         modes = modes or list(self.cfg.modes)
         tools = await self.tools()
         by = {t.name: t for t in tools}

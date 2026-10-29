@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any
 from jinja2 import Environment, PackageLoader, select_autoescape
+from misroute.detectors.confusion import READ_FIRST
 from misroute.store.runs import Store
 
 
@@ -15,7 +16,9 @@ def heatmap(matrix: dict[str, dict[str, int]]) -> dict[str, Any]:
     cells = []
     for r in rows:
         total = sum(matrix[r].values()) or 1
-        cells.append([(c, matrix[r].get(c, 0), matrix[r].get(c, 0) / total, c == r) for c in cols])
+        cells.append(
+            [(c, matrix[r].get(c, 0), 0 if c == READ_FIRST else matrix[r].get(c, 0) / total, c == r) for c in cols]
+        )
     return {"rows": rows, "cols": cols, "cells": cells}
 
 
@@ -35,5 +38,9 @@ def html(store: Store) -> str:
         for c in discover["cells"]:
             c["heat"] = heatmap(c["matrix"])
     return env.get_template("report.html.j2").render(
-        lint=store.read("lint"), discover=discover, probe=store.read("probe"), fix=store.read("fix")
+        lint=store.read("lint"),
+        discover=discover,
+        probe=store.read("probe"),
+        fix=store.read("fix"),
+        stale=store.stale(),
     )

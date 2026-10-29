@@ -49,3 +49,9 @@ async def test_rerun_is_cached(project):
     calls = project.adapter("mock").calls
     await project.discover(modes=["json"])
     assert project.adapter("mock").calls == calls
+
+
+def test_stale_results_are_skipped(project, tmp_path):
+    (project.store.root / "fix.json").write_text('{"pairs": [{"errors": {"sham": 1}}]}')
+    assert project.store.read("fix") is None and project.store.stale() == ["fix"]
+    assert "older version" in render(project.store, tmp_path / "r.html").read_text(encoding="utf-8")

@@ -5,6 +5,9 @@ from typing import Any
 import duckdb
 from misroute.trial import Trial
 
+SCHEMA_VERSION = 1
+RESULTS = ("lint", "discover", "probe", "fix")
+
 SCHEMA = """
 create table if not exists runs (run_id varchar, phase varchar, started double, catalog varchar, info json);
 create table if not exists trials (
@@ -67,9 +70,19 @@ class Store:
 
     def write(self, name: str, data: Any) -> Path:
         path = self.root / f"{name}.json"
+        if isinstance(data, dict):
+            data = {"schema_version": SCHEMA_VERSION, **data}
         path.write_text(json.dumps(data, indent=1, default=str), encoding="utf-8")
         return path
 
     def read(self, name: str) -> Any:
         path = self.root / f"{name}.json"
-        return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+        if not path.exists():
+            return None
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(data, dict) and name in RESULTS and data.get("schema_version") != SCHEMA_VERSION:
+            return None
+        return data
+
+    def stale(self) -> list[str]:
+        return [n for n in RESULTS if (self.root / f"{n}.json").exists() and self.read(n) is None]

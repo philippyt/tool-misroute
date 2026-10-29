@@ -24,6 +24,7 @@ code { font-size: 12px; }
 </head>
 <body>
 <h1>misroute</h1>
+{% if stale %}<p class="bad">Results from an older version were skipped, rerun {{ stale|join(", ") }}</p>{% endif %}
 <p class="muted">Discover and probe point to where to look, fix compares a boundary clause with a neutral edit of the same length, or with a drafted description when a tool has none</p>
 
 {% if lint %}
