@@ -1,6 +1,7 @@
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from fnmatch import fnmatch
 from typing import Any
 from mcp import Client
 from mcp.client.stdio import StdioServerParameters
@@ -41,11 +42,17 @@ async def connect(server: ServerConfig | Any) -> AsyncGenerator[Client]:
         yield client
 
 
-async def list_tools(client: Client) -> list[Tool]:
+def keep(name: str, include: list[str], exclude: list[str]) -> bool:
+    if include and not any(fnmatch(name, p) for p in include):
+        return False
+    return not any(fnmatch(name, p) for p in exclude)
+
+
+async def list_tools(client: Client, include: list[str] | None = None, exclude: list[str] | None = None) -> list[Tool]:
     tools, cursor = [], None
     while True:
         page = await client.list_tools(cursor=cursor)
-        tools += [from_mcp(t) for t in page.tools]
+        tools += [from_mcp(t) for t in page.tools if keep(t.name, include or [], exclude or [])]
         cursor = page.next_cursor
         if not cursor:
             return tools

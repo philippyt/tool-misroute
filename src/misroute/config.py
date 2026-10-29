@@ -13,6 +13,8 @@ class ServerConfig(BaseModel):
     auth: str | None = None
     headers: dict[str, str] = Field(default_factory=dict)
     env: dict[str, str] = Field(default_factory=dict)
+    include_tools: list[str] = Field(default_factory=list)
+    exclude_tools: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _one_target(self):

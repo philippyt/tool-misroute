@@ -62,7 +62,8 @@ class Project:
     async def tools(self) -> list[Tool]:
         if self._tools is None:
             async with connect(self.server) as client:
-                self._tools = await list_tools(client)
+                cfg = self.cfg.server
+                self._tools = await list_tools(client, cfg.include_tools, cfg.exclude_tools)
         return self._tools
 
     async def catalog(self) -> str:

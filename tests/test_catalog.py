@@ -38,3 +38,11 @@ async def test_undescribed_tools_use_drafted_baseline(project):
     edits = await write(project.role("writer"), *pair, drafts)
     assert edits["baseline_kind"] == "description" and edits["baseline"] == drafts
     assert all(edits["clause"][k].startswith(drafts[k].rstrip(".")) for k in drafts)
+
+
+def test_tool_filter():
+    from misroute.server.connect import keep
+
+    assert keep("list_issues", ["*issue*"], [])
+    assert not keep("list_commits", ["*issue*"], [])
+    assert not keep("delete_issue", ["*issue*"], ["delete_*"])

@@ -183,6 +183,7 @@ A cheap local model catches regressions in its own behaviour, which may differ f
 server:
   url: https://mcp.example.com/mcp      # or command: [npx, your-server]
   auth: bearer_env:MCP_TOKEN
+  include_tools: ["*issue*", "*pull_request*"]   # optional, test a slice of a large server
 
 models:
   - name: opus-eu
