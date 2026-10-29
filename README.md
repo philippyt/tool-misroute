@@ -72,11 +72,16 @@ wrote report.html
 | `misroute discover` | Runs requests for every tool against the full tool list and ranks the risky pairs |
 | `misroute probe` | Tests risky pairs with harder requests that borrow words from the sibling tool |
 | `misroute fix` | Compares a boundary clause with a neutral edit, or with a drafted description for undescribed tools |
+| `misroute check` | Checks whether one proposed description beats the current one on held out requests |
 | `misroute report` | Writes a self-contained HTML report |
 | `misroute ui` | Opens a local web interface for results, runs and held writes |
 | `misroute ci` | Runs discover and exits with an error when limits are exceeded |
 | `misroute guard serve` | Runs an MCP proxy that logs and guards every real tool call |
 | `misroute site` | Builds a static results site from one or more runs |
+| `misroute serve-mcp` | Runs misroute itself as an MCP server for agents |
+| `misroute catalog` | Prints tool hashes and descriptions for change-aware CI |
+
+Every command takes `--json`, and paid commands take `--yes`, `--max-cost` and `--estimate-only`. Exit codes are `0` passed, `1` limits failed or worse, `2` not enough data to decide, `3` budget or config problem.
 
 ## Status
 
@@ -88,6 +93,7 @@ wrote report.html
 | Near misses | experimental, not yet validated, kept out of the ranking |
 | Local UI | API and pages checked in a browser, not yet used on a real project |
 | Guard proxy | tested against a local test server only |
+| check, ci with changed tools, serve-mcp | tested with a mock model only |
 
 ## Features
 
@@ -160,6 +166,14 @@ $ misroute ci
 opus json wrong rate 0.105 above 0.05
 ```
 
+To test only the tools a pull request changed, save the catalog from the base branch and compare:
+
+```yaml
+- run: git checkout origin/main && misroute catalog > tools.json && git checkout -
+- run: misroute ci --changed --baseline tools.json --markdown comment.md --max-cost 2
+- run: gh pr comment ${{ github.event.number }} --body-file comment.md
+```
+
 A cheap local model catches regressions in its own behaviour, which may differ from your production model's. Schedule regular runs against the model you actually deploy as well.
 
 ## Configuration
@@ -194,6 +208,19 @@ Results are saved in `.misroute/`: a DuckDB database you can query with SQL, JSO
 ```console
 $ duckdb .misroute/misroute.duckdb "select target, chosen, count(*) from trials where wrong group by all order by 3 desc"
 ```
+
+## For agents
+
+A coding agent that edits tool descriptions can check its own edits:
+
+```console
+$ misroute check --tool get_case_comments --description "Written comments on a case. Not for status changes." --json --max-cost 1
+{"schema_version": 1, "command": "check", "verdict": "better", "trials": 96, "held_out": true, ...}
+```
+
+Requests are split into a tuning set and a held out set. The verdict uses only the held out set, and after three verdicts on the same tool it is spent until you pass `--refresh`, so an agent cannot tune a description to the test requests. Verdicts are `better`, `worse`, `no_difference` or `insufficient_data`.
+
+`misroute serve-mcp` exposes `lint_descriptions`, `draft_description`, `estimate_check`, `check_description` and `get_report` as MCP tools. [AGENTS.md](AGENTS.md), [llms.txt](llms.txt) and a [Claude Code skill](skills/misroute/SKILL.md) describe when to use each. misroute never edits your tools.
 
 ## Python API
 

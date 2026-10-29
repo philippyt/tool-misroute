@@ -1,0 +1,35 @@
+# misroute
+
+> Finds the tools an agent confuses on any MCP server and tests whether a description change helps, against a neutral baseline, on held out requests.
+
+## Commands
+
+- `misroute lint [--draft] --json`: weak descriptions, free
+- `misroute discover --json --max-cost N`: ranked risky tool pairs from model behaviour
+- `misroute probe --pair a,b --json`: harder requests on one pair
+- `misroute fix --pair a,b --json`: boundary clause against a neutral edit or a drafted description
+- `misroute check --tool NAME --description TEXT --json --max-cost N [--refresh]`: is a proposed description better
+- `misroute catalog`: tool names, hashes and descriptions as JSON
+- `misroute ci [--changed --baseline tools.json --markdown out.md] --json`: limits or changed tools only
+- `misroute serve-mcp`: misroute as an MCP server
+- `misroute report`, `misroute ui`, `misroute guard serve`
+
+Shared flags: `--json`, `--yes`, `--max-cost DOLLARS`, `--estimate-only`, `-c misroute.yaml`.
+
+## Exit codes
+
+0 passed, 1 limits failed or worse, 2 insufficient data, 3 budget, cost cap, provider or config problem.
+
+## JSON
+
+Every `--json` output is one object with `schema_version` (currently 1) and `command`. Errors have `error` and `exit_code`. An estimate has `estimate.calls` and `estimate.cost_usd`.
+
+`check` returns: `tool`, `neighbours`, `verdict` (`better`, `worse`, `no_difference`, `insufficient_data`), `reason`, `baseline_kind` (`neutral` or `description`), `wrong_rate` and `hedge_rate` per condition (`current`, `baseline`, `proposed`) on held out requests, `leakage`, `trials`, `held_out`, `fixed`, `broke`, `p`, `vs_current`, `verdicts_left`, `round`, `cost_usd`, plus `tuning` and `held_out` blocks with per condition details.
+
+`discover` returns: `cells` (per model and mode: `trials`, `wrong_rate`, `hedge_rate`, `write_hedge_rate`, `failures`, `matrix`), `spots` (`a`, `b`, `score`, `signals`, `write`, `gate_failed`), `gate_failed`, `near_misses`, `removal`, `noise`, `short`, `spent`.
+
+`fix` returns: `pairs` (`pair`, `model`, `mode`, `baseline_kind`, `errors` for `original`, `baseline`, `clause`, `fixed`, `broke`, `p_holm`, `verdict`, `directions`, `leakage`, `edits`) and `across`.
+
+## Rules
+
+misroute never edits tools. Drafts are for human review. Verdicts come from held out requests, and a held out set is spent after 3 verdicts on the same tool.

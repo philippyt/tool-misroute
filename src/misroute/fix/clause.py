@@ -60,6 +60,29 @@ async def write(writer, a: Tool, b: Tool, drafts: dict[str, str] | None = None, 
     return {"clause": clause, "baseline": baseline, "baseline_kind": "neutral"}
 
 
+NEUTRAL_ONE = """Rewrite this tool description so it reads more clearly, with the same meaning, in about {n} characters.
+Do not mention other tools, do not say what the tool is not for, and do not add facts beyond the name,
+parameters and description.
+
+A: {name}({params}): {description}
+
+Reply with JSON only: {{"a": "full new description"}}"""
+
+
+async def neutral_one(writer, tool: Tool, length: int, attempts: int = 3) -> str:
+    text = ""
+    for i in range(attempts):
+        prompt = NEUTRAL_ONE.format(
+            n=length, name=tool.name, params=", ".join(tool.params), description=tool.description
+        )
+        text = str(parse_json(await writer.complete(prompt, "neutral", rep=i))["a"]).strip()
+        if matched(text, " " * length):
+            break
+    if not text:
+        raise ValueError("writer returned an empty neutral edit")
+    return pad(text, length)
+
+
 def matched(x: str, y: str, tol: float = 0.1) -> bool:
     return abs(len(x) - len(y)) <= tol * max(len(y), 1)
 

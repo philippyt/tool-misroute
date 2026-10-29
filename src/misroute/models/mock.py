@@ -74,7 +74,7 @@ class MockAdapter:
         for other, rate in (self.opts.get("confuse", {}).get(right) or {}).items():
             if other not in names:
                 continue
-            if CLAUSE in desc[right] and CLAUSE in desc[other]:
+            if CLAUSE in desc[right]:
                 rate *= self.opts.get("clause_factor", 0.1)
             if unit(self.name, user, "confuse", other) < rate:
                 out = [other]

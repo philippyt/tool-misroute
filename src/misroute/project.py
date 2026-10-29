@@ -86,10 +86,12 @@ class Project:
         self.store.write("lint", out)
         return out
 
-    async def requests_for(self, tool: Tool, tools: list[Tool], sibling: Tool | None = None) -> list[Request]:
+    async def requests_for(
+        self, tool: Tool, tools: list[Tool], sibling: Tool | None = None, seed: int = 0
+    ) -> list[Request]:
         gen, val = self.role("generator"), self.role("validator")
         n, kept = self.cfg.requests_per_tool, []
-        for attempt in range(3):
+        for attempt in range(seed * 10, seed * 10 + 3):
             try:
                 reqs = await generate.generate(gen, tool, n, self.cfg.slots, sibling, attempt)
             except (ValueError, KeyError, TypeError):
