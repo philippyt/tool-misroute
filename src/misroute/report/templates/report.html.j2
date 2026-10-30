@@ -39,12 +39,13 @@ code { font-size: 12px; }
 
 {% if discover %}
 <h2>Risky spots</h2>
-<table><tr><th>Pair</th><th>Score</th><th>Signals</th><th>Seen in</th><th>Gate</th></tr>
+{% for u in discover.untested %}<p class="bad"><b>Untested {{ u }}</b>: the validator kept none of its requests, so a low score here does not clear it</p>{% endfor %}
+<table><tr><th>Pair</th><th>Score</th><th>Signals</th><th>Seen in</th><th>Note</th></tr>
 {% for s in discover.spots[:25] %}<tr>
 <td>{% if s.write %}<span class="write">{{ s.a }} and {{ s.b }}</span>{% else %}{{ s.a }} and {{ s.b }}{% endif %}</td>
 <td>{{ "%.2f"|format(s.score) }}</td>
 <td>{% for k, v in s.signals.items() %}{{ k }} {{ v|pct }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
-<td class="muted">{{ s.where|join(", ") }}</td><td class="bad">{{ "failed" if s.gate_failed }}</td></tr>{% endfor %}
+<td class="muted">{{ s.where|join(", ") }}</td><td class="bad">{% for x in (s.a, s.b) if x in discover.untested %}untested {{ x }} {% endfor %}{{ "gate failed" if s.gate_failed }}{{ " few requests" if s.thin }}</td></tr>{% endfor %}
 </table>
 {% if discover.gate_failed %}<p class="muted">{{ discover.gate_failed|length }} tool pairs have request sets that surface words can tell apart, so confusion between them may be underestimated</p>{% endif %}
 {% if discover.near_misses %}

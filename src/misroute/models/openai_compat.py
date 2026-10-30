@@ -42,7 +42,7 @@ class OpenAICompatAdapter:
                 raise ValueError("azure-openai needs base_url, the resource endpoint")
             auth: dict[str, Any] = {"api_key": key} if key and key != "none" else {}
             if cfg.options.get("entra"):
-                from azure.identity import DefaultAzureCredential, get_bearer_token_provider  # ty: ignore[unresolved-import]
+                from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 
                 scope = "https://cognitiveservices.azure.com/.default"
                 auth = {"azure_ad_token_provider": get_bearer_token_provider(DefaultAzureCredential(), scope)}

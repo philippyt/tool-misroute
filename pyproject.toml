@@ -38,6 +38,9 @@ dependencies = [
 otel = [
     "opentelemetry-sdk>=1.45.2",
 ]
+azure = [
+    "azure-identity>=1.27.0",
+]
 
 [project.scripts]
 misroute = "misroute.cli:app"

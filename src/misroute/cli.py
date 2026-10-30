@@ -181,10 +181,18 @@ def discover(
             sig = "  ".join(f"{k} {v:.2f}" for k, v in s["signals"].items())
             d = s["directions"]
             dirs = f"{d.get(s['a'] + '>' + s['b'], 0)} to {d.get(s['b'] + '>' + s['a'], 0)}" if d else ""
-            note = ", ".join(x for x, on in (("gate failed", s["gate_failed"]), ("few requests", s["thin"])) if on)
+            gone = [x for x in (s["a"], s["b"]) if x in res["untested"]]
+            flags = (("gate failed", s["gate_failed"]), ("few requests", s["thin"] and not gone))
+            note = ", ".join([*(f"UNTESTED {x}" for x in gone), *(x for x, on in flags if on)])
             row = (s["a"], s["b"], f"{s['score']:.2f}", sig, dirs, ", ".join(s["where"]), note)
             t.add_row(*row, style="red" if s["write"] else "")
         out.print(t)
+        for tool in res["untested"]:
+            out.print(
+                f"UNTESTED {tool}: the validator kept none of its requests, so it was never tested as a target. "
+                "Its scores only count other tools' requests landing on it, a low score does not clear it",
+                style="bold red",
+            )
         for c in res["cells"]:
             for tool, rate in c.get("unanswered", {}).items():
                 out.print(f"{c['model']} {c['mode']}: {tool} answered without a tool call in {rate:.0%} of trials")

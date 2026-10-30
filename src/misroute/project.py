@@ -222,6 +222,7 @@ class Project:
             gate_failed=[list(g) for g in gated],
             removal={k: dict(v) for k, v in moved.items()},
             short=self.shortfall(reqs),
+            untested=sorted(k for k, v in reqs.items() if not v),
             catalog=catalog_hash(tools),
             spent=self.budget.spent,
         )

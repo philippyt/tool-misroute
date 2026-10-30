@@ -55,3 +55,13 @@ def test_stale_results_are_skipped(project, tmp_path):
     (project.store.root / "fix.json").write_text('{"pairs": [{"errors": {"sham": 1}}]}')
     assert project.store.read("fix") is None and project.store.stale() == ["fix"]
     assert "older version" in render(project.store, tmp_path / "r.html").read_text(encoding="utf-8")
+
+
+async def test_untested_tool_is_marked(project):
+    async def none(tool, tools, sibling=None, seed=0):
+        return [] if tool.name == "get_customer" else await real(tool, tools, sibling, seed)
+
+    real = project.requests_for
+    project.requests_for = none
+    res = await project.discover(modes=["json"])
+    assert res["untested"] == ["get_customer"]
