@@ -7,10 +7,12 @@ from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.routing import Route
+from misroute.config import load_env
 from misroute.guard.wrapper import approve
 from misroute.models.base import BudgetExceeded
 from misroute.project import Project
 from misroute.report.html import html
+from misroute.ui import setup
 
 PHASES = ("lint", "discover", "probe", "fix")
 
@@ -104,10 +106,17 @@ def create(config: Path) -> Starlette:
         return HTMLResponse(page)
 
     async def report(request: Request) -> Response:
+        if not config.exists():
+            return HTMLResponse("<p style='font-family:system-ui;color:#6b6b66'>Set up a server and a model first</p>")
         return HTMLResponse(html(runner.project().store))
 
     async def state(request: Request) -> Response:
-        cfg = runner.project().cfg
+        if not config.exists():
+            return JSONResponse({"configured": False, "running": False, **runner.state, "models": [], "modes": []})
+        try:
+            cfg = runner.project().cfg
+        except Exception as e:
+            return JSONResponse({"configured": False, "config_error": str(e)[:400], "running": False, **runner.state})
         return JSONResponse(
             {
                 "running": runner.running,
@@ -117,8 +126,26 @@ def create(config: Path) -> Starlette:
                 ],
                 "modes": list(cfg.modes),
                 "budget": cfg.budget_usd,
+                "configured": True,
             }
         )
+
+    async def setup_get(request: Request) -> Response:
+        load_env(config)
+        return JSONResponse(setup.current(config))
+
+    async def setup_test(request: Request) -> Response:
+        if bad := guarded(request):
+            return bad
+        return JSONResponse(await setup.test(config, await request.json()))
+
+    async def setup_save(request: Request) -> Response:
+        if bad := guarded(request):
+            return bad
+        try:
+            return JSONResponse(setup.save(config, await request.json()))
+        except Exception as e:
+            return JSONResponse({"error": str(e)[:600]}, status_code=400)
 
     async def estimate(request: Request) -> Response:
         if bad := guarded(request):
@@ -150,6 +177,9 @@ def create(config: Path) -> Starlette:
             Route("/", index),
             Route("/report", report),
             Route("/api/state", state),
+            Route("/api/setup", setup_get),
+            Route("/api/setup/test", setup_test, methods=["POST"]),
+            Route("/api/setup/save", setup_save, methods=["POST"]),
             Route("/api/estimate", estimate, methods=["POST"]),
             Route("/api/run", run, methods=["POST"]),
             Route("/api/guard", guard),

@@ -37,6 +37,7 @@ code { font-size: 12px; }
 <header>
   <b>misroute</b>
   <nav>
+    <button data-tab="setup">Setup</button>
     <button data-tab="results" class="on">Results</button>
     <button data-tab="run">Run</button>
     <button data-tab="guard">Guard</button>
@@ -44,6 +45,55 @@ code { font-size: 12px; }
   <span id="status"></span>
 </header>
 <main>
+  <section id="setup">
+    <div class="card">
+      <h3 style="margin-top:0">MCP server</h3>
+      <div class="row">
+        <div><label for="server_kind">Connect with</label>
+          <select id="server_kind"><option value="url">URL</option><option value="command">Local command</option><option value="openapi">OpenAPI file</option></select></div>
+        <div style="flex:1;min-width:260px"><label for="server_value" id="server_label">URL</label><input id="server_value" style="width:100%" placeholder="https://your-server/mcp"></div>
+      </div>
+      <div class="row">
+        <div style="flex:1;min-width:220px"><label for="server_token">Bearer token, optional</label><input id="server_token" type="password" style="width:100%" autocomplete="off"></div>
+        <div style="flex:1;min-width:220px"><label for="include_tools">Only these tools, optional</label><input id="include_tools" style="width:100%" placeholder="*issue*, *pull_request*"></div>
+      </div>
+      <p class="muted" id="token_note"></p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Model</h3>
+      <div class="row">
+        <div><label for="provider">Provider</label>
+          <select id="provider">
+            <option value="openai-compatible">OpenAI compatible (OpenRouter, vLLM, Ollama, relay)</option>
+            <option value="anthropic">Anthropic API</option>
+            <option value="anthropic-foundry">Anthropic on Azure Foundry</option>
+            <option value="azure-openai">Azure OpenAI</option>
+            <option value="bedrock">Anthropic on Bedrock</option>
+          </select></div>
+        <div><label for="name">Name</label><input id="name" value="main" style="width:120px"></div>
+        <div style="flex:1;min-width:200px"><label for="model">Model or deployment</label><input id="model" style="width:100%"></div>
+      </div>
+      <div class="row">
+        <div style="flex:1;min-width:260px"><label for="base_url">Endpoint</label><input id="base_url" style="width:100%"></div>
+        <div id="api_version_box" hidden><label for="api_version">API version</label><input id="api_version" value="2024-10-21" style="width:130px"></div>
+      </div>
+      <div class="row">
+        <div style="flex:1;min-width:220px"><label for="api_key">API key</label><input id="api_key" type="password" style="width:100%" autocomplete="off"></div>
+        <div><label for="price_in">Dollars per million input tokens</label><input id="price_in" type="number" step="0.01" style="width:120px"></div>
+        <div><label for="price_out">Per million output tokens</label><input id="price_out" type="number" step="0.01" style="width:120px"></div>
+        <div><label for="budget_usd">Budget per run, dollars</label><input id="budget_usd" type="number" step="0.5" value="5" style="width:110px"></div>
+      </div>
+      <p class="muted" id="key_note"></p>
+      <label>Modes</label>
+      <div class="checks"><label><input type="checkbox" class="smode" value="json" checked>json</label><label><input type="checkbox" class="smode" value="code">code</label></div>
+      <div class="checks" style="margin-top:8px"><label><input type="checkbox" id="no_temperature">model rejects a temperature setting, for example Opus</label></div>
+      <button class="ghost" id="test">Test connection</button>
+      <button class="primary" id="save">Save</button>
+      <p class="muted">Keys go to .env next to misroute.yaml, never into the YAML. Testing lists the server's tools for free and makes one small model call</p>
+    </div>
+    <div class="card" id="setupResult" hidden></div>
+  </section>
+
   <section id="results" class="on"><iframe id="report" src="/report" title="report"></iframe></section>
 
   <section id="run">
@@ -99,7 +149,7 @@ function body() {
 
 $("estimate").onclick = async () => {
   const r = await post("/api/estimate", body());
-  $("estimateText").textContent = r.error ? r.error : `${r.calls} model calls, est $${r.cost.toFixed(2)}`;
+  $("estimateText").textContent = r.error ? r.error : `up to ${r.calls} model calls, up to $${r.cost.toFixed(2)}`;
   $("start").disabled = !!r.error;
 };
 ["phase", "top", "trials"].forEach((id) => $(id).onchange = () => { $("start").disabled = true; $("estimateText").textContent = ""; });
@@ -113,6 +163,11 @@ $("start").onclick = async () => {
 
 async function poll() {
   const s = await fetch("/api/state").then((r) => r.json());
+  if (!s.configured) {
+    $("status").textContent = s.config_error ? "config problem, see Setup" : "not set up";
+    if (!location.hash) location.hash = "setup";
+    return;
+  }
   if (!$("models").children.length) {
     $("models").innerHTML = s.models.map((m) => `<label><input type="checkbox" value="${esc(m.name)}" ${m.tested ? "checked" : ""}>${esc(m.name)}</label>`).join("");
     $("modes").innerHTML = ["json", "code"].map((m) => `<label><input type="checkbox" value="${m}" ${s.modes.includes(m) ? "checked" : ""}>${m}</label>`).join("");
@@ -142,6 +197,71 @@ async function loadGuard() {
     <td>${esc(e.tool)}</td><td>${esc(e.other)}</td><td class="muted">${new Date(e.at * 1000).toLocaleTimeString()}</td></tr>`).join("");
 }
 
+const LABELS = { url: ["URL", "https://your-server/mcp"], command: ["Command", "npx your-mcp-server"], openapi: ["Path to OpenAPI file", "api.json"] };
+const ENDPOINTS = {
+  "openai-compatible": "https://openrouter.ai/api/v1",
+  anthropic: "empty for the Anthropic API",
+  "anthropic-foundry": "https://your-resource.services.ai.azure.com/anthropic",
+  "azure-openai": "https://your-resource.openai.azure.com",
+  bedrock: "empty",
+};
+function refreshSetup() {
+  const [label, hint] = LABELS[$("server_kind").value];
+  $("server_label").textContent = label;
+  $("server_value").placeholder = hint;
+  $("base_url").placeholder = ENDPOINTS[$("provider").value];
+  $("api_version_box").hidden = $("provider").value !== "azure-openai";
+}
+$("server_kind").onchange = refreshSetup;
+$("provider").onchange = refreshSetup;
+
+const FIELDS = ["server_kind", "server_value", "server_token", "include_tools", "provider", "name", "model", "base_url", "api_version", "api_key", "price_in", "price_out", "budget_usd"];
+function setupForm() {
+  const f = Object.fromEntries(FIELDS.map((id) => [id, $(id).value.trim()]));
+  f.modes = [...document.querySelectorAll(".smode:checked")].map((i) => i.value);
+  f.no_temperature = $("no_temperature").checked;
+  f.keep_token = true;
+  return f;
+}
+
+function showSetup(html) { $("setupResult").hidden = false; $("setupResult").innerHTML = html; }
+
+$("test").onclick = async () => {
+  showSetup('<span class="muted">Testing</span>');
+  const r = await post("/api/setup/test", setupForm());
+  if (r.error) return showSetup(`<span class="bad">${esc(r.error)}</span>`);
+  const t = r.tools.error ? `<span class="bad">Server: ${esc(r.tools.error)}</span>`
+    : `<span class="good">Server: ${r.tools.count} tools</span> <span class="muted">${esc(r.tools.names.join(", "))}</span>`;
+  const m = r.model.error ? `<span class="bad">Model: ${esc(r.model.error)}</span>`
+    : `<span class="good">Model replied ${esc(JSON.stringify(r.model.reply))}</span> <span class="muted">${r.model.tokens_in} tokens in, ${r.model.tokens_out} out</span>`;
+  showSetup(`<p style="margin:0 0 8px">${t}</p><p style="margin:0">${m}</p>`);
+};
+
+$("save").onclick = async () => {
+  const r = await post("/api/setup/save", setupForm());
+  if (r.error) return showSetup(`<span class="bad">${esc(r.error)}</span>`);
+  const keys = r.env.length ? ` <span class="muted">keys in .env: ${esc(r.env.join(", "))}</span>` : "";
+  showSetup(`<span class="good">Saved ${esc(r.saved)}</span>${keys}`);
+  $("models").innerHTML = "";
+  $("report").src = "/report";
+  $("server_token").value = "";
+  $("api_key").value = "";
+  loadSetup();
+  poll();
+};
+
+async function loadSetup() {
+  const c = await fetch("/api/setup").then((r) => r.json());
+  if (c.configured) {
+    FIELDS.filter((id) => id !== "server_token" && id !== "api_key").forEach((id) => { if (c[id] !== undefined) $(id).value = c[id]; });
+    document.querySelectorAll(".smode").forEach((i) => { i.checked = c.modes.includes(i.value); });
+  }
+  $("token_note").textContent = c.has_token ? "A token is saved, leave the field empty to keep it" : "";
+  $("key_note").textContent = c.has_key ? "A key is saved, leave the field empty to keep it" : "";
+  refreshSetup();
+}
+
+loadSetup();
 show(location.hash.slice(1) || "results");
 poll();
 </script>

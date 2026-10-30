@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Any, Literal
 import yaml
@@ -91,6 +92,22 @@ class Config(BaseModel):
         return self.model(name)
 
 
+def env_path(config: str | Path) -> Path:
+    return Path(config).resolve().parent / ".env"
+
+
+def load_env(config: str | Path) -> None:
+    """Read KEY=VALUE lines from .env next to the config into the environment, without overriding set values."""
+    path = env_path(config)
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        key, sep, value = line.partition("=")
+        if sep and key.strip() and not key.lstrip().startswith("#"):
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
 def load(path: str | Path) -> Config:
+    load_env(path)
     data = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
     return Config.model_validate(data)
