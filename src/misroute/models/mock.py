@@ -146,6 +146,21 @@ class MockAdapter:
         if kind == "neutral":
             a, b = field.get("A", ""), field.get("B", "")
             return json.dumps({"a": a + " Returns results.", "b": b + " Returns results."})
+        if kind == "candidates":
+            name = field.get("Operation", "")
+            own = " ".join(words(name))
+            sibs = re.findall(r"^- (\w+): .*Current:", prompt, re.M)
+            other = " ".join(sorted(bag(" ".join(sibs)) - bag(name))[:3]) or "other requests"
+            found = [
+                {"style": "boundary", "text": f"Returns {own} data. {CLAUSE} {other}."},
+                {"style": "returns", "text": f"Returns {own} data and everything else. {CLAUSE} {other}."},
+                {"style": "example", "text": f"Returns {own} data. Example: show {own} for 42."},
+                {"style": "minimal", "text": f"{own}."},
+            ]
+            return json.dumps({"candidates": found})
+        if kind == "faithful":
+            ok = "everything" not in field.get("Description", "")
+            return json.dumps({"faithful": ok, "reason": "" if ok else "claims data the interface does not show"})
         if kind == "describe":
             return f"Returns {' '.join(words(field.get('Operation name', 'data')))} data."
         return "ok"

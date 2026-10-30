@@ -14,8 +14,10 @@ description: Check MCP tool descriptions against model behaviour with the misrou
    - `better`: propose the change to the user with `wrong_rate`, `trials` and `held_out`.
    - `no_difference` or `worse`: do not claim an improvement. Show the numbers.
    - `insufficient_data`: say the sample was too small. Do not read anything into the rates.
-4. Never apply a description to the server yourself. Propose it and let the user apply it.
-5. Do not run `check` repeatedly on the same tool to tune wording. After 3 verdicts the held out set is spent. Only pass `--refresh` when the user agrees to a fresh set.
+4. To improve many descriptions at once, for an MCP server or a Swagger file, run
+   `misroute improve <target> --json --max-cost 5`. Propose only entries with status `tested` or `tested baseline` as tested, with their `confirm.tests` numbers. Present `draft` entries as untested drafts.
+5. Never apply a description to the server yourself. Propose it and let the user apply it.
+6. Do not run `check` repeatedly on the same tool to tune wording. After 3 verdicts the held out set is spent. Only pass `--refresh` when the user agrees to a fresh set.
 
 Exit codes: 0 passed, 1 worse or limits failed, 2 insufficient data, 3 budget or config problem.
 If a run exits with 3 because of cost, report the estimate and ask before raising `--max-cost`.

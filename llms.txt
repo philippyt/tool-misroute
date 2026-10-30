@@ -14,6 +14,7 @@
 - `misroute probe --pair a,b --json`: harder requests on one pair
 - `misroute fix --pair a,b --json`: boundary clause against a neutral edit or a drafted description
 - `misroute check --tool NAME --description TEXT --json --max-cost N [--refresh]`: is a proposed description better
+- `misroute improve [target] --json --max-cost N [--languages en,no] [--fastmcp] [--out dir]`: write, race and confirm new descriptions for confused tools, export for review
 - `misroute catalog`: tool names, hashes and descriptions as JSON
 - `misroute ci [--changed --baseline tools.json --markdown out.md] --json`: limits or changed tools only
 - `misroute serve-mcp`: misroute as an MCP server
@@ -34,6 +35,8 @@ Every `--json` output is one object with `schema_version` (currently 1) and `com
 `check` returns: `tool`, `neighbours`, `verdict` (`better`, `worse`, `no_difference`, `insufficient_data`), `reason`, `baseline_kind` (`neutral` or `description`), `wrong_rate` and `hedge_rate` per condition (`current`, `baseline`, `proposed`) on held out requests, `leakage`, `trials`, `held_out`, `fixed`, `broke`, `p`, `vs_current`, `verdicts_left`, `round`, `cost_usd`, plus `tuning` and `held_out` blocks with per condition details.
 
 `discover` returns: `cells` (per model and mode: `trials`, `wrong_rate`, `hedge_rate`, `write_hedge_rate`, `failures`, `matrix`), `spots` (`a`, `b`, `score`, `signals`, `write`, `gate_failed`), `gate_failed`, `near_misses`, `removal`, `noise`, `short`, `spent`.
+
+`improve` returns: `audit` (`notes` with `tool`, `kind`, `detail`), `groups` (`tools`, `original`, `baseline`, `winner`, `style`, `confirm.tests` for `winner_vs_baseline`, `winner_vs_original`, `baseline_vs_original` with `verdict`, `p`, `p_holm`, `templates`, `discordant_templates`, `diff`, `ci`, and `confirm.by_language`, `export`, `why`), `entries` (`tool`, `op_id`, `route`, `description`, `original`, `status`, `reason`, `suggest_exclude`), `files`, `fastmcp`, `cost_usd`.
 
 `fix` returns: `pairs` (`pair`, `model`, `mode`, `baseline_kind`, `errors` for `original`, `baseline`, `clause`, `fixed`, `broke`, `p_holm`, `verdict`, `directions`, `leakage`, `edits`) and `across`.
 

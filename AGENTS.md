@@ -20,6 +20,7 @@ misroute tells you whether a model picks the right tool on an MCP server, and wh
 | You changed one description | `misroute check --tool NAME --description "..." --json --max-cost 1` | a few hundred model calls |
 | You want to find confused tools | `misroute discover --json --max-cost 5` | grows with the number of tools |
 | A pull request changed descriptions | `misroute ci --changed --baseline tools.json --json --max-cost 2` | only changed tools and their neighbours |
+| You want better descriptions for a server or a Swagger file | `misroute improve <target> --json --max-cost 5` | discover plus a race per confused group |
 
 ## Check verdicts
 
@@ -35,6 +36,10 @@ The baseline is a neutral rewrite of the current description of the same length.
 The verdict uses held out requests you never see results for. After 3 verdicts on the same tool the held out set is spent and `check` returns `insufficient_data` until you pass `--refresh`, which draws a fresh set. Do not keep tweaking a description against the same set.
 
 Every result includes `trials`, `held_out` and `cost_usd`. Report them with the verdict so a reviewer can tell a solid result from a thin one.
+
+## Improve results
+
+`improve` writes files to `improve/` and applies nothing. Each entry in `entries` has a `status`: `tested` means the winner beat the baseline on held out requests, `tested baseline` means only the baseline beat the original, `kept` means no change won, `draft` means a weak tool outside any confused group got an untested draft, and `unchanged` means nothing was found. Report the `confirm.tests` numbers per group with any proposal, and say which entries are untested drafts.
 
 ## Exit codes
 

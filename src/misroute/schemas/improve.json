@@ -1,0 +1,346 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "misroute/improve.json",
+ "title": "misroute improve output",
+ "type": "object",
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "command": {
+   "type": "string"
+  },
+  "source": {
+   "type": "string"
+  },
+  "audit": {
+   "type": "object",
+   "properties": {
+    "tools": {
+     "type": "integer"
+    },
+    "reads": {
+     "type": "integer"
+    },
+    "writes": {
+     "type": "integer"
+    },
+    "counts": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "integer"
+     }
+    },
+    "notes": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "tool",
+       "kind",
+       "detail"
+      ]
+     }
+    }
+   }
+  },
+  "groups": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "group",
+     "tools",
+     "original",
+     "baseline",
+     "winner",
+     "confirm",
+     "export",
+     "why"
+    ],
+    "properties": {
+     "group": {
+      "type": "integer"
+     },
+     "tools": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "requests": {
+      "type": "object",
+      "properties": {
+       "tuning": {
+        "type": "integer"
+       },
+       "held_out": {
+        "type": "integer"
+       }
+      }
+     },
+     "original": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "string"
+      }
+     },
+     "baseline": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "string"
+      }
+     },
+     "winner": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "string"
+      }
+     },
+     "style": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "string"
+      }
+     },
+     "export": {
+      "enum": [
+       "winner",
+       "baseline",
+       "original"
+      ]
+     },
+     "why": {
+      "type": "string"
+     },
+     "confirm": {
+      "type": "object",
+      "properties": {
+       "rates": {
+        "type": "object"
+       },
+       "tests": {
+        "type": "object",
+        "properties": {
+         "winner_vs_baseline": {
+          "type": "object",
+          "properties": {
+           "verdict": {
+            "enum": [
+             "better",
+             "worse",
+             "no_difference",
+             "insufficient_data"
+            ]
+           },
+           "reason": {
+            "type": "string"
+           },
+           "p": {
+            "type": "number"
+           },
+           "p_holm": {
+            "type": "number"
+           },
+           "templates": {
+            "type": "integer"
+           },
+           "discordant_templates": {
+            "type": "integer"
+           },
+           "diff": {
+            "type": "number"
+           },
+           "ci": {
+            "type": "array",
+            "items": {
+             "type": "number"
+            }
+           }
+          }
+         },
+         "winner_vs_original": {
+          "type": "object",
+          "properties": {
+           "verdict": {
+            "enum": [
+             "better",
+             "worse",
+             "no_difference",
+             "insufficient_data"
+            ]
+           },
+           "reason": {
+            "type": "string"
+           },
+           "p": {
+            "type": "number"
+           },
+           "p_holm": {
+            "type": "number"
+           },
+           "templates": {
+            "type": "integer"
+           },
+           "discordant_templates": {
+            "type": "integer"
+           },
+           "diff": {
+            "type": "number"
+           },
+           "ci": {
+            "type": "array",
+            "items": {
+             "type": "number"
+            }
+           }
+          }
+         },
+         "baseline_vs_original": {
+          "type": "object",
+          "properties": {
+           "verdict": {
+            "enum": [
+             "better",
+             "worse",
+             "no_difference",
+             "insufficient_data"
+            ]
+           },
+           "reason": {
+            "type": "string"
+           },
+           "p": {
+            "type": "number"
+           },
+           "p_holm": {
+            "type": "number"
+           },
+           "templates": {
+            "type": "integer"
+           },
+           "discordant_templates": {
+            "type": "integer"
+           },
+           "diff": {
+            "type": "number"
+           },
+           "ci": {
+            "type": "array",
+            "items": {
+             "type": "number"
+            }
+           }
+          }
+         }
+        }
+       },
+       "by_language": {
+        "type": "object"
+       }
+      }
+     }
+    }
+   }
+  },
+  "entries": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "tool",
+     "description",
+     "original",
+     "status",
+     "reason"
+    ],
+    "properties": {
+     "tool": {
+      "type": "string"
+     },
+     "op_id": {
+      "type": "string"
+     },
+     "route": {
+      "type": "string"
+     },
+     "description": {
+      "type": "string"
+     },
+     "original": {
+      "type": "string"
+     },
+     "status": {
+      "enum": [
+       "tested",
+       "tested baseline",
+       "kept",
+       "draft",
+       "unchanged"
+      ]
+     },
+     "reason": {
+      "type": "string"
+     },
+     "read_only": {
+      "type": "boolean"
+     },
+     "destructive": {
+      "type": "boolean"
+     },
+     "suggest_exclude": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "notes": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     }
+    }
+   }
+  },
+  "files": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "string"
+   }
+  },
+  "fastmcp": {
+   "type": "object"
+  },
+  "request_source": {
+   "enum": [
+    "description",
+    "spec"
+   ]
+  },
+  "languages": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "roles_warning": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "cost_usd": {
+   "type": "number"
+  }
+ },
+ "required": [
+  "schema_version",
+  "command",
+  "audit",
+  "groups",
+  "entries",
+  "cost_usd"
+ ],
+ "additionalProperties": true
+}

@@ -321,7 +321,9 @@ def explain(
 
 @app.command()
 def schema(
-    name: Annotated[str, typer.Argument(help="lint, discover, fix, check, explain, doctor, estimate or error")],
+    name: Annotated[
+        str, typer.Argument(help="lint, discover, fix, check, improve, explain, doctor, estimate or error")
+    ],
 ) -> None:
     """Print the JSON Schema for a command's --json output"""
     from importlib import resources
@@ -562,6 +564,105 @@ def check(
         out.print(f"  held out {res['held_out']}, verdicts left {res['verdicts_left']}, spent ${res['cost_usd']:.2f}")
 
     emit(opts, res, warned(res, text), check_code(res["verdict"]))
+
+
+@app.command()
+def improve(
+    target: Annotated[str | None, typer.Argument(help="OpenAPI file, MCP URL, tool list or command")] = None,
+    config: Cfg = Path("misroute.yaml"),
+    model: ModelSpec = None,
+    models: Names = None,
+    modes: Annotated[str, typer.Option(help="comma separated")] = "json",
+    groups: Annotated[int, typer.Option(help="confused groups to work on")] = 5,
+    candidates: Annotated[int, typer.Option(help="candidate descriptions per tool, 1 to 4")] = 4,
+    max_chars: Annotated[int, typer.Option(help="longest candidate description")] = 300,
+    languages: Annotated[str | None, typer.Option(help="request languages, for example en,no")] = None,
+    domain: Annotated[str | None, typer.Option(help="glossary for request writing, text or a file")] = None,
+    real: Annotated[Path | None, typer.Option(help="JSON lines of real requests")] = None,
+    source: Annotated[str, typer.Option(help="spec writes requests from the interface, description from it")] = "spec",
+    out_dir: Annotated[Path, typer.Option("--out", help="where to write the results")] = Path("improve"),
+    fastmcp: Annotated[bool, typer.Option(help="also write a FastMCP server.py and confirm against it")] = False,
+    drafts: Annotated[bool, typer.Option(help="draft descriptions for weak tools outside the groups")] = True,
+    json_: Json = False,
+    yes: Yes = False,
+    max_cost: MaxCost = None,
+    estimate_only: EstimateOnly = False,
+    progress: ProgressMode = "bar",
+) -> None:
+    """Write and test candidate descriptions for confused tools, then export them for review"""
+    from misroute.config import ServerConfig
+    from misroute.config import load as load_config
+    from misroute.improve import run as improver
+
+    opts = Opts("improve", json_, yes, max_cost, estimate_only, progress)
+    system_certs(config)
+    block, secrets = target_server(target) if target else (None, {})
+    try:
+        if config.exists():
+            cfg = load_config(config)
+            if block:
+                cfg = cfg.model_copy(update={"server": ServerConfig.model_validate(block)})
+                write_env(config, secrets)
+        elif block:
+            data = {"server": block, "models": [pick_model(model, json_)], "modes": ["json"]}
+            cfg = Config.model_validate(data)
+            write_env(config, secrets)
+        else:
+            fail(opts, "give a target: an OpenAPI file, an MCP URL, a tool list or a command")
+            return
+    except (OSError, ValidationError, yaml.YAMLError) as e:
+        fail(opts, f"config problem: {e}")
+        return
+    if source not in ("spec", "description"):
+        fail(opts, "source must be spec or description")
+    cfg.request_source = "spec" if source == "spec" else "description"
+    cfg.request_languages = split(languages) or cfg.request_languages
+    cfg.domain = domain or cfg.domain
+    cfg.real_requests = str(real) if real else cfg.real_requests
+    if fastmcp and not cfg.server.openapi:
+        fail(opts, "--fastmcp needs an OpenAPI source")
+    proj = Project(cfg, root=config.parent / cfg.workdir)
+    ms, md = split(models) or cfg.tested(), split(modes) or ["json"]
+    n_cands = max(1, min(candidates, 4))
+    calls, cost = asyncio.run(improver.estimate(proj, ms, md, groups, n_cands))
+    gate(opts, calls, cost)
+    res = run(
+        opts,
+        proj,
+        improver.improve(proj, ms, md, groups, n_cands, max_chars, out_dir, fastmcp, drafts),
+        calls,
+    )
+
+    def text() -> None:
+        a = res["audit"]
+        out.print(f"{a['tools']} tools, {a['reads']} read, {a['writes']} write")
+        for kind, n in sorted(a["counts"].items()):
+            out.print(f"  {n} {kind} notes")
+        for g in res["groups"]:
+            t = g["confirm"]["tests"]["winner_vs_baseline"]
+            r = g["confirm"]["rates"]
+            rates = "  ".join(f"{c} {v['error_rate']:.2f}" for c, v in r.items())
+            out.print(f"group {g['group']}: {', '.join(g['tools'])}")
+            out.print(f"  held out errors  {rates}")
+            out.print(f"  winner vs baseline {t['verdict']}, {t['reason']}, export {g['export']}: {g['why']}")
+            for code, tests in g["confirm"]["by_language"].items():
+                x = tests["winner_vs_baseline"]
+                out.print(f"  {code}: {x['verdict']}, {x['reason']}", style="dim")
+        counts: dict[str, int] = {}
+        for e in res["entries"]:
+            counts[e["status"]] = counts.get(e["status"], 0) + 1
+        out.print("  ".join(f"{k} {v}" for k, v in sorted(counts.items())))
+        if res.get("fastmcp"):
+            f = res["fastmcp"]
+            out.print(f"FastMCP: {'matches' if f.get('ok') else 'differs'}, {f.get('tools', 0)} tools")
+            for k in ("error", "missing", "descriptions_differ", "hints_differ"):
+                if f.get(k):
+                    out.print(f"  {k.replace('_', ' ')}: {f[k]}", style="yellow")
+        for name, path in res.get("files", {}).items():
+            out.print(f"  {name}: {path}")
+        out.print(f"spent ${res['cost_usd']:.2f}. Review the files, nothing was applied", style="dim")
+
+    emit(opts, res, warned(res, text))
 
 
 @app.command()

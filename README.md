@@ -9,6 +9,7 @@ misroute tests how language models pick tools from an MCP server. It runs reques
 - **Discover:** runs requests for every tool and ranks the pairs your models confuse, with the direction of each leak
 - **Reproduce:** checks JSON tool calls, and runs code-mode programs against recorded fake tools so nothing touches your server
 - **Evaluate:** compares a boundary clause with the original description and a neutral edit of the same length, with exact statistics
+- **Improve:** writes several descriptions per confused tool, races them on synthetic requests and exports the winners for review, from an MCP server or a Swagger file
 - **Inspect:** shows the misrouted requests, what the model called, and where errors moved after a fix
 - **Integrate:** runs from the command line, in CI, in pytest, from any agent through MCP, and from a local web UI, with a cost cap on every paid run
 - **Guard:** logs real tool calls and holds a second write to a sibling tool until a person approves it
@@ -119,6 +120,7 @@ domain: Municipal operations. A work order is a planned job, an incident is a re
 | `misroute explain` | shows the misrouted requests for a pair and what the model called |
 | `misroute fix` | tests a boundary clause against a neutral edit, or against a drafted description for undescribed tools |
 | `misroute check` | tests one proposed description on held out requests |
+| `misroute improve` | writes, races and confirms new descriptions for confused tools, and exports them for review |
 | `misroute report` | writes a self-contained HTML report |
 | `misroute ui` | local web interface to set up, run, read results and approve held writes |
 | `misroute ci` | fails on exceeded limits, or with `--changed` on descriptions that got worse |
@@ -141,6 +143,33 @@ Code mode runs each program in Monty against recorded fakes and reports faked to
 `fix` writes one boundary sentence per tool and runs the original, a baseline and the clause on identical requests. The baseline is a neutral rewrite of the same length, or lint's drafted description when a tool has none. Trials from one request template fail together, so verdicts count templates, not trials: an exact sign flip test on per template error differences, with Holm correction across pairs. Fewer than six templates that differ gives no verdict. Every result also shows the error rate change with a 95% interval, a trial level mid p McNemar, errors in both directions and leakage to other tools.
 
 `check` tests one proposed description. It splits requests into a tuning set and a held out set, gives its verdict on the held out set only, and requires a fresh held out set after three verdicts on the same tool, so a description cannot be tuned to the test requests.
+
+## Improve descriptions
+
+```console
+$ misroute improve api.json --languages en,no --fastmcp --max-cost 5
+```
+
+`improve` takes the same targets as `quick`: an OpenAPI or Swagger file, an MCP server, or a tool list. It runs in stages:
+
+1. Audit, free: weak descriptions, names FastMCP cuts at 56 characters, POSTs that only read, overlapping routes, operations like health or auth that agents rarely need, and spec errors that stop converters.
+2. Discover with requests written from the interface, so descriptions under test never shape the requests.
+3. Group confused tools and write up to four candidates per tool in different styles: a boundary clause, returns first, example led and minimal. The validator drops candidates that claim fields or behaviour the interface lacks.
+4. Race the candidates on the tuning half of the requests, one tool at a time with the others fixed at their best.
+5. Confirm on the held out half: the original, a baseline and the winner, with the template level test, Holm across groups and results per language.
+
+The winner is exported when it beats the baseline. Otherwise the baseline is exported when it beats the original, and otherwise the original stays. Every entry carries its reason and numbers. Weak tools outside any group get a drafted description marked untested.
+
+Results go to `improve/`:
+
+| File | For |
+|---|---|
+| `descriptions.yaml` | tool name to description, for MCP servers you edit in code |
+| `overlay.yaml` | per operationId: description, read and write hints, suggested exclusions and the evidence |
+| `overlay.openapi.yaml` | the same descriptions as an OpenAPI Overlay 1.0 file for docs and other converters |
+| `server.py` | with `--fastmcp`, a FastMCP 4.1.4 server that serves the untouched spec with the overlay applied |
+
+With `--fastmcp` misroute also starts the generated server, checks that names, descriptions and hints come through, and reruns the held out requests against it, since that is what agents will see. Run it with `uv run improve/server.py`, with `API_BASE_URL` and `API_HEADERS` set for the backend. Set `exclude: true` in `overlay.yaml` on operations to hide. Nothing is applied to your spec or server.
 
 ## For agents
 

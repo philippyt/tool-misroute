@@ -1,9 +1,11 @@
 import asyncio
 import uuid
+from pathlib import Path
 from typing import Any
 from mcp.server.mcpserver import MCPServer
 from mcp_types import ToolAnnotations
 from misroute import check as checker
+from misroute.improve import run as improver
 from misroute.lint import descriptions
 from misroute.models.base import BudgetExceeded
 from misroute.project import Project
@@ -133,21 +135,25 @@ def create(proj: Project) -> MCPServer:
     jobs: dict[str, dict[str, Any]] = {}
 
     @app.tool(
-        description="Starts discover, probe or fix in the background and returns a job id at once, for runs longer "
-        "than a tool call may take. args takes models, modes, top, pairs as [[a, b]] and trials. Refuses above "
-        "max_cost. Poll job_status with the id.",
+        description="Starts discover, probe, fix or improve in the background and returns a job id at once, for runs "
+        "longer than a tool call may take. args takes models, modes, top, pairs as [[a, b]] and trials, and for "
+        "improve groups, candidates, max_chars and out. Refuses above max_cost. Poll job_status with the id.",
         annotations=PAID,
         structured_output=True,
     )
     async def start_job(kind: str, max_cost: float = 5.0, args: dict[str, Any] | None = None) -> dict[str, Any]:
         args = args or {}
-        if kind not in ("discover", "probe", "fix"):
-            return {"error": "kind must be discover, probe or fix"}
+        if kind not in ("discover", "probe", "fix", "improve"):
+            return {"error": "kind must be discover, probe, fix or improve"}
         models = args.get("models") or proj.cfg.tested()
         modes: list[str] = args.get("modes") or [str(m) for m in proj.cfg.modes]
         pairs = [tuple(p) for p in args.get("pairs") or []] or None
         top, trials = int(args.get("top", 3)), int(args.get("trials", 96))
-        calls, cost = await proj.cost(kind, models, modes, len(pairs) if pairs else top, trials)
+        n_groups, n_cands = int(args.get("groups", 5)), max(1, min(int(args.get("candidates", 4)), 4))
+        if kind == "improve":
+            calls, cost = await improver.estimate(proj, models, modes, n_groups, n_cands)
+        else:
+            calls, cost = await proj.cost(kind, models, modes, len(pairs) if pairs else top, trials)
         if cost > max_cost:
             return {"error": f"estimate ${cost:.2f} is above max_cost ${max_cost:.2f}", "cost_usd": round(cost, 4)}
         job_id = uuid.uuid4().hex[:8]
@@ -168,6 +174,15 @@ def create(proj: Project) -> MCPServer:
             "discover": lambda: proj.discover(models, modes),
             "probe": lambda: proj.probe(top, pairs, models, modes),
             "fix": lambda: proj.fix(top, pairs, models, modes, trials),
+            "improve": lambda: improver.improve(
+                proj,
+                models,
+                modes,
+                n_groups,
+                n_cands,
+                int(args.get("max_chars", 300)),
+                Path(args.get("out", "improve")),
+            ),
         }
 
         async def go() -> None:

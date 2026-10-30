@@ -127,8 +127,9 @@ def brief(tool: Tool) -> str:
     return "; ".join(parts)
 
 
-def rid(tool: str, kind: str, template: str) -> str:
-    return hashlib.sha256(f"{tool}|{kind}|{template}".encode()).hexdigest()[:10]
+def rid(tool: str, kind: str, template: str, lang: str = "en") -> str:
+    tag = "" if lang == "en" else f"|{lang}"
+    return hashlib.sha256(f"{tool}|{kind}|{template}{tag}".encode()).hexdigest()[:10]
 
 
 async def generate(
@@ -167,7 +168,7 @@ async def generate(
         if "{slot}" not in text:
             text = text + " ({slot})" if values else text
         sib = sibling.name if sibling else None
-        out.append(Request(rid(tool.name, kind, text), tool.name, text, values, kind, sib, lang))
+        out.append(Request(rid(tool.name, kind, text, lang), tool.name, text, values, kind, sib, lang))
     return out
 
 
@@ -183,5 +184,5 @@ def load_real(path: str | Path, tools: list[Tool]) -> list[Request]:
         name = names.get(str(row.get("tool", "")).strip())
         if name:
             lang = row.get("lang", "en")
-            out.append(Request(rid(name, "real", row["text"]), name, row["text"], [], "real", lang=lang))
+            out.append(Request(rid(name, "real", row["text"], lang), name, row["text"], [], "real", lang=lang))
     return out

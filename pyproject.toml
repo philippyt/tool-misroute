@@ -76,8 +76,8 @@ no-lines-before = ["future", "standard-library", "third-party", "first-party", "
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-markers = ["live: needs a running model endpoint"]
-addopts = "-m 'not live'"
+markers = ["live: needs a running model endpoint", "fastmcp: runs a generated server with fastmcp from PyPI"]
+addopts = "-m 'not live and not fastmcp'"
 
 [tool.ty.environment]
 python-version = "3.11"
