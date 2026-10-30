@@ -99,5 +99,14 @@ code { font-size: 12px; }
 </table>
 {% endfor %}
 {% endif %}
+{% if guard %}
+<h2>Production</h2>
+<p class="muted">From the guard log: {{ guard.calls }} real tool calls, {{ guard.held }} writes held{% for k, v in guard.kinds.items() %}, {{ v }} {{ k }}{% endfor %}</p>
+{% if guard.pairs %}
+<table><tr><th>Event</th><th>Tools</th><th>Count</th></tr>
+{% for p in guard.pairs %}<tr><td>{{ p.kind }}</td><td>{{ p.a }} and {{ p.b }}</td><td>{{ p.count }}</td></tr>{% endfor %}
+</table>
+{% endif %}
+{% endif %}
 </body>
 </html>

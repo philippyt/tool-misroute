@@ -12,6 +12,7 @@ class ServerConfig(BaseModel):
     url: str | None = None
     command: list[str] | None = None
     openapi: str | None = None
+    tools: str | None = None
     auth: str | None = None
     headers: dict[str, str] = Field(default_factory=dict)
     env: dict[str, str] = Field(default_factory=dict)
@@ -20,8 +21,8 @@ class ServerConfig(BaseModel):
 
     @model_validator(mode="after")
     def _one_target(self):
-        if sum(map(bool, (self.url, self.command, self.openapi))) != 1:
-            raise ValueError("server needs exactly one of url, command or openapi")
+        if sum(map(bool, (self.url, self.command, self.openapi, self.tools))) != 1:
+            raise ValueError("server needs exactly one of url, command, openapi or tools")
         return self
 
 
@@ -59,6 +60,8 @@ class GuardConfig(BaseModel):
 
 
 class Config(BaseModel):
+    """Run settings. Models can be written as provider:model shorthand, for example anthropic:claude-opus-5-5."""
+
     server: ServerConfig
     models: list[ModelConfig]
     modes: list[Mode] = ["json", "code"]
@@ -73,8 +76,30 @@ class Config(BaseModel):
     max_turns: int = 1
     real_requests: str | None = None
     workdir: str = ".misroute"
+    system_certs: bool = False
     limits: Limits = Field(default_factory=Limits)
     guard: GuardConfig = Field(default_factory=GuardConfig)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _shorthand(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        from misroute.models.presets import expand
+
+        data = dict(data)
+        models = [expand(m) if isinstance(m, str) else m for m in data.get("models") or []]
+        names = {m["name"] if isinstance(m, dict) else m.name for m in models}
+        for role in ("generator", "validator", "writer"):
+            value = data.get(role)
+            if isinstance(value, str) and ":" in value and value not in names:
+                block = expand(value)
+                if block["name"] not in names:
+                    models.append(block)
+                    names.add(block["name"])
+                data[role] = block["name"]
+        data["models"] = models
+        return data
 
     def model(self, name: str) -> ModelConfig:
         for m in self.models:
@@ -94,6 +119,17 @@ class Config(BaseModel):
 
 def env_path(config: str | Path) -> Path:
     return Path(config).resolve().parent / ".env"
+
+
+def write_env(config: str | Path, secrets: dict[str, str]) -> None:
+    """Add or replace KEY=VALUE lines in .env next to the config and in the current environment."""
+    if not secrets:
+        return
+    path = env_path(config)
+    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    lines = [ln for ln in lines if ln.split("=", 1)[0].strip() not in secrets]
+    path.write_text("\n".join([*lines, *(f"{k}={v}" for k, v in secrets.items())]) + "\n", encoding="utf-8")
+    os.environ.update(secrets)
 
 
 def load_env(config: str | Path) -> None:

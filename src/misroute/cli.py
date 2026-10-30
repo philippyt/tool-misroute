@@ -1,6 +1,9 @@
 import asyncio
 import json
+import shlex
 import sys
+import time
+import webbrowser
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated, Any
@@ -10,7 +13,11 @@ from pydantic import ValidationError
 from rich.console import Console
 from rich.progress import Progress
 from rich.table import Table
+from misroute import export, mcpconfig
+from misroute.config import Config, env_path, write_env
+from misroute.doctor import system_certs
 from misroute.models.base import BudgetExceeded
+from misroute.models.presets import detect
 from misroute.project import Project
 from misroute.store.runs import SCHEMA_VERSION
 
@@ -29,6 +36,10 @@ Json = Annotated[bool, typer.Option("--json", help="print one JSON object")]
 Yes = Annotated[bool, typer.Option("--yes", "-y", help="do not ask before paid runs")]
 MaxCost = Annotated[float | None, typer.Option("--max-cost", help="refuse runs estimated above this many dollars")]
 EstimateOnly = Annotated[bool, typer.Option("--estimate-only", help="print the estimate and exit")]
+ProgressMode = Annotated[str, typer.Option("--progress", help="bar, ndjson on stderr, or none")]
+ModelSpec = Annotated[
+    str | None, typer.Option("--model", help="provider:model, for example anthropic:claude-sonnet-5-5")
+]
 
 EXAMPLE = """server:
   command: ["{python}", -m, misroute.testing.fake_server]
@@ -50,6 +61,7 @@ class Opts:
     yes: bool = False
     max_cost: float | None = None
     estimate_only: bool = False
+    progress: str = "bar"
 
 
 def emit(opts: Opts, data: dict[str, Any], text=None, code: int = OK) -> None:
@@ -68,6 +80,7 @@ def fail(opts: Opts, message: str, code: int = PROBLEM) -> None:
 
 
 def load(opts: Opts, config: Path) -> Project:
+    system_certs(config)
     try:
         return Project.from_yaml(config)
     except (OSError, ValidationError, yaml.YAMLError) as e:
@@ -92,7 +105,22 @@ def gate(opts: Opts, calls: int, cost: float) -> None:
 
 
 def run(opts: Opts, proj: Project, coro, total: int):
-    with Progress(console=err, transient=True, disable=opts.json) as bar:
+    if opts.progress == "ndjson" or (opts.json and opts.progress == "bar"):
+        state = {"done": 0, "at": 0.0}
+
+        def tick(n: int) -> None:
+            state["done"] += n
+            now = time.monotonic()
+            if opts.progress == "ndjson" and (now - state["at"] > 1 or state["done"] >= total):
+                state["at"] = now
+                print(json.dumps({"event": "progress", "done": state["done"], "total": total}), file=sys.stderr)
+
+        proj.progress = tick
+        try:
+            return asyncio.run(coro)
+        except BudgetExceeded as e:
+            fail(opts, str(e))
+    with Progress(console=err, transient=True, disable=opts.progress == "none") as bar:
         task = bar.add_task("running", total=total)
         proj.progress = lambda n: bar.advance(task, n)
         try:
@@ -116,21 +144,201 @@ def table(*cols: str) -> Table:
     return t
 
 
+def write_config(path: Path, server: dict, model: str, secrets: dict[str, str], extra: dict | None = None) -> None:
+    data = {"server": server, "models": [model], "modes": ["json"], "budget_usd": 5.0, **(extra or {})}
+    Config.model_validate(data)
+    path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    write_env(path, secrets)
+
+
+def pick_model(model: str | None, quiet: bool = False) -> str:
+    if model:
+        return model
+    found, why = detect()
+    if not found:
+        raise typer.BadParameter(why, param_hint="--model")
+    (err if quiet else out).print(f"using {found}, {why}", style="dim")
+    return found
+
+
 @app.command()
-def init(path: Path = Path("misroute.yaml")) -> None:
-    """Write an example config"""
+def init(
+    path: Path = Path("misroute.yaml"),
+    from_: Annotated[
+        str | None, typer.Option("--from", help="claude, cursor, vscode or a path to an MCP config")
+    ] = None,
+    server: Annotated[str | None, typer.Option(help="server name in that config")] = None,
+    model: ModelSpec = None,
+    demo: Annotated[bool, typer.Option(help="write a demo config with the bundled test server")] = False,
+) -> None:
+    """Write misroute.yaml, from your MCP client config and the model keys in your environment"""
     if path.exists():
         raise typer.BadParameter(f"{path} exists")
-    path.write_text(EXAMPLE.replace("{python}", Path(sys.executable).as_posix()), encoding="utf-8")
-    out.print(f"wrote {path}")
+    servers = [] if demo else mcpconfig.found(from_)
+    if not servers:
+        if from_:
+            raise typer.BadParameter(f"no MCP servers found in {from_}", param_hint="--from")
+        path.write_text(EXAMPLE.replace("{python}", Path(sys.executable).as_posix()), encoding="utf-8")
+        out.print(f"wrote {path} with the bundled test server and a mock model")
+        return
+    chosen = next((x for x in servers if x[1] == server), None) if server else servers[0]
+    if not chosen:
+        raise typer.BadParameter(f"{server} not found, choose from {', '.join(x[1] for x in servers)}")
+    _, name, source, spec = chosen
+    block, secrets = mcpconfig.to_server(spec)
+    write_config(path, block, pick_model(model), secrets)
+    out.print(f"wrote {path} for {name} from {source}")
+    if len(servers) > 1:
+        out.print(
+            f"other servers: {', '.join(x[1] for x in servers if x is not chosen)}, pick one with --server", style="dim"
+        )
+    if secrets:
+        out.print(f"secrets saved to {env_path(path)}: {', '.join(secrets)}", style="dim")
+
+
+def target_server(target: str) -> tuple[dict, dict[str, str]]:
+    """A server block from a URL, an OpenAPI file, a tool list, an MCP client config or a command."""
+    if target.startswith(("http://", "https://")):
+        return {"url": target}, {}
+    path = Path(target)
+    if path.suffix.lower() in (".json", ".yaml", ".yml") and path.exists():
+        text = path.read_text(encoding="utf-8")
+        data = json.loads(text) if path.suffix.lower() == ".json" else yaml.safe_load(text)
+        if isinstance(data, dict) and ("openapi" in data or "swagger" in data):
+            return {"openapi": target}, {}
+        if isinstance(data, dict) and ("mcpServers" in data or "servers" in data):
+            return mcpconfig.to_server(next(iter(mcpconfig.servers_in(path).values())))
+        return {"tools": target}, {}
+    return {"command": shlex.split(target, posix=sys.platform != "win32")}, {}
 
 
 @app.command()
-def lint(config: Cfg = Path("misroute.yaml"), draft: bool = False, json_: Json = False) -> None:
+def quick(
+    target: Annotated[str | None, typer.Argument(help="URL, OpenAPI file, tool list, MCP config or command")] = None,
+    model: ModelSpec = None,
+    max_cost: Annotated[float, typer.Option("--max-cost")] = 1.0,
+    modes: Annotated[str, typer.Option(help="comma separated")] = "json",
+    open_: Annotated[bool, typer.Option("--open/--no-open")] = True,
+    json_: Json = False,
+    progress: ProgressMode = "bar",
+) -> None:
+    """Lint and a small capped discover in one go, then open the report"""
+    from misroute.report.html import render
+
+    opts = Opts("quick", json_, True, max_cost, progress=progress)
+    note = err if json_ else out
+    config = Path("misroute.yaml")
+    system_certs(config)
+    if not config.exists():
+        if target:
+            block, secrets = target_server(target)
+        else:
+            servers = mcpconfig.found()
+            if not servers:
+                fail(opts, "give a server: a URL, an OpenAPI file, a tool list or a command")
+                return
+            block, secrets = mcpconfig.to_server(servers[0][3])
+            note.print(f"using {servers[0][1]} from {servers[0][2]}", style="dim")
+        settings = {"requests_per_tool": 3, "rotations": 2, "repeats": 1, "budget_usd": max_cost}
+        write_config(config, block, pick_model(model, json_), secrets, settings)
+        note.print(f"wrote {config}", style="dim")
+    proj = load(opts, config)
+    proj.cfg.modes = [m for m in split(modes) or ["json"] if m in ("json", "code")]  # type: ignore[assignment]
+    lint_res = asyncio.run(proj.lint(False))
+    calls, cost = asyncio.run(proj.discover_cost(proj.cfg.tested(), list(proj.cfg.modes)))
+    gate(opts, calls, cost)
+    res = run(opts, proj, proj.discover(None, list(proj.cfg.modes)), calls)
+    report = render(proj.store, proj.store.root / "report.html")
+
+    def text() -> None:
+        out.print(f"{lint_res['tools']} tools, {len(lint_res['findings'])} with weak descriptions")
+        for s_ in res["spots"][:5]:
+            out.print(f"  {s_['a']}  {s_['b']}  {s_['score']:.2f}")
+        out.print(f"spent ${res['spent']:.2f}, report {report}")
+
+    if open_ and not json_:
+        webbrowser.open(report.resolve().as_uri())
+    emit(opts, {"lint": lint_res, "discover": res, "report": str(report)}, text)
+
+
+@app.command()
+def doctor(config: Cfg = Path("misroute.yaml"), offline: bool = False, json_: Json = False) -> None:
+    """Check Python, config, server, keys, prices and one call per model, with a fix for each problem"""
+    from misroute import doctor as doc
+
+    opts = Opts("doctor", json_)
+    system_certs(config)
+    rows = asyncio.run(doc.run(config, offline))
+    ok = all(r["ok"] for r in rows)
+
+    def text() -> None:
+        for r in rows:
+            mark = "[green]ok[/green]  " if r["ok"] else "[red]fail[/red]"
+            out.print(f"{mark} {r['check']:18} {r['detail']}")
+            if not r["ok"] and r["fix"]:
+                out.print(f"       {r['fix']}", style="yellow")
+
+    emit(opts, {"checks": rows, "ok": ok}, text, OK if ok else PROBLEM)
+
+
+@app.command()
+def explain(
+    pair: Annotated[str, typer.Option("--pair", help="tool_a,tool_b")],
+    config: Cfg = Path("misroute.yaml"),
+    limit: int = 5,
+    json_: Json = False,
+) -> None:
+    """Show misrouted requests between two tools in both directions, with what the model did"""
+    from misroute.explain import explain as explain_pair
+
+    opts = Opts("explain", json_)
+    proj = load(opts, config)
+    a, b = pair.split(",", 1)
+    res = explain_pair(proj.store, a.strip(), b.strip(), limit)
+
+    def text() -> None:
+        for d, v in res["directions"].items():
+            src, dst = d.split(">")
+            out.print(
+                f"[bold]requests for {src}[/bold]: {v['wrong']} went to {dst}, "
+                f"{v['hedge']} called both, of {v['trials']}"
+            )
+            for e in v["examples"]:
+                out.print(f"  {e['kind']:5} {e['model']} {e['mode']}  {e['request']}")
+                out.print(f"        called {', '.join(e['called']) or 'nothing'}", style="dim")
+
+    emit(opts, res, text)
+
+
+@app.command()
+def schema(
+    name: Annotated[str, typer.Argument(help="lint, discover, fix, check, explain, doctor, estimate or error")],
+) -> None:
+    """Print the JSON Schema for a command's --json output"""
+    from importlib import resources
+
+    print(resources.files("misroute.schemas").joinpath(f"{name}.json").read_text(encoding="utf-8"))
+
+
+@app.command()
+def lint(
+    config: Cfg = Path("misroute.yaml"),
+    draft: bool = False,
+    json_: Json = False,
+    strict: Annotated[bool, typer.Option(help="exit 1 when any description is weak")] = False,
+    sarif: Annotated[Path | None, typer.Option(help="write findings as SARIF for code scanning")] = None,
+) -> None:
     """Flag missing, name only and path only descriptions"""
     opts = Opts("lint", json_)
     proj = load(opts, config)
     res = asyncio.run(proj.lint(draft))
+    if sarif:
+        source = proj.cfg.server.openapi or proj.cfg.server.tools or str(config)
+        results = [
+            (f"description-{f['issue'].replace(' ', '-')}", "warning", f"{f['tool']}: {f['issue']} description", source)
+            for f in res["findings"]
+        ]
+        export.sarif(results, sarif)
 
     def text() -> None:
         out.print(f"{res['tools']} tools, {len(res['findings'])} with weak descriptions")
@@ -145,7 +353,7 @@ def lint(config: Cfg = Path("misroute.yaml"), draft: bool = False, json_: Json =
             if f["tool"] in res["drafts"]:
                 out.print(f"    draft: {res['drafts'][f['tool']]}", style="dim")
 
-    emit(opts, res, text)
+    emit(opts, res, text, FAILED if strict and res["findings"] else OK)
 
 
 @app.command()
@@ -166,9 +374,10 @@ def discover(
     yes: Yes = False,
     max_cost: MaxCost = None,
     estimate_only: EstimateOnly = False,
+    progress: ProgressMode = "bar",
 ) -> None:
     """Find risky tools from model behaviour"""
-    opts = Opts("discover", json_, yes, max_cost, estimate_only)
+    opts = Opts("discover", json_, yes, max_cost, estimate_only, progress)
     proj = load(opts, config)
     ms, md = split(models), split(modes)
     calls, cost = asyncio.run(proj.discover_cost(ms or proj.cfg.tested(), md or list(proj.cfg.modes)))
@@ -229,9 +438,10 @@ def probe(
     yes: Yes = False,
     max_cost: MaxCost = None,
     estimate_only: EstimateOnly = False,
+    progress: ProgressMode = "bar",
 ) -> None:
     """Harder requests on the risky pairs"""
-    opts = Opts("probe", json_, yes, max_cost, estimate_only)
+    opts = Opts("probe", json_, yes, max_cost, estimate_only, progress)
     proj = load(opts, config)
     ms = split(models) or proj.cfg.tested()
     md = split(modes) or list(proj.cfg.modes)
@@ -266,9 +476,10 @@ def fix(
     yes: Yes = False,
     max_cost: MaxCost = None,
     estimate_only: EstimateOnly = False,
+    progress: ProgressMode = "bar",
 ) -> None:
     """Test a boundary clause against a neutral edit or a drafted description"""
-    opts = Opts("fix", json_, yes, max_cost, estimate_only)
+    opts = Opts("fix", json_, yes, max_cost, estimate_only, progress)
     proj = load(opts, config)
     trials = 24 if cheap else trials
     ms = split(models) or proj.cfg.tested()
@@ -319,11 +530,12 @@ def check(
     yes: Yes = False,
     max_cost: MaxCost = None,
     estimate_only: EstimateOnly = False,
+    progress: ProgressMode = "bar",
 ) -> None:
     """Check whether a proposed description beats the current one on held out requests"""
     from misroute import check as checker
 
-    opts = Opts("check", json_, yes, max_cost, estimate_only)
+    opts = Opts("check", json_, yes, max_cost, estimate_only, progress)
     proj = load(opts, config)
     ms, md = split(models) or proj.cfg.tested(), split(modes) or ["json"]
     tools = asyncio.run(proj.tools())
@@ -349,7 +561,7 @@ def report(config: Cfg = Path("misroute.yaml"), output: Path = Path("report.html
     from misroute.report.html import render
 
     proj = Project.from_yaml(config)
-    out.print(f"wrote {render(proj.store, output)}")
+    out.print(f"wrote {render(proj.store, output, proj.cfg.guard.log)}")
 
 
 def changed_markdown(rows: list[dict]) -> str:
@@ -377,6 +589,8 @@ def ci(
     changed: Annotated[bool, typer.Option(help="check only tools whose definition changed")] = False,
     baseline: Annotated[Path | None, typer.Option(help="catalog JSON from the base branch")] = None,
     markdown: Annotated[Path | None, typer.Option(help="write a markdown summary for a PR comment")] = None,
+    junit: Annotated[Path | None, typer.Option(help="write results as JUnit XML")] = None,
+    sarif: Annotated[Path | None, typer.Option(help="write problems as SARIF for code scanning")] = None,
     json_: Json = False,
     max_cost: MaxCost = None,
 ) -> None:
@@ -390,6 +604,27 @@ def ci(
         rows, code = run(opts, proj, ci_changed(proj, json.loads(baseline.read_text()), split(models), opts), 0)
         if markdown:
             markdown.write_text(changed_markdown(rows), encoding="utf-8")
+        status = {"worse": "failed", "insufficient_data": "skipped"}
+        if junit:
+            cases = [
+                (
+                    r["tool"],
+                    status.get(r.get("verdict", ""), "passed" if "verdict" in r else "skipped"),
+                    r.get("reason") or r.get("note", ""),
+                )
+                for r in rows
+            ]
+            export.junit("misroute changed tools", cases, junit)
+        if sarif:
+            source = proj.cfg.server.openapi or proj.cfg.server.tools or str(config)
+            export.sarif(
+                [
+                    ("description-worse", "error", f"{r['tool']}: new description routes worse, {r['reason']}", source)
+                    for r in rows
+                    if r.get("verdict") == "worse"
+                ],
+                sarif,
+            )
         emit(opts, {"changed": rows}, lambda: out.print(changed_markdown(rows)), code)
         return
     ms, md = split(models), split(modes)
@@ -397,6 +632,10 @@ def ci(
     gate(opts, calls, cost)
     run(opts, proj, proj.discover(ms, md), calls)
     bad = proj.breaches()
+    if junit:
+        export.junit("misroute limits", [(b, "failed", b) for b in bad] or [("limits", "passed", "")], junit)
+    if sarif:
+        export.sarif([("limit-exceeded", "error", b, str(config)) for b in bad], sarif)
 
     def text() -> None:
         for b in bad:

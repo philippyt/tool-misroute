@@ -1,45 +1,41 @@
 # misroute
-Find the tools your agent confuses, and test that a fix helps before you deploy it.
 
-misroute connects to any MCP server, writes test requests for every tool, and runs them on your models in both JSON mode and code mode. It shows where each request ends up, which tools get called together, and where code-mode programs fail. For the worst cases it writes a fix and compares it with a neutral edit of the same length that adds no new information, so you only deploy a fix when its content makes the difference.
+Find tool-routing failures before your agents reach production.
 
-## Highlights
+misroute tests how language models pick tools from an MCP server. It runs requests for every tool against the full catalog, finds the tools your models mix up, reproduces each failure in JSON mode and code mode, and tests description fixes against a controlled baseline.
 
-- **No pair list needed.** misroute watches how your models behave and finds the confusions from that, including between tools with unrelated names.
-- **JSON mode and code mode.** Code-mode programs run in a [Monty](https://github.com/pydantic/monty) sandbox against recorded fake tools, so nothing touches your server.
-- **Hedging counts as a failure.** Calling both sibling tools gets flagged, and in red when the tools write data.
-- **Fixes tested against a neutral edit.** Every boundary clause is compared with an edit of the same length, with errors tracked in both directions and leakage to every other tool.
-- **Any model.** Anthropic, Azure Foundry, Bedrock, OpenRouter, vLLM, Ollama, LM Studio and any OpenAI-compatible endpoint.
-- **Private.** Runs on your machine or in CI, and data only goes to the endpoints you configure.
-- **Cost-aware.** Shows an estimate before every paid run, stops at a hard budget, and caches responses so reruns are free.
-- **Production guard.** An MCP proxy that logs every real call and holds a second write to a sibling tool until someone approves it.
+## What it does
 
-## Installation
+- **Discover:** runs requests for every tool and ranks the pairs your models confuse, with the direction of each leak
+- **Reproduce:** checks JSON tool calls, and runs code-mode programs against recorded fake tools so nothing touches your server
+- **Evaluate:** compares a boundary clause with the original description and a neutral edit of the same length, with exact statistics
+- **Inspect:** shows the misrouted requests, what the model called, and where errors moved after a fix
+- **Integrate:** runs from the command line, in CI, in pytest, from any agent through MCP, and from a local web UI, with a cost cap on every paid run
+- **Guard:** logs real tool calls and holds a second write to a sibling tool until a person approves it
+
+## Install
 
 ```console
 $ uv tool install misroute
 ```
 
-Or with pip:
-
-```console
-$ pip install misroute
-```
-
-Behind a corporate package index, point pip at PyPI directly:
-
-```console
-$ pip install misroute --index-url https://pypi.org/simple/
-```
+or `pip install misroute`. Behind a corporate package index, add `--index-url https://pypi.org/simple/`.
 
 ## Quick start
 
-Example output from the bundled test server, run with Claude Opus 5.5 through OpenRouter pinned to the Anthropic provider:
+```console
+$ export ANTHROPIC_API_KEY=...
+$ misroute quick https://your-server/mcp
+```
+
+`quick` picks a model from your environment, writes `misroute.yaml`, runs lint and a discover capped at $1, and opens the report. It takes an MCP URL, a local command, an OpenAPI file, a tool list in MCP, OpenAI or Anthropic format, or nothing at all, in which case it uses the first server in your Claude, Cursor or VS Code config.
+
+Something not connecting? Run `misroute doctor`. It checks the server, each key, the price and one call per model, and prints the fix for every problem.
+
+The full loop on the bundled test server, with Claude Opus 5.5:
 
 ```console
-$ misroute init
-wrote misroute.yaml
-
+$ misroute init --demo
 $ misroute lint --draft
 9 tools, 2 with weak descriptions
   get_attachment  missing
@@ -48,202 +44,187 @@ $ misroute lint --draft
     draft: Returns the full details of a single document identified by its ID
 
 $ misroute discover
-495 model calls, est $3.43
-continue [y/N]: y
+up to 495 model calls, up to $3.43
 
 tool               sibling            score  signals                               seen in
 get_attachment     get_document       1.00   wrong 0.33  hedge 0.42  removal 1.00  opus code, opus json
 get_case_comments  get_case_events    0.50   hedge 0.25  removal 1.00              opus code, opus json
 get_case_events    update_case_meta   0.25   wrong 0.25                            opus code
 
+$ misroute explain --pair get_attachment,get_document
 $ misroute fix --pair get_case_comments,get_case_events --modes json
-tool               sibling          model  mode  original  baseline     with clause  p      verdict
-get_case_comments  get_case_events  opus   json  10        13 neutral   6            0.065  no difference, consider a guard rule or merging the tools
-
 $ misroute report
-wrote report.html
 ```
+
+## Connect your tools
+
+| Source | In misroute.yaml |
+|---|---|
+| MCP server over HTTP | `server: {url: https://your-server/mcp, auth: bearer_env:MCP_TOKEN}` |
+| Local MCP server | `server: {command: [npx, your-mcp-server]}` |
+| OpenAPI file | `server: {openapi: api.json}` |
+| Tool list in MCP, OpenAI or Anthropic format | `server: {tools: tools.json}` |
+| Your Claude, Cursor or VS Code config | `misroute init --from claude` |
+| Tools in Python | `Project.from_tools([...], "anthropic:claude-sonnet-5-5")` |
+
+Add `include_tools: ["*issue*"]` to test a slice of a large server.
+
+## Models
+
+Write models as `provider:model`:
+
+| Shorthand | Uses |
+|---|---|
+| `anthropic:claude-opus-5-5` | `ANTHROPIC_API_KEY` |
+| `foundry:claude-opus-5-5` | `ANTHROPIC_FOUNDRY_API_KEY` and `ANTHROPIC_FOUNDRY_BASE_URL` |
+| `bedrock:anthropic.claude-opus-5-5` | your AWS credentials |
+| `azure:your-deployment` | `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_ENDPOINT` |
+| `openai:gpt-5.6` | `OPENAI_API_KEY` |
+| `openrouter:anthropic/claude-opus-5.5` | `OPENROUTER_API_KEY` |
+| `ollama:qwen3.5:9b`, `vllm:Qwen/Qwen3-14B`, `lmstudio:model` | a local server |
+
+Prices come from the public OpenRouter catalog, cached for a week, and local models cost nothing. Set `price_in` and `price_out` to override. Every paid run shows an estimate first and stops at `budget_usd`. Behind a company TLS proxy, set `system_certs: true`.
+
+```yaml
+server:
+  url: https://your-server/mcp
+models:
+  - foundry:claude-opus-5-5
+generator: openrouter:deepseek/deepseek-v4.1-flash
+validator: openrouter:google/gemini-3.8-flash
+modes: [json, code]
+budget_usd: 5
+```
+
+The generator writes test requests and the validator keeps only those it routes to the right tool. A model from another family than the one under test works best for both.
 
 ## Commands
 
-| Command | What it does |
+| Command | Does |
 |---|---|
-| `misroute lint` | Flags tools with missing, name-only or path-only descriptions, and drafts replacements for you to review |
-| `misroute discover` | Runs requests for every tool against the full tool list and ranks the risky pairs |
-| `misroute probe` | Tests risky pairs with harder requests that borrow words from the sibling tool |
-| `misroute fix` | Compares a boundary clause with a neutral edit, or with a drafted description for undescribed tools |
-| `misroute check` | Checks whether one proposed description beats the current one on held out requests |
-| `misroute report` | Writes a self-contained HTML report |
-| `misroute ui` | Opens a local web interface for results, runs and held writes |
-| `misroute ci` | Runs discover and exits with an error when limits are exceeded |
-| `misroute guard serve` | Runs an MCP proxy that logs and guards every real tool call |
-| `misroute site` | Builds a static results site from one or more runs |
-| `misroute serve-mcp` | Runs misroute itself as an MCP server for agents |
-| `misroute catalog` | Prints tool hashes and descriptions for change-aware CI |
+| `misroute quick` | lint and a capped discover in one go, then opens the report |
+| `misroute init` | writes misroute.yaml from your MCP client config and environment |
+| `misroute doctor` | checks the setup and prints a fix for each problem |
+| `misroute lint` | flags missing, name only and path only descriptions and drafts replacements |
+| `misroute discover` | ranks confused tool pairs from model behaviour |
+| `misroute probe` | tests risky pairs with requests that borrow words from the sibling |
+| `misroute explain` | shows the misrouted requests for a pair and what the model called |
+| `misroute fix` | tests a boundary clause against a neutral edit, or against a drafted description for undescribed tools |
+| `misroute check` | tests one proposed description on held out requests |
+| `misroute report` | writes a self-contained HTML report |
+| `misroute ui` | local web interface to set up, run, read results and approve held writes |
+| `misroute ci` | fails on exceeded limits, or with `--changed` on descriptions that got worse |
+| `misroute catalog` | prints tool hashes and descriptions for change-aware CI |
+| `misroute serve-mcp` | runs misroute as an MCP server for agents |
+| `misroute guard serve` | runs an MCP proxy that logs and guards real tool calls |
+| `misroute site` | builds a static results site |
+| `misroute schema` | prints the JSON Schema of a command's output |
 
-Every command takes `--json`, and paid commands take `--yes`, `--max-cost` and `--estimate-only`. Exit codes are `0` passed, `1` limits failed or worse, `2` not enough data to decide, `3` budget or config problem.
+## How discover ranks pairs
 
-## Status
+Each tool gets requests written from the user's goal, without the tool's own words. Requests run against the full tool list in rotated orders. Each pair gets a score from three signals: the share of one tool's requests that went to the other, the share where the model called both, and where requests go when one tool is removed. The score orders pairs for attention, and the rates behind it are the numbers to quote.
 
-| Feature | Status |
-|---|---|
-| lint, discover, probe and fix in JSON and code mode | tested on Opus 5.5 through OpenRouter and on a local model through Ollama |
-| OpenAI compatible adapter | tested on OpenRouter, Ollama and an OpenAI style company relay |
-| Azure OpenAI adapter | client construction tested, not yet run against a real deployment |
-| Native Anthropic, Foundry and Bedrock adapters | not yet tested against real endpoints |
-| Near misses | experimental, not yet validated, kept out of the ranking |
-| Local UI | API and pages checked in a browser, not yet used on a real project |
-| Guard proxy | tested against a local test server only |
-| check, ci with changed tools, serve-mcp | tested with a mock model only |
-| Multi turn mode | tested with a mock model only |
+The ranking marks what it cannot vouch for: pairs whose request sets differ in surface words, tools with few validated requests, and tools the validator left without any, marked UNTESTED. Tools that models answer without calling anything are listed separately.
 
-## Features
+Code mode runs each program in Monty against recorded fakes and reports faked tools, pasted stubs, programs that never call anything, invented or reused cursors and unread pages.
 
-### Discover
-Each tool gets requests that describe what the user wants without using the tool's own words. A second model keeps a request only if it picks the right tool, and a permutation gate checks that the request sets can't be told apart by length or word overlap alone. Requests run against the full tool list in rotated orders, because models pick the wrong tool more often when the distractor comes first.
+## Fix and check
 
-Discover combines four signals:
+`fix` writes one boundary sentence per tool and runs the original, a baseline and the clause on identical requests. The baseline is a neutral rewrite of the same length, or lint's drafted description when a tool has none. Verdicts use an exact McNemar test with Holm correction per pair and a sign flip test across pairs, and every result shows errors in both directions and leakage to other tools.
 
-- **Confusion matrix:** where each tool's requests land, including tools with unrelated names
-- **Co-calls:** tools called together in one turn or one program
-- **Removal test:** remove a tool, rerun its requests and see where they go
-- **Near misses:** the probability spread across tools for local models through vLLM, and disagreement across repeated runs for hosted models
+`check` tests one proposed description. It splits requests into a tuning set and a held out set, gives its verdict on the held out set only, and requires a fresh held out set after three verdicts on the same tool, so a description cannot be tuned to the test requests.
 
-You can add real questions from your logs with `real_requests: logs.jsonl`. misroute reports them separately from the generated ones.
+## For agents
 
-### Code mode
+Every command takes `--json` and prints one object with a `schema_version`. Exit codes are `0` passed, `1` limits failed or worse, `2` not enough data, `3` budget or config problem. Paid commands take `--max-cost` and `--estimate-only`, and never prompt without a terminal. `--progress ndjson` streams progress to stderr. `misroute schema check` prints the output schema.
 
-In code mode the model gets a single `run_code` tool, with your tools available as async Python functions. misroute runs each program in Monty against recorded fakes and judges it by the calls it actually made. It catches:
+Add misroute as an MCP server:
 
-- faked tools that return invented data
-- pasted stubs that shadow the real function
-- programs that never call anything
-- invented or reused pagination cursors, and pages left unread
-- unknown functions, syntax errors and runtime errors
-- answers with no program at all
+```console
+$ claude mcp add misroute -- uvx misroute serve-mcp
+```
 
-### Fix
+```json
+{"mcpServers": {"misroute": {"command": "uvx", "args": ["misroute", "serve-mcp"]}}}
+```
 
-For each risky pair, misroute writes a boundary clause: one sentence per tool saying what it covers and when the other tool is the better choice. For best results, use a model from a different family to write it. Each pair then runs three ways on the same requests: the original description, a baseline, and the baseline with the clause. The baseline is a neutral edit of the same length. When lint flags a tool as undescribed, the baseline is lint's drafted description instead, since writing any description already adds information. That tells you whether the clause adds anything beyond a basic description.
+The second form goes in `.cursor/mcp.json`. VS Code takes the same block under `"servers"` in `.vscode/mcp.json`.
 
-- Per-pair verdicts use an exact McNemar test with Holm correction.
-- Across pairs, misroute uses an exact sign-flip test.
-- Errors are reported in both directions, along with any leakage to other tools.
-- When the clause does no better than the baseline, misroute tells you and suggests a guard rule or merging the tools.
+The server exposes `lint_descriptions`, `draft_description`, `check_description`, `explain_pair`, `suggest_fix`, `get_report` and background jobs with `start_job`, `job_status` and `cancel_job` for runs longer than a tool call. Paid tools refuse to run above `max_cost`. misroute never edits your tools.
 
-`misroute fix --cheap` runs fewer trials and gives indicative numbers.
+Claude Code users can install the plugin, which adds the server and a skill:
 
-### Guard
+```console
+/plugin marketplace add philippyt/tool-misroute
+/plugin install misroute@misroute
+```
 
-Put misroute in front of your MCP server to watch real traffic:
+See [AGENTS.md](AGENTS.md) and [llms.txt](llms.txt) for the agent workflow.
+
+## CI
+
+Check the descriptions a pull request changed, and comment the result:
+
+```yaml
+- uses: actions/checkout@v5
+  with: {fetch-depth: 0}
+- uses: philippyt/tool-misroute@v0.2.4
+  with:
+    config: misroute.yaml
+    max-cost: "2"
+```
+
+Or wire it yourself with `misroute catalog` on the base branch and `misroute ci --changed --baseline tools.json --markdown comment.md --junit results.xml`. `misroute lint --sarif lint.sarif` feeds GitHub code scanning, and `--strict` fails on weak descriptions.
+
+As a pre-commit hook:
+
+```yaml
+- repo: https://github.com/philippyt/tool-misroute
+  rev: v0.2.4
+  hooks:
+    - id: misroute-lint
+```
+
+## In tests
+
+```python
+def test_routing(misroute_routes):
+    misroute_routes(my_tools, "anthropic:claude-sonnet-5-5", min_accuracy=0.95)
+```
+
+The `misroute_routes` fixture comes with the package. It runs a small capped discover, fails with the confused pairs when accuracy is below the threshold, and caches responses so reruns are free. Outside pytest, use `from misroute.testing.routes import assert_routes`.
+
+## Guard
+
+As a proxy in front of any MCP server:
 
 ```console
 $ misroute guard serve -c misroute.yaml
 $ misroute guard confirm 8ba64a3fc925
-approved 8ba64a3fc925
 ```
 
-Or wrap a client session in Python:
+Inside an MCP server built with the Python SDK:
 
 ```python
-from misroute.guard.wrapper import wrap
-
-guard = wrap(session, rules, ".misroute/guard.jsonl")
-await guard.call_tool("update_case", {"case_id": "7", "status": "closed"})
+server = MCPServer("cases", middleware=[guard.middleware()])
 ```
 
-Guard logs every call, including calls made inside code-mode programs. It flags hedging, quick switches between sibling tools and faked tools, and it holds a second write to a sibling tool until a person approves it. To send logs to OpenTelemetry, set `guard: {otel: true}`. Spotting users who rephrase their question needs the user's messages, so that only works through the Python wrapper.
+Around tool functions in any agent framework, keeping their signatures:
 
-### CI
-
-```yaml
-limits:
-  max_wrong_rate: 0.05
-  max_write_hedge_rate: 0.0
-  max_code_failure_rate: 0.10
+```python
+@guard.tool
+def update_case(case_id: str, status: str) -> dict: ...
 ```
 
-```console
-$ misroute ci
-opus json wrong rate 0.105 above 0.05
-```
+The guard logs every call, flags hedges and quick switches between siblings, and holds a second write to a sibling tool until it is approved in `misroute ui` or with `misroute guard confirm`. `misroute report` adds a Production section from the guard log.
 
-To test only the tools a pull request changed, save the catalog from the base branch and compare:
+## Results
 
-```yaml
-- run: git checkout origin/main && misroute catalog > tools.json && git checkout -
-- run: misroute ci --changed --baseline tools.json --markdown comment.md --max-cost 2
-- run: gh pr comment ${{ github.event.number }} --body-file comment.md
-```
-
-A cheap local model catches regressions in its own behaviour, which may differ from your production model's. Schedule regular runs against the model you actually deploy as well.
-
-## Configuration
-
-```yaml
-server:
-  url: https://mcp.example.com/mcp      # or command: [npx, your-server]
-  auth: bearer_env:MCP_TOKEN
-  include_tools: ["*issue*", "*pull_request*"]   # optional, test a slice of a large server
-
-models:
-  - name: opus-eu
-    provider: anthropic-foundry         # anthropic, anthropic-foundry, bedrock, openai-compatible
-    model: claude-opus-5-5
-    price_in: 4
-    price_out: 20
-  - name: local
-    provider: openai-compatible
-    base_url: http://localhost:8000/v1
-    model: Qwen/Qwen3-14B
-    scoring: true                       # near misses from token probabilities, vLLM only
-
-generator: local                        # writes the test requests
-validator: opus-eu                      # checks them
-writer: local                           # writes clauses and neutral edits
-
-modes: [json, code]
-max_turns: 3                            # feed fake results back so a read before a write is followed to the write
-budget_usd: 5.00
-```
-
-With `max_turns: 1`, the default, a write request answered only with reads is labelled read first and kept apart from wrong picks. With more turns misroute returns recorded fake results and judges the first write the model makes.
-
-Azure OpenAI, where the model is your deployment name:
-
-```yaml
-models:
-  - name: gpt-eu
-    provider: azure-openai
-    base_url: https://your-resource.openai.azure.com
-    model: your-deployment-name
-    api_key_env: AZURE_OPENAI_API_KEY   # or options: {entra: true} with pip install misroute[azure]
-    price_in: 2
-    price_out: 8
-    options:
-      api_version: "2024-10-21"
-```
-
-To test from an OpenAPI file without an MCP server in front, use `server: {openapi: api.json}`. Operations without a summary get their method and path as the description, as most OpenAPI to MCP converters do.
-
-Results are saved in `.misroute/`: a DuckDB database you can query with SQL, JSONL transcripts of every run, and a response cache.
+Everything lands in `.misroute/`: a DuckDB database, JSONL transcripts of every run and a response cache.
 
 ```console
 $ duckdb .misroute/misroute.duckdb "select target, chosen, count(*) from trials where wrong group by all order by 3 desc"
 ```
-
-## For agents
-
-A coding agent that edits tool descriptions can check its own edits:
-
-```console
-$ misroute check --tool get_case_comments --description "Written comments on a case. Not for status changes." --json --max-cost 1
-{"schema_version": 1, "command": "check", "verdict": "better | worse | no_difference | insufficient_data", "trials": <int>, "held_out": true, "cost_usd": <float>, ...}
-```
-
-Requests are split into a tuning set and a held out set. The verdict uses only the held out set, and after three verdicts on the same tool it is spent until you pass `--refresh`, so an agent cannot tune a description to the test requests. Verdicts are `better`, `worse`, `no_difference` or `insufficient_data`.
-
-`misroute serve-mcp` exposes `lint_descriptions`, `draft_description`, `estimate_check`, `check_description` and `get_report` as MCP tools. [AGENTS.md](AGENTS.md), [llms.txt](llms.txt) and a [Claude Code skill](skills/misroute/SKILL.md) describe when to use each. misroute never edits your tools.
 
 ## Python API
 
@@ -251,6 +232,6 @@ Requests are split into a tuning set and a held out set. The verdict uses only t
 from misroute import Project
 
 proj = Project.from_yaml("misroute.yaml")
-found = await proj.discover(models=["local"])
+found = await proj.discover()
 result = await proj.fix(top=3, trials=96)
 ```

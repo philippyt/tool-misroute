@@ -1,7 +1,10 @@
+import os
 import pytest
 from misroute.config import Config
 from misroute.project import Project
 from misroute.testing.fake_server import app
+
+os.environ["MISROUTE_OFFLINE"] = "1"
 
 MOCK = {
     "confuse": {"get_case_comments": {"get_case_events": 0.5}, "search_cases": {"list_cases": 0.4}},

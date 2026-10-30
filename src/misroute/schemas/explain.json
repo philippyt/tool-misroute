@@ -1,0 +1,36 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "misroute/explain.json",
+ "title": "misroute explain output",
+ "type": "object",
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "command": {
+   "type": "string"
+  },
+  "pair": {
+   "type": "string"
+  },
+  "directions": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "object",
+    "required": [
+     "trials",
+     "wrong",
+     "hedge",
+     "examples"
+    ]
+   }
+  }
+ },
+ "required": [
+  "schema_version",
+  "command",
+  "pair",
+  "directions"
+ ],
+ "additionalProperties": true
+}

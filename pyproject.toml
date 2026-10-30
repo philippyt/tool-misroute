@@ -1,6 +1,6 @@
 [project]
 name = "misroute"
-version = "0.2.3"
+version = "0.2.4"
 description = "Find the tools your agent confuses and test whether a fix helps, against a neutral edit"
 authors = [
     { name = "philippyt", email = "philipaha@proton.me" }
@@ -31,6 +31,7 @@ dependencies = [
     "pyyaml>=6.0.3",
     "rich>=15.0.0",
     "scipy>=1.17.1",
+    "truststore>=0.10.5",
     "typer>=0.27.3",
 ]
 
@@ -45,12 +46,16 @@ azure = [
 [project.scripts]
 misroute = "misroute.cli:app"
 
+[project.entry-points.pytest11]
+misroute = "misroute.testing.plugin"
+
 [build-system]
 requires = ["uv_build>=0.10.3,<0.11.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "jsonschema>=4.26.0",
     "pytest>=9.2.0",
     "pytest-asyncio>=1.4.1",
     "ruff>=0.17.3",

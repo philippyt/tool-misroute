@@ -1,0 +1,53 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "misroute/lint.json",
+ "title": "misroute lint output",
+ "type": "object",
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "command": {
+   "type": "string"
+  },
+  "tools": {
+   "type": "integer"
+  },
+  "findings": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "tool",
+     "issue",
+     "write"
+    ],
+    "properties": {
+     "tool": {
+      "type": "string"
+     },
+     "issue": {
+      "type": "string"
+     },
+     "write": {
+      "type": "boolean"
+     }
+    }
+   }
+  },
+  "drafts": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "string"
+   }
+  }
+ },
+ "required": [
+  "schema_version",
+  "command",
+  "tools",
+  "findings",
+  "drafts"
+ ],
+ "additionalProperties": true
+}

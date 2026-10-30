@@ -1,0 +1,36 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "misroute/doctor.json",
+ "title": "misroute doctor output",
+ "type": "object",
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "command": {
+   "type": "string"
+  },
+  "checks": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "check",
+     "ok",
+     "detail",
+     "fix"
+    ]
+   }
+  },
+  "ok": {
+   "type": "boolean"
+  }
+ },
+ "required": [
+  "schema_version",
+  "command",
+  "checks",
+  "ok"
+ ],
+ "additionalProperties": true
+}

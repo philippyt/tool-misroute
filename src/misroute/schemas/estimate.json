@@ -1,0 +1,38 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "misroute/estimate.json",
+ "title": "misroute estimate output",
+ "type": "object",
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "command": {
+   "type": "string"
+  },
+  "estimate": {
+   "type": "object",
+   "required": [
+    "calls",
+    "cost_usd"
+   ],
+   "properties": {
+    "calls": {
+     "type": "integer"
+    },
+    "cost_usd": {
+     "type": "number"
+    },
+    "upper_bound": {
+     "type": "boolean"
+    }
+   }
+  }
+ },
+ "required": [
+  "schema_version",
+  "command",
+  "estimate"
+ ],
+ "additionalProperties": true
+}

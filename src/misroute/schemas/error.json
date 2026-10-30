@@ -1,0 +1,31 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "misroute/error.json",
+ "title": "misroute error output",
+ "type": "object",
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "command": {
+   "type": "string"
+  },
+  "error": {
+   "type": "string"
+  },
+  "exit_code": {
+   "enum": [
+    1,
+    2,
+    3
+   ]
+  }
+ },
+ "required": [
+  "schema_version",
+  "command",
+  "error",
+  "exit_code"
+ ],
+ "additionalProperties": true
+}

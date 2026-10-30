@@ -1,0 +1,65 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "misroute/fix.json",
+ "title": "misroute fix output",
+ "type": "object",
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "command": {
+   "type": "string"
+  },
+  "pairs": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "pair",
+     "model",
+     "mode",
+     "baseline_kind",
+     "errors",
+     "verdict",
+     "flagged",
+     "n"
+    ],
+    "properties": {
+     "pair": {
+      "type": "string"
+     },
+     "baseline_kind": {
+      "enum": [
+       "neutral",
+       "description"
+      ]
+     },
+     "errors": {
+      "type": "object",
+      "required": [
+       "original",
+       "baseline",
+       "clause"
+      ]
+     },
+     "verdict": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "across": {
+   "type": "array"
+  },
+  "spent": {
+   "type": "number"
+  }
+ },
+ "required": [
+  "schema_version",
+  "command",
+  "pairs",
+  "across"
+ ],
+ "additionalProperties": true
+}

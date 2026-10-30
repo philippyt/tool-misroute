@@ -3,7 +3,7 @@ import shlex
 from pathlib import Path
 from typing import Any
 import yaml
-from misroute.config import Config, env_path
+from misroute.config import Config, write_env
 from misroute.models import build
 from misroute.project import Project
 
@@ -72,12 +72,7 @@ def save(config: Path, form: dict) -> dict[str, Any]:
     Config.model_validate(data)
     config.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
     new = secrets(form)
-    if new:
-        path = env_path(config)
-        lines = [ln for ln in (path.read_text(encoding="utf-8").splitlines() if path.exists() else [])]
-        lines = [ln for ln in lines if ln.split("=", 1)[0].strip() not in new]
-        path.write_text("\n".join([*lines, *(f"{k}={v}" for k, v in new.items())]) + "\n", encoding="utf-8")
-        os.environ.update(new)
+    write_env(config, new)
     return {"saved": str(config), "env": sorted(new)}
 
 

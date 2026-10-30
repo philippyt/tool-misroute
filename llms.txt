@@ -4,7 +4,12 @@
 
 ## Commands
 
-- `misroute lint [--draft] --json`: weak descriptions, free
+- `misroute quick [target] --json --max-cost N`: config, lint and a capped discover in one go
+- `misroute init [--from claude|cursor|vscode|path] [--model provider:model]`: write misroute.yaml
+- `misroute doctor --json`: setup checks with a fix per problem
+- `misroute explain --pair a,b --json`: misrouted requests and what the model called, free
+- `misroute schema <command>`: JSON Schema of the command's output
+- `misroute lint [--draft] [--strict] [--sarif file] --json`: weak descriptions, free
 - `misroute discover --json --max-cost N`: ranked risky tool pairs from model behaviour
 - `misroute probe --pair a,b --json`: harder requests on one pair
 - `misroute fix --pair a,b --json`: boundary clause against a neutral edit or a drafted description
@@ -14,7 +19,9 @@
 - `misroute serve-mcp`: misroute as an MCP server
 - `misroute report`, `misroute ui`, `misroute guard serve`
 
-Shared flags: `--json`, `--yes`, `--max-cost DOLLARS`, `--estimate-only`, `-c misroute.yaml`.
+Shared flags: `--json`, `--yes`, `--max-cost DOLLARS`, `--estimate-only`, `--progress bar|ndjson|none`, `-c misroute.yaml`.
+
+Models: `provider:model` shorthand, providers anthropic, foundry, bedrock, azure, openai, openrouter, ollama, vllm, lmstudio. Prices are looked up automatically.
 
 ## Exit codes
 

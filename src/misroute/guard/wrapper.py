@@ -1,4 +1,6 @@
+import functools
 import hashlib
+import inspect
 import json
 import time
 from collections.abc import Awaitable, Callable
@@ -25,7 +27,7 @@ def call_id(name: str, args: dict[str, Any]) -> str:
 class Guard:
     """Logs every real tool call and applies sibling rules. Works for JSON calls and code mode functions."""
 
-    def __init__(self, call: CallFn, rules: Rules, log: str | Path, otel: bool = False):
+    def __init__(self, call: CallFn | None, rules: Rules, log: str | Path, otel: bool = False):
         self.call = call
         self.rules = rules
         self.log_path = Path(log)
@@ -56,8 +58,8 @@ class Guard:
             self._log("event", **asdict(ev))
         return ev
 
-    async def call_tool(self, name: str, args: dict[str, Any] | None = None) -> Any:
-        args = args or {}
+    def before(self, name: str, args: dict[str, Any]) -> Held | None:
+        """Log the call and apply the rules. Returns Held when the call must wait for approval."""
         now = time.time()
         cid = call_id(name, args)
         events = self.rules.check(name, self.history, now)
@@ -71,12 +73,62 @@ class Guard:
             return Held(cid, name, hold.other, msg)
         self.history.append((name, now))
         self._log("call", id=cid, tool=name, args=args, flags=[e.kind for e in events])
+        return None
+
+    async def call_tool(self, name: str, args: dict[str, Any] | None = None) -> Any:
+        args = args or {}
+        if held := self.before(name, args):
+            return held
+        if self.call is None:
+            raise RuntimeError("this guard has no call function, use tool() or middleware()")
         if self.tracer:
             with self.tracer.start_as_current_span(f"tool {name}") as span:
                 span.set_attribute("misroute.tool", name)
-                span.set_attribute("misroute.flags", ",".join(e.kind for e in events))
                 return await self.call(name, args)
         return await self.call(name, args)
+
+    def tool(self, fn: Callable[..., Any], name: str | None = None) -> Callable[..., Any]:
+        """Wrap a tool function, sync or async, keeping its signature so any agent framework can register it.
+        A held call raises PermissionError with a message the model can read."""
+        label = name or getattr(fn, "__name__", "tool")
+        sig = inspect.signature(fn)
+
+        def bound(args: tuple, kwargs: dict) -> dict[str, Any]:
+            b = sig.bind_partial(*args, **kwargs)
+            return {k: v for k, v in b.arguments.items() if k not in ("self", "ctx", "context")}
+
+        if inspect.iscoroutinefunction(fn):
+
+            @functools.wraps(fn)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                if held := self.before(label, bound(args, kwargs)):
+                    raise PermissionError(held.message)
+                return await fn(*args, **kwargs)
+
+            return async_wrapper
+
+        @functools.wraps(fn)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            if held := self.before(label, bound(args, kwargs)):
+                raise PermissionError(held.message)
+            return fn(*args, **kwargs)
+
+        return wrapper
+
+    def middleware(self) -> Callable[..., Any]:
+        """Middleware for servers built with the MCP Python SDK: MCPServer(..., middleware=[guard.middleware()])."""
+
+        async def guard_middleware(ctx: Any, call_next: Callable[..., Any]) -> Any:
+            if ctx.method == "tools/call" and ctx.params:
+                held = self.before(str(ctx.params.get("name")), dict(ctx.params.get("arguments") or {}))
+                if held:
+                    import mcp_types
+
+                    text = mcp_types.TextContent(type="text", text=held.message)
+                    return mcp_types.CallToolResult(content=[text], is_error=True)
+            return await call_next(ctx)
+
+        return guard_middleware
 
     def functions(self, names: list[str]) -> dict[str, Callable[..., Awaitable[Any]]]:
         def make(name: str):

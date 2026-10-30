@@ -7,13 +7,13 @@ from misroute.server.catalog import from_mcp
 async def test_agent_server(project):
     async with Client(create(project)) as client:
         tools = (await client.list_tools()).tools
-        assert {t.name for t in tools} == {
+        assert {
             "lint_descriptions",
             "draft_description",
             "estimate_check",
             "check_description",
             "get_report",
-        }
+        } <= {t.name for t in tools}
         assert lint([from_mcp(t) for t in tools]) == []
         res = await client.call_tool("lint_descriptions", {})
         assert not res.is_error and res.structured_content["schema_version"] == 1

@@ -1,0 +1,11 @@
+{
+  "name": "misroute",
+  "owner": {"name": "philippyt", "email": "philipaha@proton.me"},
+  "plugins": [
+    {
+      "name": "misroute",
+      "source": "./plugins/misroute",
+      "description": "Check MCP tool descriptions against model behaviour"
+    }
+  ]
+}

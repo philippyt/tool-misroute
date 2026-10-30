@@ -26,7 +26,7 @@ def headers(cfg: ServerConfig) -> dict[str, str]:
 
 def target(cfg: ServerConfig) -> Any:
     if cfg.command:
-        env = {**os.environ, **cfg.env} if cfg.env else None
+        env = {**os.environ, **{k: os.path.expandvars(v) for k, v in cfg.env.items()}} if cfg.env else None
         return StdioServerParameters(command=cfg.command[0], args=cfg.command[1:], env=env)
     h = headers(cfg)
     assert cfg.url

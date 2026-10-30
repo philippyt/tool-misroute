@@ -1,3 +1,5 @@
+import asyncio
+import uuid
 from typing import Any
 from mcp.server.mcpserver import MCPServer
 from mcp_types import ToolAnnotations
@@ -94,5 +96,115 @@ def create(proj: Project) -> MCPServer:
             ],
             "stale": proj.store.stale(),
         }
+
+    @app.tool(
+        description="Shows requests that went to the wrong one of two tools, in both directions, with what the model "
+        "called. Reads stored runs, free. Use it after discover to see why a pair is confused.",
+        annotations=READ,
+        structured_output=True,
+    )
+    async def explain_pair(tool_a: str, tool_b: str, limit: int = 5) -> dict[str, Any]:
+        from misroute.explain import explain
+
+        return {"schema_version": SCHEMA_VERSION, **explain(proj.store, tool_a, tool_b, limit)}
+
+    @app.tool(
+        description="Drafts a boundary clause for two confused tools and tests it against a neutral edit, or against "
+        "drafted descriptions when a tool has none. Returns the edits and a verdict. Refuses above max_cost. "
+        "Never changes the server.",
+        annotations=PAID,
+        structured_output=True,
+    )
+    async def suggest_fix(tool_a: str, tool_b: str, trials: int = 48, max_cost: float = 2.0) -> dict[str, Any]:
+        models, modes = proj.cfg.tested(), ["json"]
+        _, cost = await proj.cost("fix", models, modes, 1, trials)
+        if cost > max_cost:
+            return {"error": f"estimate ${cost:.2f} is above max_cost ${max_cost:.2f}", "cost_usd": round(cost, 4)}
+        try:
+            res = await proj.fix(pairs=[(tool_a, tool_b)], models_=models, modes=modes, trials=trials)
+        except (BudgetExceeded, KeyError) as e:
+            return {"error": str(e)}
+        rows = [
+            {k: r.get(k) for k in ("model", "mode", "baseline_kind", "errors", "verdict", "p_holm", "edits")}
+            for r in res["pairs"]
+        ]
+        return {"schema_version": SCHEMA_VERSION, "pair": f"{tool_a}|{tool_b}", "results": rows, "spent": res["spent"]}
+
+    jobs: dict[str, dict[str, Any]] = {}
+
+    @app.tool(
+        description="Starts discover, probe or fix in the background and returns a job id at once, for runs longer "
+        "than a tool call may take. args takes models, modes, top, pairs as [[a, b]] and trials. Refuses above "
+        "max_cost. Poll job_status with the id.",
+        annotations=PAID,
+        structured_output=True,
+    )
+    async def start_job(kind: str, max_cost: float = 5.0, args: dict[str, Any] | None = None) -> dict[str, Any]:
+        args = args or {}
+        if kind not in ("discover", "probe", "fix"):
+            return {"error": "kind must be discover, probe or fix"}
+        models = args.get("models") or proj.cfg.tested()
+        modes: list[str] = args.get("modes") or [str(m) for m in proj.cfg.modes]
+        pairs = [tuple(p) for p in args.get("pairs") or []] or None
+        top, trials = int(args.get("top", 3)), int(args.get("trials", 96))
+        calls, cost = await proj.cost(kind, models, modes, len(pairs) if pairs else top, trials)
+        if cost > max_cost:
+            return {"error": f"estimate ${cost:.2f} is above max_cost ${max_cost:.2f}", "cost_usd": round(cost, 4)}
+        job_id = uuid.uuid4().hex[:8]
+        job: dict[str, Any] = {
+            "kind": kind,
+            "status": "running",
+            "done": 0,
+            "total": calls,
+            "result": None,
+            "error": None,
+        }
+
+        def tick(n: int) -> None:
+            job["done"] += n
+
+        proj.progress = tick
+        runs = {
+            "discover": lambda: proj.discover(models, modes),
+            "probe": lambda: proj.probe(top, pairs, models, modes),
+            "fix": lambda: proj.fix(top, pairs, models, modes, trials),
+        }
+
+        async def go() -> None:
+            try:
+                job["result"] = await runs[kind]()
+                job["status"] = "done"
+            except Exception as e:
+                job["status"], job["error"] = "failed", f"{type(e).__name__}: {e}"
+
+        job["task"] = asyncio.create_task(go())
+        jobs[job_id] = job
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "job": job_id,
+            "estimate_calls": calls,
+            "estimate_usd": round(cost, 4),
+        }
+
+    @app.tool(
+        description="Returns the status of a background job: running with progress, done with the result, or failed "
+        "with the error. Free.",
+        annotations=READ,
+        structured_output=True,
+    )
+    async def job_status(job: str) -> dict[str, Any]:
+        j = jobs.get(job)
+        if not j:
+            return {"error": f"unknown job {job}"}
+        return {"schema_version": SCHEMA_VERSION, "job": job, **{k: v for k, v in j.items() if k != "task"}}
+
+    @app.tool(description="Cancels a running background job.", annotations=READ, structured_output=True)
+    async def cancel_job(job: str) -> dict[str, Any]:
+        j = jobs.get(job)
+        if not j:
+            return {"error": f"unknown job {job}"}
+        j["task"].cancel()
+        j["status"] = "cancelled"
+        return {"schema_version": SCHEMA_VERSION, "job": job, "status": "cancelled"}
 
     return app

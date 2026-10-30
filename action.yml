@@ -1,0 +1,65 @@
+name: misroute
+description: Check changed MCP tool descriptions against model behaviour and comment on the pull request
+branding:
+  icon: shuffle
+  color: blue
+inputs:
+  config:
+    description: Path to misroute.yaml
+    default: misroute.yaml
+  max-cost:
+    description: Refuse runs estimated above this many dollars
+    default: "2"
+  base-ref:
+    description: Branch or commit to compare against
+    default: ${{ github.base_ref || 'main' }}
+  comment:
+    description: Comment the result on the pull request
+    default: "true"
+  version:
+    description: misroute version, empty for the latest
+    default: ""
+outputs:
+  exit-code:
+    description: 0 passed, 1 a description got worse, 2 not enough data, 3 budget or config problem
+    value: ${{ steps.check.outputs.code }}
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@v7
+    - name: Catalog on the base branch
+      shell: bash
+      env:
+        BASE: ${{ inputs.base-ref }}
+        CONFIG: ${{ inputs.config }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        git fetch --depth=1 origin "$BASE"
+        git worktree add "$RUNNER_TEMP/misroute-base" FETCH_HEAD
+        cd "$RUNNER_TEMP/misroute-base"
+        uvx --from "misroute${VERSION:+==$VERSION}" misroute catalog -c "$CONFIG" > "$RUNNER_TEMP/misroute-base.json" \
+          || echo '{"schema_version": 1, "tools": []}' > "$RUNNER_TEMP/misroute-base.json"
+    - name: Check changed tools
+      id: check
+      shell: bash
+      env:
+        CONFIG: ${{ inputs.config }}
+        MAX_COST: ${{ inputs.max-cost }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        set +e
+        uvx --from "misroute${VERSION:+==$VERSION}" misroute ci -c "$CONFIG" --changed \
+          --baseline "$RUNNER_TEMP/misroute-base.json" --markdown "$RUNNER_TEMP/misroute.md" \
+          --junit "$RUNNER_TEMP/misroute.xml" --max-cost "$MAX_COST"
+        echo "code=$?" >> "$GITHUB_OUTPUT"
+    - name: Comment on the pull request
+      if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR: ${{ github.event.pull_request.number }}
+      run: |
+        [ -s "$RUNNER_TEMP/misroute.md" ] && gh pr comment "$PR" --body-file "$RUNNER_TEMP/misroute.md" --edit-last --create-if-none || true
+    - name: Result
+      shell: bash
+      run: exit ${{ steps.check.outputs.code }}

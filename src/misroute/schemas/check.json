@@ -1,0 +1,75 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "misroute/check.json",
+ "title": "misroute check output",
+ "type": "object",
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "command": {
+   "type": "string"
+  },
+  "tool": {
+   "type": "string"
+  },
+  "verdict": {
+   "enum": [
+    "better",
+    "worse",
+    "no_difference",
+    "insufficient_data"
+   ]
+  },
+  "reason": {
+   "type": "string"
+  },
+  "baseline_kind": {
+   "enum": [
+    "neutral",
+    "description"
+   ]
+  },
+  "wrong_rate": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "number"
+   }
+  },
+  "hedge_rate": {
+   "type": "object",
+   "additionalProperties": {
+    "type": "number"
+   }
+  },
+  "leakage": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "trials": {
+   "type": "integer"
+  },
+  "held_out": {
+   "type": "boolean"
+  },
+  "verdicts_left": {
+   "type": "integer"
+  },
+  "cost_usd": {
+   "type": "number"
+  }
+ },
+ "required": [
+  "schema_version",
+  "command",
+  "tool",
+  "verdict",
+  "reason",
+  "trials",
+  "held_out",
+  "cost_usd"
+ ],
+ "additionalProperties": true
+}

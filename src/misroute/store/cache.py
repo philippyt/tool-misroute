@@ -6,6 +6,23 @@ from typing import Any
 from misroute.config import ModelConfig
 from misroute.models.base import Adapter, Budget, BudgetExceeded, Messages, Turn, estimate_tokens
 
+LOCAL = ("http://localhost", "http://127.0.0.1", "http://[::1]")
+
+
+def fill_price(cfg: ModelConfig) -> bool:
+    """Use configured prices, zero for local endpoints, else the public list price. False when still unknown."""
+    if cfg.price_in is not None or cfg.price_out is not None or cfg.provider == "mock":
+        return True
+    if (cfg.base_url or "").startswith(LOCAL):
+        cfg.price_in = cfg.price_out = 0.0
+        return True
+    from misroute.models.presets import price
+
+    found = price(cfg.provider, cfg.model_id)
+    if found:
+        cfg.price_in, cfg.price_out = found
+    return found is not None
+
 
 class Metered:
     """Wraps an adapter with a disk cache, a concurrency limit and budget checks."""
@@ -19,6 +36,7 @@ class Metered:
         self.dir = Path(root) / "cache" / cfg.name
         self.dir.mkdir(parents=True, exist_ok=True)
         self.sem = asyncio.Semaphore(cfg.concurrency)
+        self.price_known = fill_price(cfg)
         self.calls = 0
         self.hits = 0
 

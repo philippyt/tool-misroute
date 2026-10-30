@@ -1,3 +1,5 @@
+import json
+from collections import Counter
 from pathlib import Path
 from typing import Any
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -22,13 +24,31 @@ def heatmap(matrix: dict[str, dict[str, int]]) -> dict[str, Any]:
     return {"rows": rows, "cols": cols, "cells": cells}
 
 
-def render(store: Store, out: str | Path) -> Path:
+def guard_summary(log: str | Path | None) -> dict[str, Any] | None:
+    """Real traffic seen by the guard: events per kind and per tool pair, and held writes."""
+    path = Path(log) if log else None
+    if not path or not path.exists():
+        return None
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    events = [r for r in rows if r.get("type") == "event"]
+    pairs = Counter(
+        (r.get("kind"), *sorted((r.get("tool") or "", r.get("other") or ""))) for r in events if r.get("other")
+    )
+    return {
+        "calls": sum(r.get("type") == "call" for r in rows),
+        "held": sum(r.get("type") == "held" for r in rows),
+        "kinds": dict(Counter(r.get("kind") for r in events)),
+        "pairs": [{"kind": k, "a": a, "b": b, "count": c} for (k, a, b), c in pairs.most_common(15)],
+    }
+
+
+def render(store: Store, out: str | Path, guard_log: str | Path | None = None) -> Path:
     path = Path(out)
-    path.write_text(html(store), encoding="utf-8")
+    path.write_text(html(store, guard_log), encoding="utf-8")
     return path
 
 
-def html(store: Store) -> str:
+def html(store: Store, guard_log: str | Path | None = None) -> str:
     env = Environment(loader=PackageLoader("misroute.report"), autoescape=select_autoescape())
     env.filters["heat"] = heat
     env.filters["pct"] = lambda v: f"{100 * (v or 0):.1f}%"
@@ -43,4 +63,5 @@ def html(store: Store) -> str:
         probe=store.read("probe"),
         fix=store.read("fix"),
         stale=store.stale(),
+        guard=guard_summary(guard_log),
     )

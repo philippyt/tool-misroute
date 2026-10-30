@@ -1,0 +1,8 @@
+{
+  "name": "misroute",
+  "version": "0.2.4",
+  "description": "Check MCP tool descriptions against model behaviour: lint, discover confused tools, check a proposed description on held out requests",
+  "author": {"name": "philippyt", "email": "philipaha@proton.me"},
+  "license": "MIT",
+  "keywords": ["mcp", "tools", "agents", "evaluation"]
+}

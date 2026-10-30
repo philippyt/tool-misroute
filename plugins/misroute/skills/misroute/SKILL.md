@@ -5,7 +5,9 @@ description: Check MCP tool descriptions against model behaviour with the misrou
 
 # misroute
 
-1. Run `misroute lint --json -c misroute.yaml`. It is free. Fix missing and path only descriptions first.
+1. Without a misroute.yaml, run `misroute quick <server url, OpenAPI file or command> --json --max-cost 1 --no-open`. If something fails to connect, run `misroute doctor --json` and follow the fix it prints.
+   Otherwise run `misroute lint --json -c misroute.yaml`. It is free. Fix missing and path only descriptions first.
+   To see why two tools are confused, run `misroute explain --pair a,b --json`.
 2. After you change one description, run
    `misroute check --tool NAME --description "NEW TEXT" --json --max-cost 1 -c misroute.yaml`.
 3. Read `verdict`:

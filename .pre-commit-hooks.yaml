@@ -1,0 +1,7 @@
+- id: misroute-lint
+  name: misroute lint
+  description: Flag missing, name only and path only tool descriptions
+  entry: misroute lint --strict
+  language: python
+  pass_filenames: false
+  files: (misroute\.ya?ml|openapi[^/]*\.(json|ya?ml)|tools[^/]*\.json)$

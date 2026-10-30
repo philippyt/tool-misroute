@@ -108,7 +108,8 @@ def create(config: Path) -> Starlette:
     async def report(request: Request) -> Response:
         if not config.exists():
             return HTMLResponse("<p style='font-family:system-ui;color:#6b6b66'>Set up a server and a model first</p>")
-        return HTMLResponse(html(runner.project().store))
+        proj = runner.project()
+        return HTMLResponse(html(proj.store, proj.cfg.guard.log))
 
     async def state(request: Request) -> Response:
         if not config.exists():

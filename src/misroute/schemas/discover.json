@@ -1,0 +1,163 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "misroute/discover.json",
+ "title": "misroute discover output",
+ "type": "object",
+ "properties": {
+  "schema_version": {
+   "const": 1
+  },
+  "command": {
+   "type": "string"
+  },
+  "cells": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "model",
+     "mode",
+     "trials",
+     "wrong_rate",
+     "hedge_rate",
+     "write_hedge_rate",
+     "failures",
+     "matrix"
+    ],
+    "properties": {
+     "model": {
+      "type": "string"
+     },
+     "mode": {
+      "enum": [
+       "json",
+       "code"
+      ]
+     },
+     "trials": {
+      "type": "integer"
+     },
+     "wrong_rate": {
+      "type": "number"
+     },
+     "hedge_rate": {
+      "type": "number"
+     },
+     "write_hedge_rate": {
+      "type": "number"
+     },
+     "failures": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "number"
+      }
+     },
+     "unanswered": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "number"
+      }
+     },
+     "matrix": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "object",
+       "additionalProperties": {
+        "type": "integer"
+       }
+      }
+     }
+    }
+   }
+  },
+  "spots": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "a",
+     "b",
+     "score",
+     "signals",
+     "write",
+     "gate_failed",
+     "thin",
+     "directions",
+     "where"
+    ],
+    "properties": {
+     "a": {
+      "type": "string"
+     },
+     "b": {
+      "type": "string"
+     },
+     "score": {
+      "type": "number"
+     },
+     "signals": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "number"
+      }
+     },
+     "write": {
+      "type": "boolean"
+     },
+     "gate_failed": {
+      "type": "boolean"
+     },
+     "thin": {
+      "type": "boolean"
+     },
+     "directions": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "integer"
+      }
+     },
+     "where": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     }
+    }
+   }
+  },
+  "gate_failed": {
+   "type": "array"
+  },
+  "near_misses": {
+   "type": "array"
+  },
+  "removal": {
+   "type": "object"
+  },
+  "short": {
+   "type": "object"
+  },
+  "untested": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "spent": {
+   "type": "number"
+  },
+  "run": {
+   "type": "string"
+  }
+ },
+ "required": [
+  "schema_version",
+  "command",
+  "cells",
+  "spots",
+  "gate_failed",
+  "untested",
+  "spent"
+ ],
+ "additionalProperties": true
+}

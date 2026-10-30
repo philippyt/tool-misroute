@@ -13,7 +13,7 @@ from misroute.models.base import Budget
 from misroute.modes import code_mode, json_mode
 from misroute.requests import gate, generate, validate
 from misroute.sandbox.monty_runner import Sandbox
-from misroute.server import openapi
+from misroute.server import openapi, static
 from misroute.server.catalog import Tool, catalog_hash, replace_descriptions
 from misroute.server.connect import connect, keep, list_tools
 from misroute.store.cache import Metered
@@ -53,6 +53,18 @@ class Project:
     def from_yaml(cls, path: str | Path, **kw: Any) -> "Project":
         return cls(load(path), **kw)
 
+    @classmethod
+    def from_tools(
+        cls, tools: list[Any], model: str | list[str], root: str | Path = ".misroute", **settings: Any
+    ) -> "Project":
+        """Test tools held in Python: dicts in MCP, OpenAI or Anthropic format, functions or framework tool objects.
+        model takes provider:model shorthand, for example anthropic:claude-sonnet-5-5."""
+        models = [model] if isinstance(model, str) else list(model)
+        cfg = Config.model_validate({"server": {"tools": "(python)"}, "models": models, **settings})
+        proj = cls(cfg, root=root)
+        proj._tools = [static.from_object(t) for t in tools]
+        return proj
+
     def adapter(self, name: str) -> Metered:
         if name not in self._adapters:
             mc = self.cfg.model(name)
@@ -65,8 +77,8 @@ class Project:
     async def tools(self) -> list[Tool]:
         if self._tools is None:
             cfg = self.cfg.server
-            if cfg.openapi and self.server is cfg:
-                found = openapi.tools(cfg.openapi)
+            if (cfg.openapi or cfg.tools) and self.server is cfg:
+                found = openapi.tools(cfg.openapi) if cfg.openapi else static.tools(str(cfg.tools))
                 self._tools = [t for t in found if keep(t.name, cfg.include_tools, cfg.exclude_tools)]
             else:
                 async with connect(self.server) as client:
@@ -266,6 +278,7 @@ class Project:
                         "model": m,
                         "mode": mode,
                         "trials": len(ts),
+                        "accuracy": sum(not t.error for t in ts) / len(ts),
                         "wrong_rate": confusion.wrong_rate(ts),
                         "hedge_rate": hedge.hedge_rate(ts),
                         "write_hedge_rate": hedge.hedge_rate(ts, writes),
