@@ -57,7 +57,9 @@ async def run(config: Path, offline: bool = False) -> list[dict[str, Any]]:
         key_ok = not m.api_key_env or bool(os.environ.get(m.api_key_env))
         rows.append(row(f"{m.name} key", key_ok, m.api_key_env or "no key needed", f"set {m.api_key_env}"))
         priced = fill_price(m)
-        detail = f"${m.price_in} in, ${m.price_out} out per million tokens" if priced else "unknown"
+        free = not (m.price_in or m.price_out)
+        detail = "free" if priced and free else f"${m.price_in} in, ${m.price_out} out per million tokens"
+        detail = detail if priced else "unknown"
         rows.append(row(f"{m.name} price", priced, detail, "set price_in and price_out, or estimates show $0"))
         if offline or not key_ok:
             continue
