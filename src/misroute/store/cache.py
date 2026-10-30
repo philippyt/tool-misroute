@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 from misroute.config import ModelConfig
-from misroute.models.base import Adapter, Budget, BudgetExceeded, Messages, Turn, estimate_tokens
+from misroute.models.base import COMPLETE_TOKENS, Adapter, Budget, BudgetExceeded, Messages, Turn, estimate_tokens
 
 LOCAL = ("http://localhost", "http://127.0.0.1", "http://[::1]")
 
@@ -50,7 +50,7 @@ class Metered:
         key = json.dumps([self.cfg.model_id, self.cfg.options, *parts], sort_keys=True, default=str)
         return self.dir / (hashlib.sha256(key.encode()).hexdigest()[:32] + ".json")
 
-    async def _cached(self, parts: tuple, run, encode, decode):
+    async def _cached(self, parts: tuple, run, encode, decode, keep=lambda out: True):
         path = self._path(*parts)
         if path.exists():
             self.hits += 1
@@ -66,7 +66,8 @@ class Metered:
         self.budget.charge(cost)
         self.calls += 1
         data = encode(out)
-        if data not in ("", None) and not (isinstance(data, dict) and not data["calls"] and not data["text"]):
+        empty = data in ("", None) or (isinstance(data, dict) and not data["calls"] and not data["text"])
+        if not empty and keep(out):
             path.write_text(json.dumps(data), encoding="utf-8")
         return out
 
@@ -78,14 +79,18 @@ class Metered:
         return await self._cached(("chat", user, tools, system, rep), run, Turn.to_json, Turn.from_json)
 
     async def complete(self, prompt: str, kind: str | None = None, rep: int = 0) -> str:
+        cut = [False]
+
         async def run():
             if (turn := getattr(self.inner, "complete_turn", None)) is not None:
                 t: Turn = await turn(prompt)
+                cut[0] = t.truncated
                 return t.text, t.cost if t.cost is not None else self.price(t.tokens_in, t.tokens_out)
             text = await self.inner.complete(prompt, kind)
             return text, self.price(estimate_tokens(prompt), estimate_tokens(text))
 
-        return await self._cached(("complete", prompt, kind, rep), run, lambda x: x, lambda x: x)
+        parts = ("complete", prompt, kind, rep, COMPLETE_TOKENS)
+        return await self._cached(parts, run, lambda x: x, lambda x: x, keep=lambda _: not cut[0])
 
     async def score_names(self, user: str, tools: list[dict[str, Any]]) -> dict[str, float] | None:
         async def run():

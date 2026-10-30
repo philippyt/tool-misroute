@@ -707,6 +707,8 @@ def improve(
                     out.print(f"  {k.replace('_', ' ')}: {f[k]}", style="yellow")
         for name, path in res.get("files", {}).items():
             out.print(f"  {name}: {path}")
+        for w in res.get("warnings", []):
+            out.print(w, style="yellow")
         out.print(f"spent ${res['cost_usd']:.2f}. Review the files, nothing was applied", style="dim")
 
     emit(opts, res, warned(res, text))

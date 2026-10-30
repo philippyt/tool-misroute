@@ -278,6 +278,27 @@ def examples(seen: dict[str, dict[tuple, Trial]], limit: int = 24) -> list[dict]
     return unique[:limit]
 
 
+def thin(proj, disc: dict, results: list[dict], n_tools: int) -> list[str]:
+    """Plain reasons a run gives little evidence, so a short result is not mistaken for a clean one."""
+    out = []
+    unread = sum(proj.unreadable.values())
+    if unread:
+        out.append(
+            f"{unread} helper replies could not be read, often cut off or not JSON. Try a stronger helper or a "
+            "larger max_tokens"
+        )
+    if disc.get("untested"):
+        out.append(f"{len(disc['untested'])} of {n_tools} tools got no usable test requests and were not tested")
+    if not results:
+        out.append("no group of confused tools was found, so nothing was raced")
+    for g in results:
+        if g["requests"]["held_out"] < 12:
+            out.append(
+                f"group {g['group'] + 1} has only {g['requests']['held_out']} held out requests, too few to decide"
+            )
+    return out
+
+
 def beats(test: dict) -> bool:
     return test["verdict"] == "better" and test["p_holm"] < 0.05
 
@@ -350,7 +371,7 @@ async def improve(
     spots = disc["spots"]
     imp = Improver(proj, models_, modes, max_chars, styles)
     domain = proj.domain()
-    results, held_by = [], {}
+    results, held_by, warnings = [], {}, []
     for i, group in enumerate(groups(spots, n_groups)):
         reqs = await imp.requests(tools, group, spots)
         tuning = [r for r in reqs if split(r, 0) == "tuning"]
@@ -360,6 +381,8 @@ async def improve(
             sibs = [by[x] for x in group if x != n]
             raw = await candidates.write(proj.role("writer"), by[n], sibs, imp.styles, max_chars, domain)
             written[n], dropped[n] = await candidates.screen(proj.role("validator"), by[n], raw)
+            if not raw:
+                warnings.append(f"the helper wrote no readable candidates for {n}, so it kept its original")
         race = await imp.race(tools, group, written, tuning)
         original = {n: by[n].description for n in group}
         winner = race["best"]
@@ -383,6 +406,7 @@ async def improve(
             }
         )
     adjust(results)
+    warnings = thin(proj, disc, results, len(tools)) + warnings
     entries = await build_entries(proj, tools, results, found, drafts)
     result: dict[str, Any] = {
         "source": str(Path(spec).resolve())
@@ -394,6 +418,7 @@ async def improve(
         "request_source": proj.cfg.request_source,
         "languages": proj.cfg.request_languages,
         "roles_warning": proj.cfg.role_warnings(),
+        "warnings": warnings,
         "discover_run": disc.get("run"),
     }
     if not spec:

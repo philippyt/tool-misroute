@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 from pathlib import Path
 from misroute.models.base import parse_json
 from misroute.server.catalog import Tool
@@ -127,6 +128,25 @@ def brief(tool: Tool) -> str:
     return "; ".join(parts)
 
 
+def lenient(text: str) -> dict:
+    """The reply as JSON, or the complete strings of a reply cut off mid list, so one cut request does not cost
+    the whole batch."""
+    try:
+        data = parse_json(text)
+        if isinstance(data, dict):
+            return data
+    except ValueError:
+        pass
+    out: dict = {}
+    for key in ("slots", "requests"):
+        m = re.search(rf'"{key}"\s*:\s*\[(.*?)(?:\]|$)', text, re.S)
+        if m:
+            out[key] = [json.loads(f'"{s}"') for s in re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(1))]
+    if not out.get("requests"):
+        raise ValueError("no readable requests in reply")
+    return out
+
+
 def rid(tool: str, kind: str, template: str, lang: str = "en") -> str:
     tag = "" if lang == "en" else f"|{lang}"
     return hashlib.sha256(f"{tool}|{kind}|{template}{tag}".encode()).hexdigest()[:10]
@@ -160,7 +180,7 @@ async def generate(
         sibling_name=sibling.name if sibling else "",
         sibling=(brief(sibling) if spec else sibling.description) if sibling else "",
     )
-    data = parse_json(await adapter.complete(prompt, kind=kind, rep=attempt))
+    data = lenient(await adapter.complete(prompt, kind=kind, rep=attempt))
     values = [str(s) for s in data.get("slots", [])][:slots]
     out = []
     for text in data.get("requests", [])[:count]:

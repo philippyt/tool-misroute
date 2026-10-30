@@ -64,6 +64,7 @@ class Project:
         self._tools: list[Tool] | None = None
         self.progress: Progress = lambda n: None
         self.rejected: dict[str, Counter] = {}
+        self.unreadable: Counter = Counter()
 
     @classmethod
     def from_yaml(cls, path: str | Path, **kw: Any) -> "Project":
@@ -145,6 +146,7 @@ class Project:
             try:
                 reqs = await generate.generate(gen, tool, n, self.cfg.slots, sibling, attempt, src, lang, self.domain())
             except (ValueError, KeyError, TypeError):
+                self.unreadable[tool.name] += 1
                 continue
             ok, picks = await validate.keep_valid(val, reqs, tools, src)
             self.rejected.setdefault(tool.name, Counter()).update(p or "(no tool)" for p in picks)
@@ -293,10 +295,11 @@ class Project:
         saved.update({k: dict(v) for k, v in self.rejected.items()})
         saved.pop("schema_version", None)
         self.store.write("rejections", saved)
+        want = self.cfg.requests_per_tool * len(self.cfg.request_languages or ["en"])
         return {
-            k: {"kept": len(v), "validator_picked": saved.get(k, {})}
+            k: {"kept": len(v), "validator_picked": saved.get(k, {}), "unreadable_replies": self.unreadable.get(k, 0)}
             for k, v in reqs.items()
-            if len(v) < self.cfg.requests_per_tool
+            if len(v) < want
         }
 
     async def removal(self, cand: list[str], reqs: dict[str, list[Request]], models_: list[str], tools: list[Tool]):

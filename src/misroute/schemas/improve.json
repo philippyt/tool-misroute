@@ -332,6 +332,13 @@
   },
   "cost_usd": {
    "type": "number"
+  },
+  "warnings": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "description": "plain reasons the run gives little evidence"
   }
  },
  "required": [

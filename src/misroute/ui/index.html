@@ -283,7 +283,8 @@ const changed = (e) => e.description !== e.original || decisions[e.tool].decisio
 function renderSummary() {
   const n = imp.entries.filter(changed).length, groups = (imp.groups || []).length;
   const langs = (imp.languages || []).map((l) => LANGS[l] || l).join(" and ");
-  const notes = (imp.roles_warning || []).length ? '<p class="gap">The helper is the model under test or from its family, so these results may favour the proposals. Set a helper from another family.</p>' : "";
+  const roles = (imp.roles_warning || []).length ? ["The helper is the model under test or from its family, so these results may favour the proposals. Set a helper from another family"] : [];
+  const notes = [...roles, ...(imp.warnings || [])].map((w, i) => `<p class="${i ? "" : "gap"}">${esc(w)}.</p>`).join("");
   $("impSummary").innerHTML = `<h2>${n} ${n === 1 ? "proposal" : "proposals"} across ${imp.audit.tools} operations</h2>
     <p>${groups} ${groups === 1 ? "group" : "groups"} of tools the model confused.</p>
     <p>Requests in ${esc(langs)}, $${(imp.cost_usd || 0).toFixed(2)} spent.</p>${notes}`;

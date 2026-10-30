@@ -27,6 +27,7 @@ class Turn:
     tokens_out: int = 0
     raw: str = ""
     cost: float | None = None
+    truncated: bool = False
 
     def to_json(self) -> dict[str, Any]:
         return asdict(self)
@@ -68,6 +69,9 @@ class Budget:
 
 def estimate_tokens(*parts: Any) -> int:
     return sum(len(p if isinstance(p, str) else json.dumps(p)) for p in parts) // 4 + 1
+
+
+COMPLETE_TOKENS = 4096
 
 
 def parse_json(text: str) -> Any:

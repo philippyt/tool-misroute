@@ -5,7 +5,7 @@ import re
 from typing import Any
 import openai
 from misroute.config import ModelConfig
-from misroute.models.base import Call, Messages, Turn, as_messages
+from misroute.models.base import COMPLETE_TOKENS, Call, Messages, Turn, as_messages
 
 INLINE_CALL = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.S)
 DEFAULT_PREFIX = '<tool_call>\n{"name": "'
@@ -74,11 +74,13 @@ class OpenAICompatAdapter:
                 out += [{"role": "tool", "tool_call_id": r["id"], "content": r["content"]} for r in m["results"]]
         return out
 
-    async def chat(self, user: Messages, tools: list[dict[str, Any]], system: str | None = None) -> Turn:
+    async def chat(
+        self, user: Messages, tools: list[dict[str, Any]], system: str | None = None, max_tokens: int | None = None
+    ) -> Turn:
         kw: dict[str, Any] = {
             "model": self.cfg.model_id,
             "messages": self._messages(user, system),
-            "max_tokens": self.cfg.max_tokens,
+            "max_tokens": max_tokens or self.cfg.max_tokens,
         }
         if (temp := self.cfg.options.get("temperature", 0)) is not None:
             kw["temperature"] = temp
@@ -105,13 +107,18 @@ class OpenAICompatAdapter:
         usage = resp.usage
         cost = (usage.model_extra or {}).get("cost") if usage else None
         tin, tout = (usage.prompt_tokens, usage.completion_tokens) if usage else (0, 0)
-        return Turn(calls, text, tin, tout, cost=float(cost) if cost is not None else None)
+        cut = getattr(resp.choices[0], "finish_reason", None) == "length"
+        return Turn(calls, text, tin, tout, cost=float(cost) if cost is not None else None, truncated=cut)
 
     async def complete(self, prompt: str, kind: str | None = None) -> str:
-        return (await self.chat(prompt, [])).text
+        return (await self.complete_turn(prompt)).text
 
     async def complete_turn(self, prompt: str) -> Turn:
-        return await self.chat(prompt, [])
+        """Text replies such as JSON get a larger budget than tool calls, since reasoning models spend tokens before
+        answering. A reply cut off at the limit is retried once with twice the budget."""
+        budget = max(self.cfg.max_tokens, COMPLETE_TOKENS)
+        turn = await self.chat(prompt, [], max_tokens=budget)
+        return await self.chat(prompt, [], max_tokens=budget * 2) if turn.truncated else turn
 
     async def _prefill_logprob(self, user: str, tools: list[dict[str, Any]], prefill: str) -> float:
         resp = await self.client.chat.completions.create(

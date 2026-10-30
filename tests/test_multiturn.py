@@ -104,3 +104,54 @@ def test_azure_openai_client(monkeypatch):
     )
     client = build(cfg).client
     assert type(client).__name__ == "AsyncAzureOpenAI" and "x.openai.azure.com" in str(client.base_url)
+
+
+async def test_cut_off_completion_retries_with_more_tokens_and_is_not_cached(tmp_path):
+    from misroute.models.base import COMPLETE_TOKENS, Budget
+    from misroute.store.cache import Metered
+
+    seen = []
+
+    class Completions:
+        async def create(self, **kw):
+            seen.append(kw["max_tokens"])
+
+            class Msg:
+                content, tool_calls = (
+                    ('{"requests": ["a", "b' if kw["max_tokens"] == COMPLETE_TOKENS else '{"a": 1}'),
+                    None,
+                )
+
+            class Choice:
+                message, finish_reason = Msg(), "length" if kw["max_tokens"] == COMPLETE_TOKENS else "stop"
+
+            class Resp:
+                choices, usage = [Choice()], None
+
+            return Resp()
+
+    cfg = ModelConfig(name="o", provider="openai-compatible", base_url="http://x")
+    adapter = OpenAICompatAdapter(cfg)
+    adapter.client = type("C", (), {"chat": type("Ch", (), {"completions": Completions()})()})()
+    assert (await adapter.complete_turn("write json")).text == '{"a": 1}'
+    assert seen == [COMPLETE_TOKENS, COMPLETE_TOKENS * 2]
+
+    class Cut:
+        name, family = "c", "x"
+
+        async def complete_turn(self, prompt):
+            from misroute.models.base import Turn
+
+            return Turn(text='{"requests": ["a", "b', truncated=True)
+
+    m = Metered(Cut(), cfg, Budget(1), tmp_path)
+    await m.complete("p")
+    assert not list((tmp_path / "cache" / "o").glob("*.json"))
+
+
+def test_lenient_keeps_complete_requests_from_a_cut_reply():
+    from misroute.requests.generate import lenient
+
+    cut = '```json\n{"slot_kind": "id", "slots": ["1", "2"], "requests": ["Show case {slot}", "List the files on'
+    assert lenient(cut) == {"slots": ["1", "2"], "requests": ["Show case {slot}"]}
+    assert lenient('{"requests": ["x"]}') == {"requests": ["x"]}

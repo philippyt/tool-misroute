@@ -42,7 +42,8 @@ def entry(route) -> dict:
 
 
 def route_map(route, kind):
-    return MCPType.EXCLUDE if entry(route).get("exclude") else MCPType.TOOL
+    found = entry(route)
+    return MCPType.TOOL if found and not found.get("exclude") else MCPType.EXCLUDE
 
 
 def component(route, tool) -> None:
