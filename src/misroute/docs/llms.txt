@@ -1,0 +1,58 @@
+# misroute
+
+> Finds the tools an agent confuses on an MCP server or OpenAPI spec, tests whether a description change helps against a neutral baseline on held out requests, and writes better descriptions for review.
+
+Install with `pip install misroute` or `uv tool install misroute`. `misroute guide` prints the agent guide (AGENTS.md) and this reference. misroute never edits tools.
+
+## Commands
+
+- `misroute guide`: this reference and the agent guide
+- `misroute quick [target] --json --max-cost N --no-open`: config, lint and a capped discover in one go
+- `misroute init [--from claude|cursor|vscode|path] [--model provider:model]`: write misroute.yaml
+- `misroute doctor --json`: setup checks with a fix per problem
+- `misroute lint [--draft] [--strict] [--sarif file] --json`: weak descriptions, free
+- `misroute explain --pair a,b --json`: misrouted requests and what the model called, free
+- `misroute discover --json --max-cost N`: ranked confused tool pairs from model behaviour
+- `misroute probe --pair a,b --json`: harder requests on one pair
+- `misroute fix --pair a,b --json`: boundary clause against a neutral edit or a drafted description
+- `misroute check --tool NAME --description TEXT --json --max-cost N [--refresh]`: is a proposed description better
+- `misroute improve [target] [--model M] [--helper H] [--languages no,en] [--fastmcp] [--out dir] --json --max-cost N`: write, race and confirm new descriptions for confused tools, export for review. Advanced: `--domain`, `--real-requests`, `--requests-from interface|descriptions`, `--max-groups`, `--styles boundary,returns,example,minimal`, `--max-chars`, `--modes`, `--no-drafts`
+- `misroute catalog`: tool names, hashes and descriptions as JSON
+- `misroute ci [--changed --baseline tools.json --markdown out.md] --json`: limits or changed tools only
+- `misroute schema <command>`: JSON Schema of a command's output
+- `misroute serve-mcp -c misroute.yaml`: misroute as an MCP server
+- `misroute report`, `misroute ui`, `misroute site`, `misroute guard serve`
+
+Shared flags: `--json`, `--yes`, `--max-cost DOLLARS`, `--estimate-only`, `--progress bar|ndjson|none`, `-c misroute.yaml`.
+
+Targets: MCP URL, local command, OpenAPI or Swagger file, tool list in MCP, OpenAI or Anthropic format, or an MCP client config.
+
+Models: `provider:model` shorthand with providers anthropic, foundry, bedrock, azure, openai, openrouter, ollama, vllm, lmstudio. Prices are looked up automatically, local models are free. Set a helper model from another family for writing and judging requests (`--helper`, or `generator`, `validator`, `writer` in misroute.yaml).
+
+Config keys: `server` (`url`, `command`, `openapi` or `tools`, plus `include_tools`, `exclude_tools`, `headers`, `env`), `models`, `generator`, `validator`, `writer`, `modes`, `budget_usd`, `requests_per_tool`, `slots`, `rotations`, `repeats`, `request_source` (`description` or `spec`), `request_languages`, `domain`, `real_requests`, `system_certs`, `limits`, `guard`.
+
+## Exit codes
+
+0 passed, 1 limits failed or worse, 2 insufficient data, 3 budget, cost cap, provider or config problem.
+
+## JSON
+
+Every `--json` output is one object with `schema_version` (currently 1) and `command`. Errors have `error` and `exit_code`. An estimate has `estimate.calls` and `estimate.cost_usd`. Results with a `roles_warning` list used a helper model from the same family as a tested model.
+
+Template test fields, used by check, fix and improve: `templates`, `discordant_templates`, `p` (exact sign flip over request templates), `p_trial_midp` (trial level, reported only), `fixed`, `broke`, `diff` (error rate change), `ci` (95% interval of diff). Fewer than 6 discordant templates means no verdict.
+
+`check` returns: `tool`, `neighbours`, `verdict` (`better`, `worse`, `no_difference`, `insufficient_data`), `reason`, `baseline_kind` (`neutral` or `description`), `baseline`, the template test fields, `wrong_rate` and `hedge_rate` per condition (`current`, `baseline`, `proposed`) on held out requests, `leakage`, `trials`, `held_out`, `vs_current`, `verdicts_left`, `round`, `cost_usd`, `roles_warning`, plus `tuning` and `held_out` blocks.
+
+`discover` returns: `cells` (per model and mode: `trials`, `accuracy`, `wrong_rate`, `hedge_rate`, `write_hedge_rate`, `failures`, `unanswered`, `matrix`), `spots` (`a`, `b`, `score`, `signals`, `directions`, `write`, `gate_failed`, `thin`), `gate_failed`, `near_misses`, `removal`, `noise`, `short`, `untested`, `request_source`, `by_language` and `by_kind` (rates per request language and per kind `goal`, `borrowed`, `real`), `roles_warning`, `spent`.
+
+`fix` returns: `pairs` (`pair`, `model`, `mode`, `baseline_kind`, `errors` for `original`, `baseline`, `clause`, the template test fields, `p_holm`, `hedge_p`, `verdict`, `directions`, `leakage`, `edits`), `across` and `roles_warning`.
+
+`improve` returns: `audit` (`tools`, `reads`, `writes`, `counts`, `notes` with `tool`, `kind`, `detail`), `groups` (`tools`, `requests`, `original`, `baseline`, `winner`, `style`, `candidates`, `dropped`, `race`, `confirm` with `rates` per condition (with `real_error_rate` when real requests are held out), `tests` for `winner_vs_baseline`, `winner_vs_original` and `baseline_vs_original` with `verdict`, `reason`, `p_holm` and the template test fields, and `by_language`, then `export` (`winner`, `baseline` or `original`) and `why`), `entries` (`tool`, `op_id`, `route`, `description`, `original`, `status` (`tested`, `tested baseline`, `kept`, `draft`, `unchanged`), `reason`, `read_only`, `destructive`, `suggest_exclude`, `notes`), `files`, `fastmcp` (`ok`, `tools`, `missing`, `descriptions_differ`, `hints_differ`, `held_out`), `cost_usd`.
+
+## MCP tools
+
+`lint_descriptions`, `draft_description`, `estimate_check`, `check_description`, `explain_pair`, `suggest_fix`, `get_report`, `start_job` (kind `discover`, `probe`, `fix` or `improve`, `max_cost`, `estimate_only`, `args`), `job_status`, `cancel_job`. Resource `misroute://guide` holds this text.
+
+## Rules
+
+misroute never edits tools. Drafts are for human review. Verdicts come from held out requests, and a held out set is spent after 3 verdicts on the same tool.

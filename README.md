@@ -129,6 +129,7 @@ domain: Municipal operations. A work order is a planned job, an incident is a re
 | `misroute guard serve` | runs an MCP proxy that logs and guards real tool calls |
 | `misroute site` | builds a static results site |
 | `misroute schema` | prints the JSON Schema of a command's output |
+| `misroute guide` | prints the agent guide and JSON reference |
 
 ## How discover ranks pairs
 
@@ -147,10 +148,10 @@ Code mode runs each program in Monty against recorded fakes and reports faked to
 ## Improve descriptions
 
 ```console
-$ misroute improve api.json --languages en,no --fastmcp --max-cost 5
+$ misroute improve api.json --model foundry:claude-opus-5-5 --helper openai:gpt-5.6 --languages no,en --fastmcp --max-cost 5
 ```
 
-`improve` takes the same targets as `quick`: an OpenAPI or Swagger file, an MCP server, or a tool list. It runs in stages:
+`improve` takes the same targets as `quick`: an OpenAPI or Swagger file, an MCP server, or a tool list. `--model` is the model under test and `--helper` writes and judges the requests and writes the candidates. Use a helper from another family, so no model grades its own test. Real user requests, passed with `--real-requests`, are the strongest evidence and are reported separately. It runs in stages:
 
 1. Audit, free: weak descriptions, names FastMCP cuts at 56 characters, POSTs that only read, overlapping routes, operations like health or auth that agents rarely need, and spec errors that stop converters.
 2. Discover with requests written from the interface, so descriptions under test never shape the requests.
@@ -173,7 +174,7 @@ With `--fastmcp` misroute also starts the generated server, checks that names, d
 
 ## For agents
 
-Every command takes `--json` and prints one object with a `schema_version`. Exit codes are `0` passed, `1` limits failed or worse, `2` not enough data, `3` budget or config problem. Paid commands take `--max-cost` and `--estimate-only`, and never prompt without a terminal. `--progress ndjson` streams progress to stderr. `misroute schema check` prints the output schema.
+Every command takes `--json` and prints one object with a `schema_version`. Exit codes are `0` passed, `1` limits failed or worse, `2` not enough data, `3` budget or config problem. Paid commands take `--max-cost` and `--estimate-only`, and never prompt without a terminal. `--progress ndjson` streams progress to stderr. `misroute schema check` prints the output schema, and `misroute guide` prints the full agent guide, which also ships in the package and as the `misroute://guide` resource of `misroute serve-mcp`.
 
 Add misroute as an MCP server:
 

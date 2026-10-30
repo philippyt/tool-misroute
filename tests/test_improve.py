@@ -106,3 +106,29 @@ async def test_generated_fastmcp_server_serves_the_overlay(tmp_path):
     assert served["tools"] == len(SPEC["paths"])
     for row in served["held_out"]:
         assert row["error_rate"] == pytest.approx(row["misroute_error_rate"], abs=0.05)
+
+
+def test_configure_roles_sources_and_inputs(tmp_path):
+    from misroute.improve.run import configure, pick_styles
+
+    base = Config.model_validate({"server": {"openapi": "x.json"}, "models": ["ollama:qwen3.5:9b"]})
+    cfg, tested = configure(base, ["ollama:qwen3.5:9b"], "openai:gpt-5.6", languages=["no", "en"])
+    assert tested == ["qwen3.5-9b"] and cfg.generator == cfg.validator == cfg.writer == "gpt-5.6"
+    assert cfg.request_source == "spec" and cfg.request_languages == ["no", "en"] and not cfg.role_warnings()
+    kept = Config.model_validate({**base.model_dump(), "request_source": "description"})
+    assert configure(kept)[0].request_source == "description"
+    assert configure(kept, requests_from="interface")[0].request_source == "spec"
+    with pytest.raises(ValueError, match="domain file"):
+        configure(base, domain="glossary.txt")
+    assert configure(base, domain="Work orders are planned jobs.")[0].domain == "Work orders are planned jobs."
+    with pytest.raises(ValueError, match="real requests"):
+        configure(base, real_requests=str(tmp_path / "nope.jsonl"))
+    assert pick_styles(["minimal", "boundary"]) == ["minimal", "boundary"]
+    with pytest.raises(ValueError, match="unknown style"):
+        pick_styles(["fancy"])
+
+
+def test_packaged_guide_matches_repo():
+    root = Path(__file__).parent.parent
+    for name in ("AGENTS.md", "llms.txt"):
+        assert (root / "src/misroute/docs" / name).read_bytes() == (root / name).read_bytes(), name

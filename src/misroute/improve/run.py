@@ -4,6 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 from misroute.check import decide, split
+from misroute.config import Config
 from misroute.fix import clause, stats
 from misroute.improve import audit, candidates, export
 from misroute.lint import descriptions
@@ -16,6 +17,71 @@ RACE_SLOTS = 2
 MIN_SCORE = 0.1
 TOP_SHARE = 0.3
 PAIRS = (("winner", "baseline"), ("winner", "original"), ("baseline", "original"))
+
+
+SOURCES = {"interface": "spec", "descriptions": "description", "spec": "spec", "description": "description"}
+PATHLIKE = (".txt", ".md", ".yaml", ".yml", ".json")
+
+
+def pick_styles(names: list[str] | None) -> list[str]:
+    if not names:
+        return list(candidates.STYLES)
+    unknown = [n for n in names if n not in candidates.STYLES]
+    if unknown:
+        raise ValueError(f"unknown style {', '.join(unknown)}, styles are {', '.join(candidates.STYLES)}")
+    return list(dict.fromkeys(names))
+
+
+def configure(
+    cfg: Config,
+    models: list[str] | None = None,
+    helper: str | None = None,
+    requests_from: str | None = None,
+    languages: list[str] | None = None,
+    domain: str | None = None,
+    real_requests: str | None = None,
+) -> tuple[Config, list[str]]:
+    """Config for an improve run and the models under test. models and helper take provider:model shorthand or a
+    configured model name. The helper writes requests, validates them and writes candidates, so the tested model
+    never grades itself. Requests come from the interface unless requests_from or the config says descriptions."""
+    from misroute.models.presets import expand
+
+    data = cfg.model_dump()
+    names = {m["name"] for m in data["models"]}
+
+    def add(spec: str) -> str:
+        if spec in names:
+            return spec
+        block = expand(spec)
+        if block["name"] not in names:
+            data["models"].append(block)
+            names.add(block["name"])
+        return block["name"]
+
+    tested = [add(m) for m in models or []]
+    if helper:
+        name = add(helper)
+        data.update(generator=name, validator=name, writer=name)
+    if requests_from:
+        if requests_from not in SOURCES:
+            raise ValueError("requests_from must be interface or descriptions")
+        data["request_source"] = SOURCES[requests_from]
+    elif "request_source" not in cfg.model_fields_set:
+        data["request_source"] = "spec"
+    if languages:
+        data["request_languages"] = languages
+    if domain:
+        text = domain.strip()
+        pathlike = text.lower().endswith(PATHLIKE) or (" " not in text and ("/" in text or "\\" in text))
+        if "\n" not in text and pathlike and not Path(text).is_file():
+            raise ValueError(f"domain file {text} not found, pass the glossary text itself or an existing file")
+        data["domain"] = text
+    if real_requests:
+        if not Path(real_requests).is_file():
+            raise ValueError(f"real requests file {real_requests} not found")
+        data["real_requests"] = real_requests
+    new = Config.model_validate(data)
+    return new, tested or new.tested()
 
 
 def groups(spots: list[dict], limit: int, max_size: int = MAX_GROUP) -> list[list[str]]:
@@ -140,6 +206,12 @@ class Improver:
                 "error_rate": sum(t.error for t in ts) / n,
                 "wrong_rate": sum(t.wrong for t in ts) / n,
             }
+        real = {r.id for r in reqs if r.kind == "real"}
+        if real:
+            for cond in conds:
+                hit = [v for k, v in errs[cond].items() if k[2] in real]
+                rates[cond]["real_error_rate"] = sum(hit) / len(hit) if hit else None
+                rates[cond]["real_trials"] = len(hit)
         lang = {r.id: r.lang for r in reqs}
         tests = {f"{a}_vs_{b}": decide(errs[b], errs[a]) for a, b in PAIRS}
         per_lang = {}
@@ -203,7 +275,7 @@ async def improve(
     models_: list[str] | None = None,
     modes: list[str] | None = None,
     n_groups: int = 5,
-    n_cands: int = 4,
+    styles: list[str] | None = None,
     max_chars: int = 300,
     out: Path | None = None,
     fastmcp: bool = False,
@@ -221,7 +293,7 @@ async def improve(
     found = audit.notes(tools, doc)
     disc = await proj.discover(models_, modes)
     spots = disc["spots"]
-    imp = Improver(proj, models_, modes, max_chars, list(candidates.STYLES)[:n_cands])
+    imp = Improver(proj, models_, modes, max_chars, styles)
     domain = proj.domain()
     results, held_by = [], {}
     for i, group in enumerate(groups(spots, n_groups)):

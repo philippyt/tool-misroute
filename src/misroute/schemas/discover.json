@@ -178,6 +178,24 @@
      }
     }
    }
+  },
+  "by_kind": {
+   "type": "object",
+   "description": "Wrong and error rates per request kind, empty with one kind",
+   "additionalProperties": {
+    "type": "object",
+    "properties": {
+     "trials": {
+      "type": "integer"
+     },
+     "wrong_rate": {
+      "type": "number"
+     },
+     "error_rate": {
+      "type": "number"
+     }
+    }
+   }
   }
  },
  "required": [

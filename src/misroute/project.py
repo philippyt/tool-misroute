@@ -24,15 +24,15 @@ Progress = Callable[[int], None]
 CONDS = ("original", "baseline", "clause")
 
 
-def by_language(trials: list[Trial]) -> dict[str, dict[str, Any]]:
-    """Wrong and error rates per request language, empty when every request is in one language."""
-    langs = sorted({t.lang for t in trials})
-    if len(langs) < 2:
+def rates_by(trials: list[Trial], attr: str) -> dict[str, dict[str, Any]]:
+    """Wrong and error rates per value of a trial field such as lang or kind, empty when there is one value."""
+    values = sorted({str(getattr(t, attr)) for t in trials})
+    if len(values) < 2:
         return {}
     out = {}
-    for lang in langs:
-        ts = [t for t in trials if t.lang == lang]
-        out[lang] = {
+    for v in values:
+        ts = [t for t in trials if str(getattr(t, attr)) == v]
+        out[v] = {
             "trials": len(ts),
             "wrong_rate": sum(t.wrong for t in ts) / len(ts),
             "error_rate": sum(t.error for t in ts) / len(ts),
@@ -275,7 +275,8 @@ class Project:
             short=self.shortfall(reqs),
             roles_warning=self.cfg.role_warnings(),
             request_source=self.cfg.request_source,
-            by_language=by_language(trials),
+            by_language=rates_by(trials, "lang"),
+            by_kind=rates_by(trials, "kind"),
             untested=sorted(k for k, v in reqs.items() if not v),
             catalog=catalog_hash(tools),
             spent=self.budget.spent,

@@ -23,7 +23,11 @@ from misroute.store.runs import SCHEMA_VERSION
 
 OK, FAILED, INSUFFICIENT, PROBLEM = 0, 1, 2, 3
 
-app = typer.Typer(no_args_is_help=True, add_completion=False)
+app = typer.Typer(
+    no_args_is_help=True,
+    add_completion=False,
+    epilog="Using misroute from an agent: run misroute guide for commands, exit codes and JSON fields.",
+)
 guard_app = typer.Typer(no_args_is_help=True, help="Protect production calls")
 app.add_typer(guard_app, name="guard")
 out = Console()
@@ -37,6 +41,7 @@ Yes = Annotated[bool, typer.Option("--yes", "-y", help="do not ask before paid r
 MaxCost = Annotated[float | None, typer.Option("--max-cost", help="refuse runs estimated above this many dollars")]
 EstimateOnly = Annotated[bool, typer.Option("--estimate-only", help="print the estimate and exit")]
 ProgressMode = Annotated[str, typer.Option("--progress", help="bar, ndjson on stderr, or none")]
+ADVANCED = "Advanced"
 ModelSpec = Annotated[
     str | None, typer.Option("--model", help="provider:model, for example anthropic:claude-sonnet-5-5")
 ]
@@ -319,6 +324,19 @@ def explain(
     emit(opts, res, text)
 
 
+def guide_text() -> str:
+    from importlib import resources
+
+    docs = resources.files("misroute.docs")
+    return "\n\n".join(docs.joinpath(f).read_text(encoding="utf-8") for f in ("AGENTS.md", "llms.txt"))
+
+
+@app.command()
+def guide() -> None:
+    """Print the agent guide and reference: commands, rules, exit codes and JSON fields"""
+    print(guide_text())
+
+
 @app.command()
 def schema(
     name: Annotated[
@@ -568,28 +586,60 @@ def check(
 
 @app.command()
 def improve(
-    target: Annotated[str | None, typer.Argument(help="OpenAPI file, MCP URL, tool list or command")] = None,
+    target: Annotated[
+        str | None,
+        typer.Argument(help="OpenAPI or Swagger file, MCP URL, tool list or command, else the server in misroute.yaml"),
+    ] = None,
+    model: Annotated[
+        str | None,
+        typer.Option("--model", help="models under test, provider:model or a configured name, comma separated"),
+    ] = None,
+    helper: Annotated[
+        str | None,
+        typer.Option(help="model that writes and judges requests and writes candidates, from another family"),
+    ] = None,
+    languages: Annotated[str | None, typer.Option(help="languages to write requests in, for example no,en")] = None,
+    fastmcp: Annotated[
+        bool, typer.Option(help="also write a FastMCP server.py and confirm against it, OpenAPI only")
+    ] = False,
+    out_dir: Annotated[Path, typer.Option("--out", help="folder for the results")] = Path("improve"),
     config: Cfg = Path("misroute.yaml"),
-    model: ModelSpec = None,
-    models: Names = None,
-    modes: Annotated[str, typer.Option(help="comma separated")] = "json",
-    groups: Annotated[int, typer.Option(help="confused groups to work on")] = 5,
-    candidates: Annotated[int, typer.Option(help="candidate descriptions per tool, 1 to 4")] = 4,
-    max_chars: Annotated[int, typer.Option(help="longest candidate description")] = 300,
-    languages: Annotated[str | None, typer.Option(help="request languages, for example en,no")] = None,
-    domain: Annotated[str | None, typer.Option(help="glossary for request writing, text or a file")] = None,
-    real: Annotated[Path | None, typer.Option(help="JSON lines of real requests")] = None,
-    source: Annotated[str, typer.Option(help="spec writes requests from the interface, description from it")] = "spec",
-    out_dir: Annotated[Path, typer.Option("--out", help="where to write the results")] = Path("improve"),
-    fastmcp: Annotated[bool, typer.Option(help="also write a FastMCP server.py and confirm against it")] = False,
-    drafts: Annotated[bool, typer.Option(help="draft descriptions for weak tools outside the groups")] = True,
     json_: Json = False,
     yes: Yes = False,
     max_cost: MaxCost = None,
     estimate_only: EstimateOnly = False,
     progress: ProgressMode = "bar",
+    domain: Annotated[
+        str | None, typer.Option(help="glossary for writing requests, text or a file", rich_help_panel=ADVANCED)
+    ] = None,
+    real_requests: Annotated[
+        Path | None,
+        typer.Option(help="JSON lines of real user requests with text, tool and lang", rich_help_panel=ADVANCED),
+    ] = None,
+    requests_from: Annotated[
+        str | None,
+        typer.Option(
+            help="interface writes requests from routes, parameters and fields, descriptions from the descriptions. "
+            "Default interface",
+            rich_help_panel=ADVANCED,
+        ),
+    ] = None,
+    max_groups: Annotated[
+        int, typer.Option(help="sets of tools models confuse with each other to work on", rich_help_panel=ADVANCED)
+    ] = 5,
+    styles: Annotated[
+        str | None,
+        typer.Option(
+            help="candidate styles: boundary, returns, example, minimal. Default all", rich_help_panel=ADVANCED
+        ),
+    ] = None,
+    max_chars: Annotated[int, typer.Option(help="longest candidate description", rich_help_panel=ADVANCED)] = 300,
+    modes: Annotated[str, typer.Option(help="json, code or both, comma separated", rich_help_panel=ADVANCED)] = "json",
+    drafts: Annotated[
+        bool, typer.Option(help="draft descriptions for weak tools outside any group", rich_help_panel=ADVANCED)
+    ] = True,
 ) -> None:
-    """Write and test candidate descriptions for confused tools, then export them for review"""
+    """Write, race and confirm new descriptions for confused tools, then export them for review"""
     from misroute.config import ServerConfig
     from misroute.config import load as load_config
     from misroute.improve import run as improver
@@ -597,39 +647,36 @@ def improve(
     opts = Opts("improve", json_, yes, max_cost, estimate_only, progress)
     system_certs(config)
     block, secrets = target_server(target) if target else (None, {})
+    tested = split(model)
     try:
         if config.exists():
             cfg = load_config(config)
             if block:
                 cfg = cfg.model_copy(update={"server": ServerConfig.model_validate(block)})
-                write_env(config, secrets)
         elif block:
-            data = {"server": block, "models": [pick_model(model, json_)], "modes": ["json"]}
-            cfg = Config.model_validate(data)
-            write_env(config, secrets)
+            first = tested[0] if tested else pick_model(None, json_)
+            cfg = Config.model_validate({"server": block, "models": [first], "modes": ["json"]})
         else:
-            fail(opts, "give a target: an OpenAPI file, an MCP URL, a tool list or a command")
+            fail(opts, "give a target: an OpenAPI or Swagger file, an MCP URL, a tool list or a command")
             return
-    except (OSError, ValidationError, yaml.YAMLError) as e:
+        write_env(config, secrets)
+        cfg, ms = improver.configure(
+            cfg, tested, helper, requests_from, split(languages), domain, str(real_requests) if real_requests else None
+        )
+        chosen = improver.pick_styles(split(styles))
+    except (OSError, ValueError, ValidationError, yaml.YAMLError) as e:
         fail(opts, f"config problem: {e}")
         return
-    if source not in ("spec", "description"):
-        fail(opts, "source must be spec or description")
-    cfg.request_source = "spec" if source == "spec" else "description"
-    cfg.request_languages = split(languages) or cfg.request_languages
-    cfg.domain = domain or cfg.domain
-    cfg.real_requests = str(real) if real else cfg.real_requests
     if fastmcp and not cfg.server.openapi:
-        fail(opts, "--fastmcp needs an OpenAPI source")
+        fail(opts, "--fastmcp needs an OpenAPI or Swagger source")
     proj = Project(cfg, root=config.parent / cfg.workdir)
-    ms, md = split(models) or cfg.tested(), split(modes) or ["json"]
-    n_cands = max(1, min(candidates, 4))
-    calls, cost = asyncio.run(improver.estimate(proj, ms, md, groups, n_cands))
+    md = split(modes) or ["json"]
+    calls, cost = asyncio.run(improver.estimate(proj, ms, md, max_groups, len(chosen)))
     gate(opts, calls, cost)
     res = run(
         opts,
         proj,
-        improver.improve(proj, ms, md, groups, n_cands, max_chars, out_dir, fastmcp, drafts),
+        improver.improve(proj, ms, md, max_groups, chosen, max_chars, out_dir, fastmcp, drafts),
         calls,
     )
 

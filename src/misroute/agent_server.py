@@ -15,8 +15,22 @@ READ = ToolAnnotations(read_only_hint=True)
 PAID = ToolAnnotations(read_only_hint=True, open_world_hint=True)
 
 
+INSTRUCTIONS = """misroute finds the tools agents confuse on an MCP server or OpenAPI spec and tests description
+changes on held out requests. It never edits tools: propose results to a person.
+Start with lint_descriptions, free. To test one description, call estimate_check, then check_description. To find
+confused tools or improve many descriptions, use start_job with kind discover or improve, then job_status. Paid tools
+refuse above max_cost. Report verdict, trials, held_out and cost_usd with any claim. insufficient_data means no
+answer. improve entries with status draft are untested. The guide resource has the full reference."""
+
+
 def create(proj: Project) -> MCPServer:
-    app = MCPServer("misroute", instructions="Check MCP tool descriptions against model behaviour. Never edits tools.")
+    app = MCPServer("misroute", instructions=INSTRUCTIONS)
+
+    @app.resource("misroute://guide", name="guide", description="Agent guide and reference", mime_type="text/markdown")
+    def guide() -> str:
+        from misroute.cli import guide_text
+
+        return guide_text()
 
     @app.tool(
         description="Lists tools on the configured MCP server whose descriptions are missing, only a path, only the "
@@ -76,14 +90,16 @@ def create(proj: Project) -> MCPServer:
         return {"schema_version": SCHEMA_VERSION, "estimate_usd": round(cost, 4), **res}
 
     @app.tool(
-        description="Returns the latest discover, probe and fix results as JSON: risky tool pairs, wrong pick and "
-        "hedge rates per model and mode, and fix verdicts. Free.",
+        description="Returns the latest discover, probe, fix and improve results as JSON: risky tool pairs, wrong "
+        "pick and hedge rates per model and mode, fix verdicts, and improve entries with their status and files. "
+        "Free.",
         annotations=READ,
         structured_output=True,
     )
     async def get_report() -> dict[str, Any]:
         found: dict[str, Any] = proj.store.read("discover") or {}
         fixed: dict[str, Any] = proj.store.read("fix") or {}
+        improved: dict[str, Any] = proj.store.read("improve") or {}
         cells = [
             {k: c[k] for k in ("model", "mode", "trials", "wrong_rate", "hedge_rate", "failures")}
             for c in found.get("cells", [])
@@ -96,6 +112,12 @@ def create(proj: Project) -> MCPServer:
                 {k: r.get(k) for k in ("pair", "model", "mode", "baseline_kind", "errors", "verdict")}
                 for r in fixed.get("pairs", [])
             ],
+            "improve": [
+                {k: e.get(k) for k in ("tool", "status", "description", "original", "reason")}
+                for e in improved.get("entries", [])
+                if e.get("status") != "unchanged"
+            ],
+            "improve_files": improved.get("files", {}),
             "stale": proj.store.stale(),
         }
 
@@ -136,24 +158,49 @@ def create(proj: Project) -> MCPServer:
 
     @app.tool(
         description="Starts discover, probe, fix or improve in the background and returns a job id at once, for runs "
-        "longer than a tool call may take. args takes models, modes, top, pairs as [[a, b]] and trials, and for "
-        "improve groups, candidates, max_chars and out. Refuses above max_cost. Poll job_status with the id.",
+        "longer than a tool call may take. args for all kinds: models (provider:model or configured names) and "
+        "modes. discover, probe and fix: top, pairs as [[a, b]] and trials. improve: helper (a model from another "
+        'family that writes and judges requests), languages such as ["no", "en"], requests_from (interface or '
+        "descriptions), domain, real_requests, max_groups, styles, max_chars, out, fastmcp and drafts. improve "
+        "writes files for review and applies nothing. Refuses above max_cost, set estimate_only to get the cost "
+        "without running. Poll job_status with the id.",
         annotations=PAID,
         structured_output=True,
     )
-    async def start_job(kind: str, max_cost: float = 5.0, args: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def start_job(
+        kind: str, max_cost: float = 5.0, args: dict[str, Any] | None = None, estimate_only: bool = False
+    ) -> dict[str, Any]:
         args = args or {}
         if kind not in ("discover", "probe", "fix", "improve"):
             return {"error": "kind must be discover, probe, fix or improve"}
-        models = args.get("models") or proj.cfg.tested()
-        modes: list[str] = args.get("modes") or [str(m) for m in proj.cfg.modes]
+        modes: list[str] = args.get("modes") or ([str(m) for m in proj.cfg.modes] if kind != "improve" else ["json"])
         pairs = [tuple(p) for p in args.get("pairs") or []] or None
         top, trials = int(args.get("top", 3)), int(args.get("trials", 96))
-        n_groups, n_cands = int(args.get("groups", 5)), max(1, min(int(args.get("candidates", 4)), 4))
+        target = proj
         if kind == "improve":
-            calls, cost = await improver.estimate(proj, models, modes, n_groups, n_cands)
+            try:
+                cfg, models = improver.configure(
+                    proj.cfg,
+                    args.get("models"),
+                    args.get("helper"),
+                    args.get("requests_from"),
+                    args.get("languages"),
+                    args.get("domain"),
+                    args.get("real_requests"),
+                )
+                styles = improver.pick_styles(args.get("styles"))
+            except ValueError as e:
+                return {"error": str(e)}
+            target = Project(
+                cfg, server=proj.server if proj.server is not proj.cfg.server else None, root=proj.store.root
+            )
+            target._tools = proj._tools
+            calls, cost = await improver.estimate(target, models, modes, int(args.get("max_groups", 5)), len(styles))
         else:
+            models = args.get("models") or proj.cfg.tested()
             calls, cost = await proj.cost(kind, models, modes, len(pairs) if pairs else top, trials)
+        if estimate_only:
+            return {"schema_version": SCHEMA_VERSION, "estimate_calls": calls, "estimate_usd": round(cost, 4)}
         if cost > max_cost:
             return {"error": f"estimate ${cost:.2f} is above max_cost ${max_cost:.2f}", "cost_usd": round(cost, 4)}
         job_id = uuid.uuid4().hex[:8]
@@ -169,19 +216,21 @@ def create(proj: Project) -> MCPServer:
         def tick(n: int) -> None:
             job["done"] += n
 
-        proj.progress = tick
+        target.progress = tick
         runs = {
             "discover": lambda: proj.discover(models, modes),
             "probe": lambda: proj.probe(top, pairs, models, modes),
             "fix": lambda: proj.fix(top, pairs, models, modes, trials),
             "improve": lambda: improver.improve(
-                proj,
+                target,
                 models,
                 modes,
-                n_groups,
-                n_cands,
+                int(args.get("max_groups", 5)),
+                styles,
                 int(args.get("max_chars", 300)),
                 Path(args.get("out", "improve")),
+                bool(args.get("fastmcp", False)) and bool(target.cfg.server.openapi),
+                bool(args.get("drafts", True)),
             ),
         }
 
