@@ -47,16 +47,15 @@ def project(tmp_path) -> Project:
     return Project(cfg, root=tmp_path / ".misroute")
 
 
-def test_groups_join_connected_pairs():
+def test_groups_join_flagged_pairs():
     spots = [
-        {"a": "a", "b": "b", "score": 1.0, "signals": {"wrong": 0.5}},
-        {"a": "b", "b": "c", "score": 0.5, "signals": {"hedge": 0.2}},
-        {"a": "x", "b": "y", "score": 0.4, "signals": {"wrong": 0.1}},
-        {"a": "y", "b": "z", "score": 0.2, "signals": {"wrong": 0.1}},
-        {"a": "p", "b": "q", "score": 0.9, "signals": {"removal": 1.0}},
+        {"a": "a", "b": "b", "errors": 12, "flagged": True},
+        {"a": "b", "b": "c", "errors": 7, "flagged": True},
+        {"a": "x", "b": "y", "errors": 6, "flagged": True},
+        {"a": "y", "b": "z", "errors": 5, "flagged": False},
     ]
-    assert groups(spots, 5) == [["b", "a", "c"], ["x", "y"]]
-    assert groups(spots, 1, max_size=2) == [["b", "a"]]
+    assert groups(spots) == [["b", "a", "c"], ["x", "y"]]
+    assert groups(spots, 1) == [["b", "a", "c"]]
 
 
 async def test_improve_end_to_end(tmp_path):
@@ -183,9 +182,12 @@ async def test_baseline_survives_a_writer_without_json():
             return self.replies.pop(0) if self.replies else "Returns the comments on a case."
 
     tool = Tool("get_comments", "Returns comments for a case id.")
-    assert await clause.neutral_one(Writer(["no json here", '{"a": "Lists comments on one case."}']), tool, 30)
+    short, longer = '{"a": "Lists comments."}', '{"a": "Lists the comments written on one case by caseworkers."}'
+    assert clause.fit("Lists the comments written on one case by caseworkers.", 30) == "Lists the comments written on."
+    assert await clause.neutral_one(Writer([short, longer]), tool, 30) == "Lists the comments written on."
+    assert await clause.neutral_one(Writer([short, short]), tool, 30) == "Lists comments."
     with pytest.raises(ValueError):
-        await clause.neutral_one(Writer(["nope", "nope", "nope"]), tool, 30)
+        await clause.neutral_one(Writer(["nope"]), tool, 30)
 
     class Proj:
         def role(self, name):

@@ -8,7 +8,7 @@ def misroute_routes(tmp_path_factory):
 
     root = tmp_path_factory.getbasetemp().parent / "misroute-cache"
 
-    def check(tools, model, min_accuracy=0.95, **kw):
+    def check(tools, model, min_accuracy, **kw):
         return assert_routes(tools, model, min_accuracy, root=str(root), **kw)
 
     return check

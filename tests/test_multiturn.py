@@ -106,27 +106,28 @@ def test_azure_openai_client(monkeypatch):
     assert type(client).__name__ == "AsyncAzureOpenAI" and "x.openai.azure.com" in str(client.base_url)
 
 
-async def test_cut_off_completion_retries_with_more_tokens_and_is_not_cached(tmp_path):
-    from misroute.models.base import COMPLETE_TOKENS, Budget
+async def test_cut_off_reply_retries_with_twice_the_tokens_used_and_is_not_cached(tmp_path):
+    from misroute.models.base import Budget, Turn
     from misroute.store.cache import Metered
 
     seen = []
 
     class Completions:
         async def create(self, **kw):
-            seen.append(kw["max_tokens"])
+            seen.append(kw.get("max_tokens"))
+            whole = kw.get("max_tokens", 0) >= 20
 
             class Msg:
-                content, tool_calls = (
-                    ('{"requests": ["a", "b' if kw["max_tokens"] == COMPLETE_TOKENS else '{"a": 1}'),
-                    None,
-                )
+                content, tool_calls = ('{"a": 1}' if whole else '{"requests": ["a", "b'), None
 
             class Choice:
-                message, finish_reason = Msg(), "length" if kw["max_tokens"] == COMPLETE_TOKENS else "stop"
+                message, finish_reason = Msg(), "stop" if whole else "length"
+
+            class Usage:
+                prompt_tokens, completion_tokens, model_extra = 5, 10, {}
 
             class Resp:
-                choices, usage = [Choice()], None
+                choices, usage = [Choice()], Usage()
 
             return Resp()
 
@@ -134,14 +135,12 @@ async def test_cut_off_completion_retries_with_more_tokens_and_is_not_cached(tmp
     adapter = OpenAICompatAdapter(cfg)
     adapter.client = type("C", (), {"chat": type("Ch", (), {"completions": Completions()})()})()
     assert (await adapter.complete_turn("write json")).text == '{"a": 1}'
-    assert seen == [COMPLETE_TOKENS, COMPLETE_TOKENS * 2]
+    assert seen == [None, 20]
 
     class Cut:
         name, family = "c", "x"
 
         async def complete_turn(self, prompt):
-            from misroute.models.base import Turn
-
             return Turn(text='{"requests": ["a", "b', truncated=True)
 
     m = Metered(Cut(), cfg, Budget(1), tmp_path)

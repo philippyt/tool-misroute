@@ -42,14 +42,12 @@ class Runner:
     async def estimate(self, body: dict) -> dict:
         if body["phase"] == "improve":
             proj, models = self.improver(body)
-            calls, cost = await improver.estimate(
-                proj, models, ["json"], body["groups"], len(improver.pick_styles(None))
-            )
+            calls, cost = await improver.estimate(proj, models, ["json"])
             return {"calls": calls, "cost": cost}
         proj = self.project()
         if body["phase"] == "lint":
             return {"calls": 0, "cost": 0.0}
-        calls, cost = await proj.cost(body["phase"], body["models"], body["modes"], body["top"], body["trials"])
+        calls, cost = await proj.cost(body["phase"], body["models"], body["modes"], body["top"], None, body["trials"])
         return {"calls": calls, "cost": cost}
 
     def start(self, body: dict, calls: int) -> None:
@@ -122,11 +120,11 @@ def create(config: Path) -> Starlette:
             "phase": phase,
             "models": b.get("models") or cfg.tested(),
             "modes": b.get("modes") or list(cfg.modes),
-            "top": int(b.get("top") or 3),
+            "top": int(b["top"]) if b.get("top") else None,
             "trials": int(b.get("trials") or 96),
             "helper": b.get("helper") or None,
             "languages": [x.strip() for x in str(b.get("languages") or "").split(",") if x.strip()],
-            "groups": int(b.get("groups") or 5),
+            "groups": int(b["groups"]) if b.get("groups") else None,
             "fastmcp": bool(b.get("fastmcp")),
         }
 

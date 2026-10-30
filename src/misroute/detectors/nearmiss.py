@@ -1,6 +1,6 @@
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from misroute.fix.stats import binom_greater, holm
+from misroute.fix.stats import ALPHA, binom_greater, holm
 from misroute.trial import Trial
 
 
@@ -13,20 +13,21 @@ class NearMiss:
     source: str = "probs"
 
 
-def from_probs(trials: list[Trial], margin: float = 0.5) -> list[NearMiss]:
-    """Local models: correct trials whose probability for the target beats the best rival by less than margin."""
+def from_probs(trials: list[Trial]) -> list[NearMiss]:
+    """Local models: for correct trials, the share of probability the strongest rival holds against the target,
+    averaged per tool. 0 means the rival never had a chance, 1 means a coin flip. Every tool is listed, closest
+    first."""
     by_tool: dict[str, list[tuple[float, str]]] = defaultdict(list)
     for t in trials:
-        if not t.probs or t.chosen != t.target:
+        if not t.probs or t.chosen != t.target or len(t.probs) < 2:
             continue
         rival, p_rival = max(((k, v) for k, v in t.probs.items() if k != t.target), key=lambda kv: kv[1])
-        by_tool[t.target].append((t.probs.get(t.target, 0) - p_rival, rival))
+        p_target = t.probs.get(t.target, 0)
+        by_tool[t.target].append((2 * p_rival / (p_rival + p_target) if p_rival + p_target else 0.0, rival))
     out = []
     for tool, rows in by_tool.items():
-        close = [r for r in rows if r[0] < margin]
-        if close:
-            rival = Counter(r[1] for r in close).most_common(1)[0][0]
-            out.append(NearMiss(tool, rival, len(close) / len(rows)))
+        rival = Counter(r[1] for r in rows).most_common(1)[0][0]
+        out.append(NearMiss(tool, rival, sum(r[0] for r in rows) / len(rows)))
     return sorted(out, key=lambda n: -n.score)
 
 
@@ -63,4 +64,4 @@ def from_repeats(trials: list[Trial]) -> tuple[float, list[NearMiss]]:
         d, n, picks = per[tool]
         rivals = [(c, k) for k, c in picks.items() if k not in (tool, None)]
         out.append(NearMiss(tool, max(rivals)[1] if rivals else None, d / n, p, "repeats"))
-    return pooled, sorted([m for m in out if (m.p or 1) < 0.05], key=lambda m: -m.score)
+    return pooled, sorted([m for m in out if (m.p or 1) < ALPHA], key=lambda m: -m.score)

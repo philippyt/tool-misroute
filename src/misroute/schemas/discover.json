@@ -121,6 +121,14 @@
       "items": {
        "type": "string"
       }
+     },
+     "errors": {
+      "type": "integer",
+      "description": "most wrong or hedged requests between the pair in one model and mode"
+     },
+     "flagged": {
+      "type": "boolean",
+      "description": "errors at least 6, the thesis flag rule"
      }
     }
    }

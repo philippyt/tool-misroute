@@ -1,5 +1,4 @@
 import asyncio
-import math
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -8,15 +7,16 @@ from misroute.config import Config
 from misroute.fix import clause, stats
 from misroute.improve import audit, candidates, export
 from misroute.lint import descriptions
+from misroute.models.base import BudgetExceeded
 from misroute.server import openapi
 from misroute.server.catalog import Tool, replace_descriptions
 from misroute.trial import Request, Trial
 
-MAX_GROUP = 6
-RACE_SLOTS = 2
-MIN_SCORE = 0.1
-TOP_SHARE = 0.3
 PAIRS = (("winner", "baseline"), ("winner", "original"), ("baseline", "original"))
+STAGES_NOTE = (
+    "This covers discover. Candidates, race and confirmation depend on the groups discover finds, so they are "
+    "priced after discover and the run stops before racing if they would pass the budget"
+)
 
 
 SOURCES = {"interface": "spec", "descriptions": "description", "spec": "spec", "description": "description"}
@@ -84,12 +84,10 @@ def configure(
     return new, tested or new.tested()
 
 
-def groups(spots: list[dict], limit: int, max_size: int = MAX_GROUP) -> list[list[str]]:
-    """Confused groups: tools connected by pairs with a wrong or hedge signal, strongest first. Only pairs scoring at
-    least 0.1 and 30% of the top pair count, so weak noise does not chain everything into one group."""
-    edges = [s for s in spots if s["signals"].get("wrong") or s["signals"].get("hedge")]
-    floor = max(MIN_SCORE, TOP_SHARE * max((s["score"] for s in edges), default=0))
-    edges = [s for s in edges if s["score"] >= floor]
+def groups(spots: list[dict], limit: int | None = None) -> list[list[str]]:
+    """Confused groups: tools connected by pairs that meet the flag rule, most errors first. limit keeps the
+    first groups only."""
+    edges = [s for s in spots if s.get("flagged")]
     parent: dict[str, str] = {}
 
     def root(x: str) -> str:
@@ -101,51 +99,48 @@ def groups(spots: list[dict], limit: int, max_size: int = MAX_GROUP) -> list[lis
 
     for s in edges:
         parent[root(s["a"])] = root(s["b"])
-    weight: dict[str, float] = defaultdict(float)
-    members: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    weight: dict[str, int] = defaultdict(int)
+    members: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     for s in edges:
         r = root(s["a"])
-        weight[r] += s["score"]
-        members[r][s["a"]] += s["score"]
-        members[r][s["b"]] += s["score"]
-    ranked = sorted(weight, key=lambda r: -weight[r])[:limit]
-    return [sorted(members[r], key=lambda n: (-members[r][n], n))[:max_size] for r in ranked]
+        weight[r] += s["errors"]
+        members[r][s["a"]] += s["errors"]
+        members[r][s["b"]] += s["errors"]
+    ranked = sorted(weight, key=lambda r: (-weight[r], r))
+    found = [sorted(members[r], key=lambda n: (-members[r][n], n)) for r in ranked]
+    return found[:limit] if limit else found
 
 
-def partners(spots: list[dict], group: list[str]) -> dict[str, str]:
-    best: dict[str, tuple[float, str]] = {}
+def partners(spots: list[dict], group: list[str]) -> list[tuple[str, str]]:
+    """Every flagged pair inside the group, in both directions, for borrowed requests."""
+    out = []
     for s in spots:
-        if s["a"] in group and s["b"] in group:
-            for x, y in ((s["a"], s["b"]), (s["b"], s["a"])):
-                if s["score"] > best.get(x, (-1.0, ""))[0]:
-                    best[x] = (s["score"], y)
-    return {k: v[1] for k, v in best.items()}
+        if s.get("flagged") and s["a"] in group and s["b"] in group:
+            out += [(s["a"], s["b"]), (s["b"], s["a"])]
+    return out
 
 
 class Improver:
     def __init__(
-        self, proj, models_: list[str], modes: list[str], max_chars: int = 300, styles: list[str] | None = None
+        self, proj, models_: list[str], modes: list[str], max_chars: int | None = None, styles: list[str] | None = None
     ):
         self.proj, self.models, self.modes = proj, models_, modes
         self.max_chars = max_chars
         self.styles = styles or list(candidates.STYLES)
 
-    async def trials(
-        self, tools: list[Tool], desc: dict[str, str], reqs: list[Request], slots: int, label: str, cheap: bool = False
-    ) -> list[Trial]:
+    async def trials(self, tools: list[Tool], desc: dict[str, str], reqs: list[Request], label: str) -> list[Trial]:
         ts = replace_descriptions(tools, desc)
         orders = [ts, ts[::-1]]
-        todo = self.proj.pair_trials(reqs, self.models, self.modes, slots, phase="improve", condition=label)
-        if cheap:
-            todo = [t for t in todo if t.order == 0]
+        todo = self.proj.pair_trials(
+            reqs, self.models, self.modes, self.proj.cfg.slots, phase="improve", condition=label
+        )
         return await self.proj.run_trials(todo, lambda t: orders[t.order])
 
     async def requests(self, tools: list[Tool], group: list[str], spots: list[dict]) -> list[Request]:
         by = {t.name: t for t in tools}
         base = await self.proj.request_set(tools, [by[n] for n in group])
-        near = partners(spots, group)
         borrowed = await asyncio.gather(
-            *(self.proj.requests_for(by[n], tools, by[near[n]]) for n in group if n in near)
+            *(self.proj.requests_for(by[a], tools, by[b]) for a, b in partners(spots, group))
         )
         out = [r for n in group for r in base.get(n, [])] + [r for rs in borrowed for r in rs]
         return list({r.id: r for r in out}.values())
@@ -153,33 +148,27 @@ class Improver:
     async def race(
         self, tools: list[Tool], group: list[str], cands: dict[str, list[dict]], reqs: list[Request]
     ) -> dict[str, Any]:
-        """Coordinate pass on tuning requests: each tool's candidates with the others fixed at the current best.
-        A cheap round with one slot and one order halves the field, survivors run in full. Fewer errors win and
-        the shorter description breaks ties."""
+        """Coordinate pass on tuning requests: each tool's candidates run in full with the other tools fixed at the
+        current best. Fewer errors win and the shorter description breaks ties."""
         by = {t.name: t for t in tools}
         best = {n: by[n].description for n in group}
         memo: dict[tuple, int] = {}
 
-        async def score(desc: dict[str, str], cheap: bool) -> int:
-            k = (cheap, tuple(sorted(desc.items())))
+        async def score(desc: dict[str, str]) -> int:
+            k = tuple(sorted(desc.items()))
             if k not in memo:
-                ts = await self.trials(tools, desc, reqs, 1 if cheap else RACE_SLOTS, "race", cheap)
-                memo[k] = sum(t.error for t in ts)
+                memo[k] = sum(t.error for t in await self.trials(tools, desc, reqs, "race"))
             return memo[k]
 
-        best_score = start = await score(best, False)
+        best_score = start = await score(best)
         tried = []
         for name in group:
             options = [c["text"] for c in cands.get(name, [])]
-            if not options:
-                continue
-            cheap = await asyncio.gather(*(score({**best, name: o}, True) for o in options))
-            field = sorted(zip(cheap, map(len, options), options, strict=True))[: max(1, math.ceil(len(options) / 2))]
-            for c_score, _, o in field:
-                s = await score({**best, name: o}, False)
-                tried.append({"tool": name, "text": o, "cheap_errors": c_score, "errors": s})
-                if (s, len(o)) < (best_score, len(best[name])):
-                    best, best_score = {**best, name: o}, s
+            scores = await asyncio.gather(*(score({**best, name: o}) for o in options))
+            for o, sc in zip(options, scores, strict=True):
+                tried.append({"tool": name, "text": o, "errors": sc})
+                if (sc, len(o)) < (best_score, len(best[name])):
+                    best, best_score = {**best, name: o}, sc
         return {"best": best, "errors": best_score, "start_errors": start, "tried": tried}
 
     async def baseline(
@@ -207,7 +196,7 @@ class Improver:
     async def confirm(self, tools: list[Tool], conds: dict[str, dict[str, str]], reqs: list[Request]) -> dict:
         errs, rates, seen = {}, {}, {}
         for cond, desc in conds.items():
-            ts = await self.trials(tools, desc, reqs, self.proj.cfg.slots, cond)
+            ts = await self.trials(tools, desc, reqs, cond)
             errs[cond] = {t.key: t.error for t in ts}
             seen[cond] = {t.key: t for t in ts}
             n = len(ts) or 1
@@ -239,7 +228,7 @@ class Improver:
         }
 
 
-def examples(seen: dict[str, dict[tuple, Trial]], limit: int = 24) -> list[dict]:
+def examples(seen: dict[str, dict[tuple, Trial]]) -> list[dict]:
     """Held out requests where any condition picked wrong, with each condition's picks. Fixed ones first, then
     broken ones, then those every condition got wrong."""
     keys = set.intersection(*(set(v) for v in seen.values())) if seen else set()
@@ -275,7 +264,7 @@ def examples(seen: dict[str, dict[tuple, Trial]], limit: int = 24) -> list[dict]
         if e["request"] not in seen_text:
             seen_text.add(e["request"])
             unique.append(e)
-    return unique[:limit]
+    return unique
 
 
 def thin(proj, disc: dict, results: list[dict], n_tools: int) -> list[str]:
@@ -285,22 +274,24 @@ def thin(proj, disc: dict, results: list[dict], n_tools: int) -> list[str]:
     if unread:
         out.append(
             f"{unread} helper replies could not be read, often cut off or not JSON. Try a stronger helper or a "
-            "larger max_tokens"
+            "max_tokens set"
         )
     if disc.get("untested"):
         out.append(f"{len(disc['untested'])} of {n_tools} tools got no usable test requests and were not tested")
     if not results:
         out.append("no group of confused tools was found, so nothing was raced")
     for g in results:
-        if g["requests"]["held_out"] < 12:
+        n = g["confirm"]["templates"]
+        if n < stats.MIN_DISCORDANT_TEMPLATES:
             out.append(
-                f"group {g['group'] + 1} has only {g['requests']['held_out']} held out requests, too few to decide"
+                f"group {g['group'] + 1} has {n} held out request templates, a sign flip test needs "
+                f"{stats.MIN_DISCORDANT_TEMPLATES} to reach p below {stats.ALPHA}"
             )
     return out
 
 
 def beats(test: dict) -> bool:
-    return test["verdict"] == "better" and test["p_holm"] < 0.05
+    return test["verdict"] == "better" and test["p_holm"] < stats.ALPHA
 
 
 def adjust(found: list[dict]) -> None:
@@ -324,25 +315,26 @@ def adjust(found: list[dict]) -> None:
             g["why"] = x["reason"] if x["verdict"] == "insufficient_data" else "no tested change beats the original"
 
 
-async def estimate(
-    proj, models_: list[str], modes: list[str], n_groups: int, n_cands: int, size: int = 3
-) -> tuple[int, float]:
-    """Upper bound for every stage, assuming groups of three tools."""
-    tools = await proj.tools()
-    calls, cost = await proj.discover_cost(models_, modes)
+async def estimate(proj, models_: list[str], modes: list[str]) -> tuple[int, float]:
+    """Cost of discover, the first stage. The later stages depend on which groups discover finds, so improve
+    computes their cost once it has them and stops before racing when that would pass the budget."""
+    return await proj.discover_cost(models_, modes)
+
+
+def stage_cost(proj, found: list[list[str]], spots: list[dict], models_: list[str], modes: list[str], n_styles: int):
+    """Model calls and dollars for candidates, race and confirmation over the groups discover found."""
     langs = len(proj.cfg.request_languages or ["en"])
-    size = min(size, len(tools))
-    reqs = size * proj.cfg.requests_per_tool * langs * 2
-    tuning, held = reqs // 2 + 1, reqs // 2 + 1
-    race = tuning * RACE_SLOTS * 2 * (1 + size * math.ceil(n_cands / 2)) + tuning * size * n_cands
-    confirm = held * proj.cfg.slots * 2 * 3
-    per_group = (race + confirm) * len(modes)
-    side = n_groups * size * (2 + n_cands + proj.cfg.requests_per_tool * langs)
-    for m in models_:
-        calls += n_groups * per_group
-        cost += proj.estimate(n_groups * per_group, m, tools)
-    calls += side
-    cost += proj.estimate(side, proj.cfg.role("writer").name, [])
+    per_set = proj.cfg.requests_per_tool * langs
+    calls, cost = 0, 0.0
+    helper = proj.cfg.role("writer").name
+    for group in found:
+        sets = len(group) + len(partners(spots, group))
+        half = sets * per_set / 2
+        runs = 1 + len(group) * n_styles + 3
+        trials = round(half * proj.cfg.slots * 2 * runs) * len(modes)
+        side = len(group) * (2 + n_styles) + len(partners(spots, group)) * (1 + per_set)
+        calls += trials * len(models_) + side
+        cost += sum(proj.estimate(trials, m, []) for m in models_) + proj.estimate(side, helper, [])
     return calls, cost
 
 
@@ -350,9 +342,9 @@ async def improve(
     proj,
     models_: list[str] | None = None,
     modes: list[str] | None = None,
-    n_groups: int = 5,
+    n_groups: int | None = None,
     styles: list[str] | None = None,
-    max_chars: int = 300,
+    max_chars: int | None = None,
     out: Path | None = None,
     fastmcp: bool = False,
     drafts: bool = True,
@@ -371,8 +363,15 @@ async def improve(
     spots = disc["spots"]
     imp = Improver(proj, models_, modes, max_chars, styles)
     domain = proj.domain()
+    found_groups = groups(spots, n_groups)
+    calls, cost = stage_cost(proj, found_groups, spots, models_, modes, len(imp.styles))
+    if proj.budget.spent + cost > proj.budget.limit:
+        raise BudgetExceeded(
+            f"discover found {len(found_groups)} groups, racing them needs about {calls} calls and ${cost:.2f}, "
+            f"above the ${proj.budget.limit - proj.budget.spent:.2f} left. Raise the budget or pass max_groups"
+        )
     results, held_by, warnings = [], {}, []
-    for i, group in enumerate(groups(spots, n_groups)):
+    for i, group in enumerate(found_groups):
         reqs = await imp.requests(tools, group, spots)
         tuning = [r for r in reqs if split(r, 0) == "tuning"]
         held = held_by[i] = [r for r in reqs if split(r, 0) == "held_out"]
@@ -514,7 +513,7 @@ async def served(
     rerun = []
     for g in results:
         held = [r for r in held_by[g["group"]] if r.tool in got]
-        ts = await imp.trials(served_tools, {}, held, proj.cfg.slots, "fastmcp")
+        ts = await imp.trials(served_tools, {}, held, "fastmcp")
         n = len(ts) or 1
         exported = g["confirm"]["rates"].get(g["export"], {})
         rerun.append(

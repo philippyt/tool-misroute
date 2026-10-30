@@ -309,7 +309,7 @@ function groupBlock(g) {
   const r = g.confirm.rates;
   const stat = (c, label) => r[c] ? `<div class="stat"><b>${pct(r[c].error_rate)}</b><span>${label}</span></div>` : "";
   const langs = Object.entries(g.confirm.by_language || {}).map(([code, x]) => `${LANGS[code] || code} ${x.winner_vs_baseline.verdict.replace("_", " ")}`).join(", ");
-  const ex = (g.confirm.examples || []).slice(0, 10);
+  const ex = (g.confirm.examples || []);
   const rows = ex.map((e) => `<tr><td>${esc(e.request)}</td><td>${esc(e.target)}</td><td>${pick(e.picked.original || [], e.target)}</td><td>${pick(e.picked.winner || [], e.target)}</td></tr>`).join("");
   return `<div class="block"><h3>${g.tools.map(esc).join(", ")}</h3>
     <div class="stats">${stat("original", "wrong with the original")}${stat("baseline", "wrong with a plain rewrite")}${stat("winner", "wrong with the proposal")}</div>

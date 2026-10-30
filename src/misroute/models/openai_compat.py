@@ -5,7 +5,7 @@ import re
 from typing import Any
 import openai
 from misroute.config import ModelConfig
-from misroute.models.base import COMPLETE_TOKENS, Call, Messages, Turn, as_messages
+from misroute.models.base import Call, Messages, Turn, as_messages, estimate_tokens, until_whole
 
 INLINE_CALL = re.compile(r"<tool_call>\s*(\{.*?\})\s*</tool_call>", re.S)
 DEFAULT_PREFIX = '<tool_call>\n{"name": "'
@@ -74,14 +74,15 @@ class OpenAICompatAdapter:
                 out += [{"role": "tool", "tool_call_id": r["id"], "content": r["content"]} for r in m["results"]]
         return out
 
-    async def chat(
-        self, user: Messages, tools: list[dict[str, Any]], system: str | None = None, max_tokens: int | None = None
+    async def chat(self, user: Messages, tools: list[dict[str, Any]], system: str | None = None) -> Turn:
+        return await until_whole(lambda limit: self.once(user, tools, system, limit), self.cfg.max_tokens)
+
+    async def once(
+        self, user: Messages, tools: list[dict[str, Any]], system: str | None, max_tokens: int | None
     ) -> Turn:
-        kw: dict[str, Any] = {
-            "model": self.cfg.model_id,
-            "messages": self._messages(user, system),
-            "max_tokens": max_tokens or self.cfg.max_tokens,
-        }
+        kw: dict[str, Any] = {"model": self.cfg.model_id, "messages": self._messages(user, system)}
+        if max_tokens:
+            kw["max_tokens"] = max_tokens
         if (temp := self.cfg.options.get("temperature", 0)) is not None:
             kw["temperature"] = temp
         if tools:
@@ -106,7 +107,7 @@ class OpenAICompatAdapter:
                     calls.append(Call(d["name"], d.get("arguments") or {}, f"inline{len(calls)}"))
         usage = resp.usage
         cost = (usage.model_extra or {}).get("cost") if usage else None
-        tin, tout = (usage.prompt_tokens, usage.completion_tokens) if usage else (0, 0)
+        tin, tout = (usage.prompt_tokens, usage.completion_tokens) if usage else (0, estimate_tokens(text))
         cut = getattr(resp.choices[0], "finish_reason", None) == "length"
         return Turn(calls, text, tin, tout, cost=float(cost) if cost is not None else None, truncated=cut)
 
@@ -114,11 +115,7 @@ class OpenAICompatAdapter:
         return (await self.complete_turn(prompt)).text
 
     async def complete_turn(self, prompt: str) -> Turn:
-        """Text replies such as JSON get a larger budget than tool calls, since reasoning models spend tokens before
-        answering. A reply cut off at the limit is retried once with twice the budget."""
-        budget = max(self.cfg.max_tokens, COMPLETE_TOKENS)
-        turn = await self.chat(prompt, [], max_tokens=budget)
-        return await self.chat(prompt, [], max_tokens=budget * 2) if turn.truncated else turn
+        return await self.chat(prompt, [])
 
     async def _prefill_logprob(self, user: str, tools: list[dict[str, Any]], prefill: str) -> float:
         resp = await self.client.chat.completions.create(

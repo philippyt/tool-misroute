@@ -1,4 +1,4 @@
-from misroute.check import MAX_VERDICTS, check
+from misroute.check import check, decide
 
 GOOD = "Written comments that caseworkers posted on a case. Not for timeline events such as status changes."
 
@@ -22,13 +22,16 @@ async def test_small_sample_is_insufficient(project):
     assert res["verdict"] == "insufficient_data"
 
 
-async def test_held_out_runs_out(project):
+async def test_reusing_a_held_out_set_scales_p(project):
     project.cfg.requests_per_tool = 2
     project.cfg.slots = 1
-    for _ in range(MAX_VERDICTS):
-        res = await check(project, "get_customer", "Customer contact details and address.")
-        assert res["held_out"]
-    res = await check(project, "get_customer", "Customer contact details and address.")
-    assert not res["held_out"] and "refresh" in res["reason"]
+    looks = [(await check(project, "get_customer", "Customer contact details and address."))["looks"] for _ in range(3)]
+    assert looks == [1, 2, 3]
     res = await check(project, "get_customer", "Customer contact details and address.", refresh=True)
-    assert res["held_out"] and res["round"] == 1
+    assert res["looks"] == 1 and res["round"] == 1
+
+
+def test_decide_multiplies_p_by_looks():
+    base = {("m", "json", f"r{i}", "", 0, 0): 1 for i in range(8)}
+    better = {k: 0 for k in base}
+    assert decide(base, better)["p"] * 2 == decide(base, better, looks=2)["p"]

@@ -27,10 +27,15 @@ async def test_agent_server_improve_estimate_and_guide(project):
     async with Client(create(project)) as client:
         res = await client.call_tool(
             "start_job",
-            {"kind": "improve", "estimate_only": True, "args": {"languages": ["no", "en"], "styles": ["boundary"]}},
+            {
+                "kind": "improve",
+                "max_cost": 5,
+                "estimate_only": True,
+                "args": {"languages": ["no", "en"], "styles": ["boundary"]},
+            },
         )
         assert not res.is_error and "estimate_usd" in res.structured_content
-        res = await client.call_tool("start_job", {"kind": "improve", "args": {"styles": ["fancy"]}})
+        res = await client.call_tool("start_job", {"kind": "improve", "max_cost": 5, "args": {"styles": ["fancy"]}})
         assert "unknown style" in res.structured_content["error"]
         guide = await client.read_resource("misroute://guide")
         assert "misroute improve" in guide.contents[0].text

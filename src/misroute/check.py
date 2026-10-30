@@ -6,19 +6,22 @@ from misroute.lint import descriptions
 from misroute.server.catalog import Tool, replace_descriptions
 from misroute.trial import Request, Trial
 
-MAX_VERDICTS = 3
-
 
 def split(req: Request, salt: int) -> str:
     h = int(hashlib.sha256(f"{req.id}|{salt}".encode()).hexdigest()[:8], 16)
     return "held_out" if h % 2 else "tuning"
 
 
-def neighbours(proj, name: str, limit: int = 3) -> list[str]:
+def neighbours(proj, name: str) -> list[str]:
+    """Tools discover flagged together with this one, then where most of its requests went when it was removed."""
     found = proj.store.read("discover") or {}
-    out = [s["b"] if s["a"] == name else s["a"] for s in found.get("spots", []) if name in (s["a"], s["b"])]
-    out += list((found.get("removal") or {}).get(name, {}))
-    return [n for n in dict.fromkeys(out) if n != name and not n.startswith("(")][:limit]
+    spots = [s for s in found.get("spots", []) if name in (s["a"], s["b"])]
+    out = [s["b"] if s["a"] == name else s["a"] for s in spots if s.get("flagged")]
+    moved = {k: v for k, v in ((found.get("removal") or {}).get(name) or {}).items() if not k.startswith("(")}
+    if moved:
+        top = max(moved.values())
+        out += [k for k, v in moved.items() if v == top]
+    return [n for n in dict.fromkeys(out) if n != name]
 
 
 def rates(trials: list[Trial], focus: set[str]) -> dict[str, Any]:
@@ -33,15 +36,18 @@ def rates(trials: list[Trial], focus: set[str]) -> dict[str, Any]:
     }
 
 
-def decide(base: dict, prop: dict) -> dict:
-    """Verdict on the request template level, with trial level counts and the effect size alongside."""
+def decide(base: dict, prop: dict, looks: int = 1) -> dict:
+    """Verdict on the request template level, with trial level counts and the effect size alongside. looks is how
+    many verdicts this held out set has given, including this one, and the p value is multiplied by it, so
+    reusing a set costs power instead of quietly inflating false positives."""
     test = stats.template_test(base, prop)
+    test["p"] = min(1.0, test["p"] * looks)
     n, p = test["discordant_templates"], test["p"]
     if n == 0 and test["templates"] >= stats.MIN_DISCORDANT_TEMPLATES:
         verdict, reason = "no_difference", f"no change on any of {test['templates']} templates"
     elif n < stats.MIN_DISCORDANT_TEMPLATES:
         verdict, reason = "insufficient_data", f"{n} request templates differ, need {stats.MIN_DISCORDANT_TEMPLATES}"
-    elif p >= 0.05:
+    elif p >= stats.ALPHA:
         verdict, reason = "no_difference", f"p {p:.3f} over {n} differing templates"
     else:
         verdict = "better" if test["diff"] < 0 else "worse"
@@ -73,14 +79,14 @@ async def check(
     entry = state.get(tool_name, {"round": 0, "verdicts": 0})
     if refresh:
         entry = {"round": entry["round"] + 1, "verdicts": 0}
-    spent = entry["verdicts"] >= MAX_VERDICTS
     near = neighbours(proj, tool_name)
     focus = {tool_name, *near}
     reqs: list[Request] = []
     for t in [target, *[by[n] for n in near if n in by]]:
         reqs += await proj.requests_for(t, tools, seed=entry["round"])
-    if near:
-        reqs += await proj.requests_for(target, tools, by[near[0]], seed=entry["round"])
+    for n in near:
+        if n in by:
+            reqs += await proj.requests_for(target, tools, by[n], seed=entry["round"])
     halves = {"tuning": [r for r in reqs if split(r, entry["round"]) == "tuning"]}
     halves["held_out"] = [r for r in reqs if split(r, entry["round"]) == "held_out"]
     flagged = descriptions.classify(target)
@@ -98,7 +104,7 @@ async def check(
     }
     out: dict[str, Any] = {"tool": tool_name, "neighbours": near, "baseline_kind": kind, "baseline": baseline}
     start = proj.budget.spent
-    use = ["tuning"] if spent else ["tuning", "held_out"]
+    use = ["tuning", "held_out"]
     for name in use:
         rs = halves[name]
         res: dict[str, Any] = {}
@@ -113,19 +119,11 @@ async def check(
             errs[cond] = {t.key: t.error for t in trials}
         out[name] = res
         out[f"{name}_errors"] = errs
-    if spent:
-        result: dict = {
-            "verdict": "insufficient_data",
-            "reason": f"held out set used for {MAX_VERDICTS} verdicts, rerun with refresh",
-            "fixed": 0,
-            "broke": 0,
-            "p": 1.0,
-        }
-    else:
-        result = decide(out["held_out_errors"]["baseline"], out["held_out_errors"]["proposed"])
-        vs = decide(out["held_out_errors"]["current"], out["held_out_errors"]["proposed"])
-        out["vs_current"] = {k: vs[k] for k in ("verdict", "fixed", "broke", "p", "diff", "ci")}
-        entry["verdicts"] += 1
+    entry["verdicts"] += 1
+    looks = entry["verdicts"]
+    result = decide(out["held_out_errors"]["baseline"], out["held_out_errors"]["proposed"], looks)
+    vs = decide(out["held_out_errors"]["current"], out["held_out_errors"]["proposed"], looks)
+    out["vs_current"] = {k: vs[k] for k in ("verdict", "fixed", "broke", "p", "diff", "ci")}
     state[tool_name] = entry
     proj.store.write("checks", state)
     for name in use:
@@ -133,12 +131,12 @@ async def check(
     held = out.get("held_out", {})
     out.update(
         **result,
-        held_out=not spent,
+        held_out=True,
         trials=held.get("proposed", {}).get("trials", 0),
         wrong_rate={c: v["wrong_rate"] for c, v in held.items()},
         hedge_rate={c: v["hedge_rate"] for c, v in held.items()},
         leakage=sorted({k for v in held.values() for k in v["leakage"]}),
-        verdicts_left=max(MAX_VERDICTS - entry["verdicts"], 0),
+        looks=looks,
         roles_warning=proj.cfg.role_warnings(),
         round=entry["round"],
         cost_usd=round(proj.budget.spent - start, 4),
@@ -147,5 +145,9 @@ async def check(
 
 
 def estimate(proj, n_tools: int, models_: list[str], modes: list[str], tools: list[Tool]) -> tuple[int, float]:
-    per_model = n_tools * proj.cfg.requests_per_tool * proj.cfg.slots * 2 * 3 * len(modes)
+    """Trials for the target and each neighbour, plus borrowed requests per neighbour, in every language, slot,
+    order and condition."""
+    sets = 1 + 2 * max(n_tools - 1, 0)
+    langs = len(proj.cfg.request_languages or ["en"])
+    per_model = sets * proj.cfg.requests_per_tool * langs * proj.cfg.slots * 2 * 3 * len(modes)
     return per_model * len(models_), sum(proj.estimate(per_model, m, tools) for m in models_)

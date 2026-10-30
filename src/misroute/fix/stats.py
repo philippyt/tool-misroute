@@ -1,13 +1,30 @@
 import itertools
+import math
 from collections import defaultdict
 import numpy as np
 from scipy import stats
 
+ALPHA = 0.05
 FLAG_MIN_ERRORS = 6
-MIN_PAIRS_SIGNFLIP = 5
-MIN_DISCORDANT_TEMPLATES = 6
-BOOTSTRAP = 2000
-RNG = np.random.default_rng(0)
+EPS = 1e-12
+
+
+def min_signflip(alpha: float = ALPHA, sides: int = 2) -> int:
+    """Smallest number of nonzero differences for which an exact sign flip test can reach p below alpha."""
+    n = 1
+    while sides * 0.5**n >= alpha:
+        n += 1
+    return n
+
+
+def mc_draws(alpha: float = ALPHA) -> int:
+    """Monte Carlo draws that put the standard error of an estimate at alpha to a tenth of alpha."""
+    return math.ceil(alpha * (1 - alpha) / (alpha / 10) ** 2)
+
+
+MIN_DISCORDANT_TEMPLATES = min_signflip(ALPHA, 2)
+MIN_PAIRS_SIGNFLIP = min_signflip(ALPHA, 1)
+BOOTSTRAP = mc_draws(ALPHA)
 
 
 def holm(pvals: list[float]) -> list[float]:
@@ -31,22 +48,41 @@ def mcnemar(a: dict, b: dict) -> tuple[int, int, float]:
     return fixed, broke, p
 
 
+def tail(values: np.ndarray, probs: np.ndarray, obs: float, alternative: str) -> float:
+    if alternative == "greater":
+        return float(probs[values >= obs - EPS].sum())
+    if alternative == "less":
+        return float(probs[values <= obs + EPS].sum())
+    return float(probs[np.abs(values) >= abs(obs) - EPS].sum())
+
+
 def signflip(d: list[float], alternative: str = "less") -> float:
-    """Exact sign flip test on the mean of d, enumerated up to 20 values, else 200k draws."""
+    """Exact sign flip test on the sum of d. Integer differences, such as error counts, use the exact null
+    distribution for any n. Other values are enumerated, or sampled when enumeration does not fit in memory."""
     arr = np.asarray(d, float)
     if not len(arr):
         return 1.0
-    obs = arr.mean()
-    if len(arr) <= 20:
+    obs = arr.sum()
+    if np.all(arr == np.round(arr)):
+        mags = np.abs(arr).astype(int)
+        total = int(mags.sum())
+        dist = np.zeros(total + 1)
+        dist[0] = 1.0
+        for m in mags:
+            if m:
+                nxt = 0.5 * dist
+                nxt[m:] += 0.5 * dist[: total + 1 - m]
+                dist = nxt
+        sums = 2 * np.arange(total + 1) - total
+        return tail(sums.astype(float), dist, obs, alternative)
+    try:
         signs = np.array(list(itertools.product([1, -1], repeat=len(arr))))
-    else:
-        signs = RNG.choice([1, -1], size=(200_000, len(arr)))
-    null = (signs * arr).mean(1)
-    if alternative == "greater":
-        return float(np.mean(null >= obs - 1e-12))
-    if alternative == "less":
-        return float(np.mean(null <= obs + 1e-12))
-    return float(np.mean(np.abs(null) >= abs(obs) - 1e-12))
+        null = signs @ arr
+        return tail(null, np.full(len(null), 1 / len(null)), obs, alternative)
+    except MemoryError:
+        signs = np.random.default_rng(0).choice([1, -1], size=(mc_draws(), len(arr)))
+        null = signs @ arr
+        return tail(null, np.full(len(null), 1 / len(null)), obs, alternative)
 
 
 def binom_greater(k: int, n: int, p: float) -> float:

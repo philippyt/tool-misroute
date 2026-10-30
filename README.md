@@ -45,12 +45,10 @@ $ misroute lint --draft
     draft: Returns the full details of a single document identified by its ID
 
 $ misroute discover
-up to 495 model calls, up to $3.43
-
 tool               sibling            score  signals                               seen in
-get_attachment     get_document       1.00   wrong 0.33  hedge 0.42  removal 1.00  opus code, opus json
-get_case_comments  get_case_events    0.50   hedge 0.25  removal 1.00              opus code, opus json
+get_attachment     get_document       0.42   wrong 0.33  hedge 0.42  removal 1.00  opus code, opus json
 get_case_events    update_case_meta   0.25   wrong 0.25                            opus code
+get_case_comments  get_case_events    0.25   hedge 0.25  removal 1.00              opus code, opus json
 
 $ misroute explain --pair get_attachment,get_document
 $ misroute fix --pair get_case_comments,get_case_events --modes json
@@ -133,7 +131,7 @@ domain: Municipal operations. A work order is a planned job, an incident is a re
 
 ## How discover ranks pairs
 
-Each tool gets requests written from the user's goal, without the tool's own words. Requests run against the full tool list in rotated orders. Each pair gets a score from three signals: the share of one tool's requests that went to the other, the share where the model called both, and where requests go when one tool is removed. The score orders pairs for attention, and the rates behind it are the numbers to quote.
+Each tool gets requests written from the user's goal, without the tool's own words. Requests run against the full tool list in rotated orders. Each pair shows three signals: the share of one tool's requests that went to the other, the share where the model called both, and the share that moved to it when the other tool was removed. The score is the larger of the first two, a measured rate with no weights, and write tools come first on ties. A pair is flagged when one model and mode got at least 6 of its requests wrong or hedged, the flag rule from the thesis, and flagged pairs are what probe, fix and improve work on unless you name pairs.
 
 The ranking marks what it cannot vouch for: pairs whose request sets differ in surface words, tools with few validated requests, and tools the validator left without any, marked UNTESTED. Tools that models answer without calling anything are listed separately.
 
@@ -141,9 +139,9 @@ Code mode runs each program in Monty against recorded fakes and reports faked to
 
 ## Fix and check
 
-`fix` writes one boundary sentence per tool and runs the original, a baseline and the clause on identical requests. The baseline is a neutral rewrite of the same length, or lint's drafted description when a tool has none. Trials from one request template fail together, so verdicts count templates, not trials: an exact sign flip test on per template error differences, with Holm correction across pairs. Fewer than six templates that differ gives no verdict. Every result also shows the error rate change with a 95% interval, a trial level mid p McNemar, errors in both directions and leakage to other tools.
+`fix` writes one boundary sentence per tool and runs the original, a baseline and the clause on identical requests. The baseline is a neutral rewrite of the same length, or lint's drafted description when a tool has none. Trials from one request template fail together, so verdicts count templates, not trials: an exact sign flip test on per template error differences, with Holm correction across pairs. Below the number of differing templates an exact sign flip test needs to reach p below 0.05, which is six, there is no verdict. Every result also shows the error rate change with a 95% interval, a trial level mid p McNemar, errors in both directions and leakage to other tools.
 
-`check` tests one proposed description. It splits requests into a tuning set and a held out set, gives its verdict on the held out set only, and requires a fresh held out set after three verdicts on the same tool, so a description cannot be tuned to the test requests.
+`check` tests one proposed description. It splits requests into a tuning set and a held out set, gives its verdict on the held out set only, and multiplies each verdict's p value by the number of verdicts that held out set has already given, so tuning a description against the same requests costs power. `--refresh` draws a fresh set.
 
 ## Improve descriptions
 
@@ -188,7 +186,7 @@ $ claude mcp add misroute -- uvx misroute serve-mcp
 
 The second form goes in `.cursor/mcp.json`. VS Code takes the same block under `"servers"` in `.vscode/mcp.json`.
 
-The server exposes `lint_descriptions`, `draft_description`, `check_description`, `explain_pair`, `suggest_fix`, `get_report` and background jobs with `start_job`, `job_status` and `cancel_job` for runs longer than a tool call. Paid tools refuse to run above `max_cost`. misroute never edits your tools.
+The server exposes `lint_descriptions`, `draft_description`, `check_description`, `explain_pair`, `suggest_fix`, `get_report` and background jobs with `start_job`, `job_status` and `cancel_job` for runs longer than a tool call. Paid tools take a required `max_cost` and refuse to run above it. misroute never edits your tools.
 
 Claude Code users can install the plugin, which adds the server and a skill:
 
@@ -227,10 +225,10 @@ As a pre-commit hook:
 
 ```python
 def test_routing(misroute_routes):
-    misroute_routes(my_tools, "anthropic:claude-sonnet-5-5", min_accuracy=0.95)
+    misroute_routes(my_tools, "anthropic:claude-sonnet-5-5", min_accuracy=0.95, max_cost=1)
 ```
 
-The `misroute_routes` fixture comes with the package. It runs a small capped discover, fails with the confused pairs when accuracy is below the threshold, and caches responses so reruns are free. Outside pytest, use `from misroute.testing.routes import assert_routes`.
+The `misroute_routes` fixture comes with the package. It runs a discover, fails with the confused pairs when accuracy is below the `min_accuracy` you set, and caches responses so reruns are free. Outside pytest, use `from misroute.testing.routes import assert_routes`.
 
 ## Guard
 

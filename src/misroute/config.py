@@ -35,7 +35,7 @@ class ModelConfig(BaseModel):
     price_in: float | None = None
     price_out: float | None = None
     concurrency: int = 4
-    max_tokens: int = 1024
+    max_tokens: int | None = None
     scoring: bool = False
     options: dict[str, Any] = Field(default_factory=dict)
 
@@ -54,6 +54,7 @@ class GuardConfig(BaseModel):
     hold_sibling_writes: bool = True
     same_turn_secs: float = 2.0
     switch_secs: float = 30.0
+    rephrase_overlap: float = 0.5
     siblings: list[list[str]] = Field(default_factory=list)
     log: str = ".misroute/guard.jsonl"
     otel: bool = False
@@ -71,8 +72,8 @@ class Config(BaseModel):
     writer: str | None = None
     requests_per_tool: int = 6
     slots: int = 4
-    rotations: int = 3
-    repeats: int = 3
+    rotations: int = 2
+    repeats: int = 1
     max_turns: int = 1
     real_requests: str | None = None
     request_source: Literal["description", "spec"] = "description"

@@ -60,9 +60,10 @@ def rerun_choice(trials: list) -> dict[str, float] | None:
     }
 
 
-def unanswered(trials: list, threshold: float = 0.2) -> dict[str, float]:
-    """Tools whose requests the model often answered without calling any tool."""
+def unanswered(trials: list) -> dict[str, float]:
+    """Share of each tool's requests the model answered without calling any tool, for tools where it happened."""
     by: dict[str, list] = {}
     for t in trials:
         by.setdefault(t.target, []).append(t.failure in ("no_tool_call", "no_code"))
-    return {k: sum(v) / len(v) for k, v in sorted(by.items()) if v and sum(v) / len(v) >= threshold}
+    rates = {k: sum(v) / len(v) for k, v in by.items() if v and any(v)}
+    return dict(sorted(rates.items(), key=lambda kv: -kv[1]))

@@ -142,17 +142,22 @@ class Project:
     ) -> list[Request]:
         gen, val = self.role("generator"), self.role("validator")
         n, kept, src = self.cfg.requests_per_tool, [], self.cfg.request_source
-        for attempt in range(seed * 10, seed * 10 + 3):
+        attempt = 0
+        while len(kept) < n:
             try:
-                reqs = await generate.generate(gen, tool, n, self.cfg.slots, sibling, attempt, src, lang, self.domain())
+                reqs = await generate.generate(
+                    gen, tool, n, self.cfg.slots, sibling, f"{seed}:{attempt}", src, lang, self.domain()
+                )
             except (ValueError, KeyError, TypeError):
                 self.unreadable[tool.name] += 1
-                continue
+                break
+            attempt += 1
             ok, picks = await validate.keep_valid(val, reqs, tools, src)
             self.rejected.setdefault(tool.name, Counter()).update(p or "(no tool)" for p in picks)
-            kept += [r for r in ok if r.id not in {k.id for k in kept}]
-            if len(kept) >= n:
+            new = [r for r in ok if r.id not in {k.id for k in kept}]
+            if not new:
                 break
+            kept += new
         return kept[:n]
 
     async def request_set(self, tools: list[Tool], only: list[Tool] | None = None) -> dict[str, list[Request]]:
@@ -200,14 +205,28 @@ class Project:
         return n_calls * a.estimate("x" * 200, [t.spec() for t in tools])
 
     async def cost(
-        self, phase: str, models_: list[str], modes: list, n_pairs: int = 3, trials: int = 96
+        self,
+        phase: str,
+        models_: list[str],
+        modes: list,
+        top: int | None = None,
+        pairs: list[tuple[str, str]] | None = None,
+        trials: int = 96,
     ) -> tuple[int, float]:
+        """Model calls and dollars for a phase, over the pairs it would run. A probe pair runs base and borrowed
+        requests for both tools in every slot and both orders."""
         if phase == "discover":
             return await self.discover_cost(models_, modes)
         tools = await self.tools()
-        per_model = (
-            n_pairs * len(modes) * (4 * self.cfg.requests_per_tool * 2 * 2 if phase == "probe" else trials * len(CONDS))
+        try:
+            n_pairs = len(self.pairs_from(top, pairs))
+        except RuntimeError:
+            n_pairs = len(pairs or [])
+        langs = len(self.cfg.request_languages or ["en"])
+        per_pair = (
+            2 * 2 * self.cfg.requests_per_tool * langs * self.cfg.slots * 2 if phase == "probe" else trials * len(CONDS)
         )
+        per_model = n_pairs * len(modes) * per_pair
         return per_model * len(models_), sum(self.estimate(per_model, m, tools) for m in models_)
 
     def repeats(self, model: str, mode: str) -> int:
@@ -241,7 +260,7 @@ class Project:
                 cost += self.estimate(n, m, tools)
         return calls, cost
 
-    async def discover(self, models_: list[str] | None = None, modes: list[str] | None = None, removal_top: int = 5):
+    async def discover(self, models_: list[str] | None = None, modes: list[str] | None = None):
         models_ = models_ or self.cfg.tested()
         modes = modes or list(self.cfg.modes)
         tools = await self.tools()
@@ -261,12 +280,12 @@ class Project:
         gated = await asyncio.to_thread(gate.screen, tools, reqs)
         failed = {(min(a, b), max(a, b)) for a, b, _ in gated}
         spots = rank.rank(trials, {}, writes, failed)
-        cand = list(dict.fromkeys(n for s in spots[:removal_top] for n in (s.a, s.b)))[:removal_top]
+        cand = list(dict.fromkeys(n for s in spots if s.flagged for n in (s.a, s.b)))
         removed = await self.removal(cand, reqs, models_, tools)
         moved = removal.neighbours(removed)
         spots = rank.rank(trials, moved, writes, failed)
         for s in spots:
-            s.thin = min(len(reqs.get(s.a, [])), len(reqs.get(s.b, []))) < 2
+            s.thin = min(len(reqs.get(s.a, [])), len(reqs.get(s.b, []))) < stats.MIN_DISCORDANT_TEMPLATES
         result = self.summarize(trials, tools, models_, modes)
         result.update(
             spots=[s.to_json() for s in spots],
@@ -340,13 +359,16 @@ class Project:
                 )
         return {"cells": cells, "writes": sorted(writes)}
 
-    def pairs_from(self, top: int, pairs: list[tuple[str, str]] | None = None) -> list[tuple[str, str]]:
+    def pairs_from(self, top: int | None, pairs: list[tuple[str, str]] | None = None) -> list[tuple[str, str]]:
+        """Given pairs, else the top pairs from discover, else every pair discover flagged by the flag rule."""
         if pairs:
             return pairs
         found = self.store.read("discover")
         if not found:
             raise RuntimeError("run discover first or pass pairs")
-        return [(s["a"], s["b"]) for s in found["spots"][:top]]
+        spots = found["spots"]
+        chosen = spots[:top] if top else [s for s in spots if s.get("flagged")]
+        return [(s["a"], s["b"]) for s in chosen]
 
     async def pair_requests(self, a: Tool, b: Tool, tools: list[Tool]) -> dict[str, Any]:
         base = await self.request_set(tools, [a, b])
@@ -365,12 +387,15 @@ class Project:
                             out.append(Trial(m, mode, r.tool, r.id, text, r.kind, slot, o, 0, lang=r.lang, **kw))
         return out
 
-    async def probe(self, top: int = 5, pairs=None, models_=None, modes=None, slots: int = 2) -> dict:
+    async def probe(
+        self, top: int | None = None, pairs=None, models_=None, modes=None, slots: int | None = None
+    ) -> dict:
         models_ = models_ or self.cfg.tested()
         modes = modes or list(self.cfg.modes)
         tools = await self.tools()
         by = {t.name: t for t in tools}
         rows, trials = [], []
+        slots = slots or self.cfg.slots
         for a, b in self.pairs_from(top, pairs):
             pr = await self.pair_requests(by[a], by[b], tools)
             ts = await self.run_trials(
@@ -402,7 +427,7 @@ class Project:
         self.store.write("probe", result)
         return result
 
-    async def fix(self, top: int = 3, pairs=None, models_=None, modes=None, trials: int = 96) -> dict:
+    async def fix(self, top: int | None = None, pairs=None, models_=None, modes=None, trials: int = 96) -> dict:
         models_ = models_ or self.cfg.tested()
         modes = modes or list(self.cfg.modes)
         tools = await self.tools()

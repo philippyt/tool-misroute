@@ -44,6 +44,7 @@ class Rules:
         return out
 
     def rephrase(self, text: str, last: str | None, age: float) -> Event | None:
-        if last and age <= 120 and jaccard(text, last) >= 0.5 and text.strip() != last.strip():
+        same = jaccard(text, last) >= self.cfg.rephrase_overlap if last else False
+        if last and age <= self.cfg.switch_secs and same and text.strip() != last.strip():
             return Event("rephrase", "", None, text[:200])
         return None

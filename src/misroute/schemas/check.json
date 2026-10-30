@@ -54,9 +54,6 @@
   "held_out": {
    "type": "boolean"
   },
-  "verdicts_left": {
-   "type": "integer"
-  },
   "cost_usd": {
    "type": "number"
   },
@@ -98,6 +95,10 @@
    "items": {
     "type": "string"
    }
+  },
+  "looks": {
+   "type": "integer",
+   "description": "verdicts this held out set has given, p is multiplied by it"
   }
  },
  "required": [

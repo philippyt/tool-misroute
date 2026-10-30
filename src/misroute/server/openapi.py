@@ -7,6 +7,7 @@ from misroute.server.catalog import Tool
 
 METHODS = ("get", "post", "put", "patch", "delete")
 READ_POSTS = ("paginert", "count", "search", "sok", "query", "filter", "list", "liste")
+NAME_LIMIT = 56
 READ_VERBS = ("get", "list", "count", "search", "find", "hent", "finn", "query", "paginert")
 
 
@@ -39,7 +40,7 @@ def resolve(doc: dict, node: Any, depth: int = 0) -> Any:
 
 def slug(text: str) -> str:
     text = re.sub(r"[\s\-.]+", "_", text)
-    return re.sub(r"_+", "_", re.sub(r"[^A-Za-z0-9_]", "", text)).strip("_")[:56]
+    return re.sub(r"_+", "_", re.sub(r"[^A-Za-z0-9_]", "", text)).strip("_")[:NAME_LIMIT]
 
 
 def name_of(method: str, path: str, op: dict) -> str:

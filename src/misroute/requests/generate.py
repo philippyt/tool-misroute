@@ -87,7 +87,7 @@ def language(code: str) -> str:
     return LANGUAGES.get(code.lower(), code)
 
 
-def fields(schema: dict | None, limit: int = 20) -> list[str]:
+def fields(schema: dict | None) -> list[str]:
     schema = schema or {}
     if schema.get("type") == "array" or "items" in schema:
         schema = schema.get("items") or {}
@@ -96,15 +96,15 @@ def fields(schema: dict | None, limit: int = 20) -> list[str]:
         if isinstance(inner, dict) and (inner.get("type") == "array" or "items" in inner):
             schema = inner.get("items") or {}
             break
-    return list(schema.get("properties") or {})[:limit]
+    return list(schema.get("properties") or {})
 
 
 def param(name: str, schema: dict) -> str:
     bits = [str(schema["type"])] if schema.get("type") else []
     if schema.get("enum"):
-        bits.append("one of " + ", ".join(map(str, schema["enum"][:8])))
+        bits.append("one of " + ", ".join(map(str, schema["enum"])))
     if schema.get("description"):
-        bits.append(str(schema["description"])[:80])
+        bits.append(" ".join(str(schema["description"]).split()))
     return f"{name} ({'; '.join(bits)})" if bits else name
 
 
@@ -122,8 +122,8 @@ def brief(tool: Tool) -> str:
     parts = [tool.route] if tool.route else []
     parts.append("changes data" if tool.is_write else "reads data")
     if tool.params:
-        parts.append("params " + ", ".join(list(tool.params)[:10]))
-    if out := fields(tool.output_schema, 10):
+        parts.append("params " + ", ".join(tool.params))
+    if out := fields(tool.output_schema):
         parts.append("returns " + ", ".join(out))
     return "; ".join(parts)
 
@@ -158,7 +158,7 @@ async def generate(
     count: int,
     slots: int,
     sibling: Tool | None = None,
-    attempt: int = 0,
+    attempt: int | str = 0,
     source: str = "description",
     lang: str = "en",
     domain: str = "",
@@ -171,7 +171,7 @@ async def generate(
         name=tool.name,
         description=tool.description or "none",
         params=list(tool.params),
-        returns=json.dumps(tool.output_schema)[:1500] if tool.output_schema else "not documented",
+        returns=", ".join(fields(tool.output_schema)) or "not documented",
         view=view(tool),
         domain=f"Domain: {domain.strip()}\n" if domain.strip() else "",
         language=language(lang),

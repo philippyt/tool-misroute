@@ -43,7 +43,7 @@ Reply with the sentence only."""
 
 
 async def draft(adapter, tool: Tool, tools: list[Tool]) -> str:
-    others = ", ".join(t.name for t in tools if t.name != tool.name)[:2000]
+    others = ", ".join(t.name for t in tools if t.name != tool.name)
     prompt = DRAFT_PROMPT.format(
         name=tool.name, description=tool.description or "none", params=list(tool.params), others=others
     )

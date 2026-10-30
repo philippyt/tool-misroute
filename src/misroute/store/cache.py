@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 from misroute.config import ModelConfig
-from misroute.models.base import COMPLETE_TOKENS, Adapter, Budget, BudgetExceeded, Messages, Turn, estimate_tokens
+from misroute.models.base import Adapter, Budget, BudgetExceeded, Messages, Turn, estimate_tokens
 
 LOCAL = ("http://localhost", "http://127.0.0.1", "http://[::1]")
 
@@ -22,6 +22,9 @@ def fill_price(cfg: ModelConfig) -> bool:
     if found:
         cfg.price_in, cfg.price_out = found
     return found is not None
+
+
+ESTIMATE_TOKENS_OUT = 256
 
 
 class Metered:
@@ -44,7 +47,7 @@ class Metered:
         return (tokens_in * (self.cfg.price_in or 0) + tokens_out * (self.cfg.price_out or 0)) / 1e6
 
     def estimate(self, *parts: Any) -> float:
-        return self.price(estimate_tokens(*parts), self.cfg.max_tokens // 4)
+        return self.price(estimate_tokens(*parts), self.cfg.max_tokens or ESTIMATE_TOKENS_OUT)
 
     def _path(self, *parts: Any) -> Path:
         key = json.dumps([self.cfg.model_id, self.cfg.options, *parts], sort_keys=True, default=str)
@@ -76,9 +79,11 @@ class Metered:
             t = await self.inner.chat(user, tools, system)
             return t, t.cost if t.cost is not None else self.price(t.tokens_in, t.tokens_out)
 
-        return await self._cached(("chat", user, tools, system, rep), run, Turn.to_json, Turn.from_json)
+        return await self._cached(
+            ("chat", user, tools, system, rep), run, Turn.to_json, Turn.from_json, keep=lambda t: not t.truncated
+        )
 
-    async def complete(self, prompt: str, kind: str | None = None, rep: int = 0) -> str:
+    async def complete(self, prompt: str, kind: str | None = None, rep: int | str = 0) -> str:
         cut = [False]
 
         async def run():
@@ -89,7 +94,7 @@ class Metered:
             text = await self.inner.complete(prompt, kind)
             return text, self.price(estimate_tokens(prompt), estimate_tokens(text))
 
-        parts = ("complete", prompt, kind, rep, COMPLETE_TOKENS)
+        parts = ("complete", prompt, kind, rep, "whole")
         return await self._cached(parts, run, lambda x: x, lambda x: x, keep=lambda _: not cut[0])
 
     async def score_names(self, user: str, tools: list[dict[str, Any]]) -> dict[str, float] | None:

@@ -1,4 +1,5 @@
 import asyncio
+from misroute.fix.clause import fit
 from misroute.models.base import parse_json
 from misroute.requests.generate import brief, view
 from misroute.server.catalog import Tool
@@ -11,7 +12,7 @@ STYLES = {
 }
 
 WRITE = """Write alternative descriptions for one API operation that an AI agent reads when choosing which tool to call.
-Write one description per style below, in English, each at most {max_chars} characters.
+Write one description per style below, in English.{limit}
 Say what it returns or changes in plain words. Do not invent fields, filters or behaviour the interface does not
 show. Do not name other operations.
 {styles}
@@ -34,23 +35,17 @@ Description: {text}
 Reply with JSON only: {{"faithful": true, "reason": "..."}} or {{"faithful": false, "reason": "..."}}"""
 
 
-def cap(text: str, limit: int) -> str:
+def cap(text: str, limit: int | None) -> str:
     text = " ".join(text.split())
-    if len(text) <= limit:
-        return text
-    cut = text[:limit]
-    end = max(cut.rfind(". "), cut.rfind("? "), cut.rfind("! "))
-    if end > limit // 2:
-        return cut[: end + 1]
-    return cut[: cut.rfind(" ")].rstrip(",;:") + "." if " " in cut else cut
+    return text if limit is None else fit(text, limit)
 
 
 async def write(
-    writer, tool: Tool, siblings: list[Tool], styles: list[str], max_chars: int, domain: str = ""
+    writer, tool: Tool, siblings: list[Tool], styles: list[str], max_chars: int | None = None, domain: str = ""
 ) -> list[dict[str, str]]:
-    """One candidate per style, capped at max_chars, deduplicated."""
+    """One candidate per style, deduplicated, cut to max_chars when it is set."""
     prompt = WRITE.format(
-        max_chars=max_chars,
+        limit=f" Each at most {max_chars} characters." if max_chars else "",
         styles="\n".join(f"- {s}: {STYLES[s]}" for s in styles),
         domain=f"Domain: {domain.strip()}\n" if domain.strip() else "",
         name=tool.name,

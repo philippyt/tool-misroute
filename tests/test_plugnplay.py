@@ -189,7 +189,7 @@ async def test_agent_jobs_and_suggest_fix(project):
         names = {t.name for t in (await client.list_tools()).tools}
         assert {"start_job", "job_status", "cancel_job", "explain_pair", "suggest_fix"} <= names
         started = (
-            await client.call_tool("start_job", {"kind": "discover", "args": {"modes": ["json"]}})
+            await client.call_tool("start_job", {"kind": "discover", "max_cost": 5, "args": {"modes": ["json"]}})
         ).structured_content
         import asyncio
 
@@ -199,7 +199,9 @@ async def test_agent_jobs_and_suggest_fix(project):
                 break
             await asyncio.sleep(0.1)
         assert st["status"] == "done" and st["result"]["spots"]
-        fix = await client.call_tool("suggest_fix", {"tool_a": "get_case_comments", "tool_b": "get_case_events"})
+        fix = await client.call_tool(
+            "suggest_fix", {"tool_a": "get_case_comments", "tool_b": "get_case_events", "max_cost": 5}
+        )
         assert fix.structured_content["results"][0]["edits"]["clause"]
         refused = await client.call_tool("start_job", {"kind": "fix", "max_cost": -1})
         assert "above max_cost" in str(refused.structured_content)

@@ -25,8 +25,8 @@ def notes(tools: list[Tool], doc: dict | None = None) -> list[Note]:
     by_name = defaultdict(list)
     for t in tools:
         by_name[t.name].append(t)
-        if t.op_id and len(t.name) == 56 and len(t.op_id) > 56:
-            out.append(Note(t.name, "name", f"cut to 56 characters from {t.op_id}"))
+        if t.op_id and len(t.name) == openapi.NAME_LIMIT and len(t.op_id) > openapi.NAME_LIMIT:
+            out.append(Note(t.name, "name", f"cut to {openapi.NAME_LIMIT} characters from {t.op_id}"))
         elif t.op_id and t.name != t.op_id:
             out.append(Note(t.name, "name", f"renamed from {t.op_id}"))
         if EXCLUDE.search(f"{t.route} {t.name}"):

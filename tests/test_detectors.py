@@ -20,7 +20,8 @@ def test_directions_and_hedge():
 def test_near_miss_from_probs():
     ts = [t("a", ["a"], probs={"a": 0.55, "b": 0.45}), t("a", ["a"], probs={"a": 0.99, "b": 0.01})]
     nm = from_probs(ts)
-    assert nm[0].tool == "a" and nm[0].rival == "b" and nm[0].score == 0.5
+    assert nm[0].tool == "a" and nm[0].rival == "b"
+    assert abs(nm[0].score - (0.9 + 0.02) / 2) < 1e-9
 
 
 def test_near_miss_from_repeats():

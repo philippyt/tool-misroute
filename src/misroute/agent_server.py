@@ -64,7 +64,7 @@ def create(proj: Project) -> MCPServer:
     )
     async def estimate_check(tool: str) -> dict[str, Any]:
         calls, cost = checker.estimate(
-            proj, 2 + len(checker.neighbours(proj, tool)), proj.cfg.tested(), ["json"], await proj.tools()
+            proj, 1 + len(checker.neighbours(proj, tool)), proj.cfg.tested(), ["json"], await proj.tools()
         )
         return {"schema_version": SCHEMA_VERSION, "calls": calls, "cost_usd": round(cost, 4)}
 
@@ -75,11 +75,9 @@ def create(proj: Project) -> MCPServer:
         annotations=PAID,
         structured_output=True,
     )
-    async def check_description(
-        tool: str, description: str, max_cost: float = 1.0, refresh: bool = False
-    ) -> dict[str, Any]:
+    async def check_description(tool: str, description: str, max_cost: float, refresh: bool = False) -> dict[str, Any]:
         _, cost = checker.estimate(
-            proj, 2 + len(checker.neighbours(proj, tool)), proj.cfg.tested(), ["json"], await proj.tools()
+            proj, 1 + len(checker.neighbours(proj, tool)), proj.cfg.tested(), ["json"], await proj.tools()
         )
         if cost > max_cost:
             return {"error": f"estimate ${cost:.2f} is above max_cost ${max_cost:.2f}", "cost_usd": round(cost, 4)}
@@ -139,9 +137,9 @@ def create(proj: Project) -> MCPServer:
         annotations=PAID,
         structured_output=True,
     )
-    async def suggest_fix(tool_a: str, tool_b: str, trials: int = 48, max_cost: float = 2.0) -> dict[str, Any]:
+    async def suggest_fix(tool_a: str, tool_b: str, max_cost: float, trials: int = 96) -> dict[str, Any]:
         models, modes = proj.cfg.tested(), ["json"]
-        _, cost = await proj.cost("fix", models, modes, 1, trials)
+        _, cost = await proj.cost("fix", models, modes, pairs=[(tool_a, tool_b)], trials=trials)
         if cost > max_cost:
             return {"error": f"estimate ${cost:.2f} is above max_cost ${max_cost:.2f}", "cost_usd": round(cost, 4)}
         try:
@@ -168,14 +166,15 @@ def create(proj: Project) -> MCPServer:
         structured_output=True,
     )
     async def start_job(
-        kind: str, max_cost: float = 5.0, args: dict[str, Any] | None = None, estimate_only: bool = False
+        kind: str, max_cost: float, args: dict[str, Any] | None = None, estimate_only: bool = False
     ) -> dict[str, Any]:
         args = args or {}
         if kind not in ("discover", "probe", "fix", "improve"):
             return {"error": "kind must be discover, probe, fix or improve"}
         modes: list[str] = args.get("modes") or ([str(m) for m in proj.cfg.modes] if kind != "improve" else ["json"])
         pairs = [tuple(p) for p in args.get("pairs") or []] or None
-        top, trials = int(args.get("top", 3)), int(args.get("trials", 96))
+        top = int(args["top"]) if args.get("top") else None
+        trials = int(args.get("trials", 96))
         target = proj
         if kind == "improve":
             try:
@@ -195,10 +194,11 @@ def create(proj: Project) -> MCPServer:
                 cfg, server=proj.server if proj.server is not proj.cfg.server else None, root=proj.store.root
             )
             target._tools = proj._tools
-            calls, cost = await improver.estimate(target, models, modes, int(args.get("max_groups", 5)), len(styles))
+            target.budget.limit = min(target.budget.limit, max_cost)
+            calls, cost = await improver.estimate(target, models, modes)
         else:
             models = args.get("models") or proj.cfg.tested()
-            calls, cost = await proj.cost(kind, models, modes, len(pairs) if pairs else top, trials)
+            calls, cost = await proj.cost(kind, models, modes, top, pairs, trials)
         if estimate_only:
             return {"schema_version": SCHEMA_VERSION, "estimate_calls": calls, "estimate_usd": round(cost, 4)}
         if cost > max_cost:
@@ -225,9 +225,9 @@ def create(proj: Project) -> MCPServer:
                 target,
                 models,
                 modes,
-                int(args.get("max_groups", 5)),
+                int(args["max_groups"]) if args.get("max_groups") else None,
                 styles,
-                int(args.get("max_chars", 300)),
+                int(args["max_chars"]) if args.get("max_chars") else None,
                 Path(args.get("out", "improve")),
                 bool(args.get("fastmcp", False)) and bool(target.cfg.server.openapi),
                 bool(args.get("drafts", True)),

@@ -71,7 +71,19 @@ def estimate_tokens(*parts: Any) -> int:
     return sum(len(p if isinstance(p, str) else json.dumps(p)) for p in parts) // 4 + 1
 
 
-COMPLETE_TOKENS = 4096
+async def until_whole(call, first: int | None) -> "Turn":
+    """Call with a token limit, and while the reply is cut off at the limit, again with twice the tokens it used,
+    until it is whole or the provider refuses a larger limit."""
+    turn = await call(first)
+    while turn.truncated:
+        try:
+            nxt = await call(max(2 * turn.tokens_out, 2 * (first or 0), 1))
+        except Exception:
+            return turn
+        if nxt.tokens_out <= turn.tokens_out and nxt.truncated:
+            return nxt
+        turn, first = nxt, max(2 * turn.tokens_out, first or 0)
+    return turn
 
 
 def parse_json(text: str) -> Any:

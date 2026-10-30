@@ -16,6 +16,8 @@ from rich.table import Table
 from misroute import export, mcpconfig
 from misroute.config import Config, env_path, write_env
 from misroute.doctor import system_certs
+from misroute.fix.stats import ALPHA
+from misroute.fix.stats import MIN_PAIRS_SIGNFLIP as MIN_PAIRS
 from misroute.models.base import BudgetExceeded
 from misroute.models.presets import detect
 from misroute.project import Project
@@ -93,15 +95,23 @@ def load(opts: Opts, config: Path) -> Project:
         raise
 
 
-def gate(opts: Opts, calls: int, cost: float) -> None:
-    estimate = {"estimate": {"calls": calls, "cost_usd": round(cost, 4), "upper_bound": True}}
+def gate(opts: Opts, calls: int, cost: float, note: str = "") -> None:
+    estimate = {"estimate": {"calls": calls, "cost_usd": round(cost, 4), "upper_bound": not note, "note": note}}
     if opts.estimate_only:
-        emit(opts, estimate, lambda: out.print(f"up to {calls} model calls, up to ${cost:.2f}"), OK)
+
+        def show() -> None:
+            out.print(f"up to {calls} model calls, up to ${cost:.2f}")
+            if note:
+                out.print(note, style="dim")
+
+        emit(opts, estimate, show, OK)
         raise typer.Exit(OK)
     if opts.max_cost is not None and cost > opts.max_cost:
         fail(opts, f"estimate ${cost:.2f} is above max cost ${opts.max_cost:.2f}")
     if not opts.json:
         out.print(f"up to {calls} model calls, up to ${cost:.2f}")
+        if note:
+            out.print(note, style="dim")
     if cost > 0 and not opts.yes and opts.max_cost is None:
         if not sys.stdin.isatty():
             fail(opts, "paid run without a terminal, pass --yes or --max-cost")
@@ -253,7 +263,7 @@ def quick(
                 return
             block, secrets = mcpconfig.to_server(servers[0][3])
             note.print(f"using {servers[0][1]} from {servers[0][2]}", style="dim")
-        settings = {"requests_per_tool": 3, "rotations": 2, "repeats": 1, "budget_usd": max_cost}
+        settings = {"budget_usd": max_cost}
         write_config(config, block, pick_model(model, json_), secrets, settings)
         note.print(f"wrote {config}", style="dim")
     proj = load(opts, config)
@@ -459,7 +469,7 @@ def discover(
 @app.command()
 def probe(
     config: Cfg = Path("misroute.yaml"),
-    top: int = 5,
+    top: Annotated[int | None, typer.Option(help="top pairs from discover, default every flagged pair")] = None,
     pair: Pairs = None,
     models: Names = None,
     modes: Names = None,
@@ -474,7 +484,7 @@ def probe(
     proj = load(opts, config)
     ms = split(models) or proj.cfg.tested()
     md = split(modes) or list(proj.cfg.modes)
-    calls, cost = asyncio.run(proj.cost("probe", ms, md, len(pair) if pair else top))
+    calls, cost = asyncio.run(proj.cost("probe", ms, md, top, pairs(pair)))
     gate(opts, calls, cost)
     res = run(opts, proj, proj.probe(top, pairs(pair), ms, md), calls)
 
@@ -495,10 +505,9 @@ def probe(
 @app.command()
 def fix(
     config: Cfg = Path("misroute.yaml"),
-    top: int = 3,
+    top: Annotated[int | None, typer.Option(help="top pairs from discover, default every flagged pair")] = None,
     pair: Pairs = None,
-    trials: int = 96,
-    cheap: bool = False,
+    trials: Annotated[int, typer.Option(help="trials per condition, 96 as in the thesis design")] = 96,
     models: Names = None,
     modes: Names = None,
     json_: Json = False,
@@ -510,10 +519,9 @@ def fix(
     """Test a boundary clause against a neutral edit or a drafted description"""
     opts = Opts("fix", json_, yes, max_cost, estimate_only, progress)
     proj = load(opts, config)
-    trials = 24 if cheap else trials
     ms = split(models) or proj.cfg.tested()
     md = split(modes) or list(proj.cfg.modes)
-    calls, cost = asyncio.run(proj.cost("fix", ms, md, len(pair) if pair else top, trials))
+    calls, cost = asyncio.run(proj.cost("fix", ms, md, top, pairs(pair), trials))
     gate(opts, calls, cost)
     res = run(opts, proj, proj.fix(top, pairs(pair), ms, md, trials), calls)
 
@@ -533,12 +541,10 @@ def fix(
             )
         out.print(t)
         for a in res["across"]:
-            note = "  under 5 pairs, cannot reach p below 0.05" if a["underpowered"] else ""
+            note = f"  under {MIN_PAIRS} pairs, cannot reach p below {ALPHA}" if a["underpowered"] else ""
             out.print(
                 f"{a['model']} {a['mode']}  {a['pairs']} flagged  mean {a['mean_diff']:+.2f}  p {a['p']:.3f}{note}"
             )
-        if cheap:
-            out.print("cheap mode, per pair numbers are indicative")
 
     emit(opts, res, warned(res, text), OK if any(r["flagged"] for r in res["pairs"]) else INSUFFICIENT)
 
@@ -568,7 +574,7 @@ def check(
     proj = load(opts, config)
     ms, md = split(models) or proj.cfg.tested(), split(modes) or ["json"]
     tools = asyncio.run(proj.tools())
-    calls, cost = checker.estimate(proj, 2 + len(checker.neighbours(proj, tool)), ms, md, tools)
+    calls, cost = checker.estimate(proj, 1 + len(checker.neighbours(proj, tool)), ms, md, tools)
     gate(opts, calls, cost)
     res = run(opts, proj, checker.check(proj, tool, description, refresh=refresh, models_=ms, modes=md), calls)
 
@@ -579,7 +585,9 @@ def check(
             out.print(f"  {cond:9} wrong {w[cond]:.2f}  hedge {h[cond]:.2f}")
         if res["leakage"]:
             out.print(f"  leakage to {', '.join(res['leakage'])}")
-        out.print(f"  held out {res['held_out']}, verdicts left {res['verdicts_left']}, spent ${res['cost_usd']:.2f}")
+        out.print(
+            f"  held out verdict {res['looks']} on this set, p scaled by {res['looks']}, spent ${res['cost_usd']:.2f}"
+        )
 
     emit(opts, res, warned(res, text), check_code(res["verdict"]))
 
@@ -625,15 +633,20 @@ def improve(
         ),
     ] = None,
     max_groups: Annotated[
-        int, typer.Option(help="sets of tools models confuse with each other to work on", rich_help_panel=ADVANCED)
-    ] = 5,
+        int | None,
+        typer.Option(
+            help="work on the first groups only, default every group discover flagged", rich_help_panel=ADVANCED
+        ),
+    ] = None,
     styles: Annotated[
         str | None,
         typer.Option(
             help="candidate styles: boundary, returns, example, minimal. Default all", rich_help_panel=ADVANCED
         ),
     ] = None,
-    max_chars: Annotated[int, typer.Option(help="longest candidate description", rich_help_panel=ADVANCED)] = 300,
+    max_chars: Annotated[
+        int | None, typer.Option(help="cut candidate descriptions to this many characters", rich_help_panel=ADVANCED)
+    ] = None,
     modes: Annotated[str, typer.Option(help="json, code or both, comma separated", rich_help_panel=ADVANCED)] = "json",
     drafts: Annotated[
         bool, typer.Option(help="draft descriptions for weak tools outside any group", rich_help_panel=ADVANCED)
@@ -669,10 +682,12 @@ def improve(
         return
     if fastmcp and not cfg.server.openapi:
         fail(opts, "--fastmcp needs an OpenAPI or Swagger source")
+    if max_cost is not None:
+        cfg.budget_usd = min(cfg.budget_usd, max_cost)
     proj = Project(cfg, root=config.parent / cfg.workdir)
     md = split(modes) or ["json"]
-    calls, cost = asyncio.run(improver.estimate(proj, ms, md, max_groups, len(chosen)))
-    gate(opts, calls, cost)
+    calls, cost = asyncio.run(improver.estimate(proj, ms, md))
+    gate(opts, calls, cost, improver.STAGES_NOTE)
     res = run(
         opts,
         proj,
@@ -817,7 +832,7 @@ async def ci_changed(proj: Project, base: dict, models_: list[str] | None, opts:
         elif old["description"] == t.description:
             rows.append({"tool": t.name, "note": "schema changed, description unchanged"})
         else:
-            n = 2 + len(checker.neighbours(proj, t.name))
+            n = 1 + len(checker.neighbours(proj, t.name))
             _, cost = checker.estimate(proj, n, models_ or proj.cfg.tested(), ["json"], await proj.tools())
             if opts.max_cost is not None and proj.budget.spent + cost > opts.max_cost:
                 rows.append({"tool": t.name, "note": f"skipped, estimate ${cost:.2f} would pass max cost"})

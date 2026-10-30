@@ -12,7 +12,7 @@ After `pip install misroute` or `uv tool install misroute`, `misroute guide` pri
 - Check the cost first with `--estimate-only` when you are unsure.
 - Report `trials`, `held_out` and `cost_usd` with every verdict, and the template counts from `confirm.tests` with every improve proposal.
 - `insufficient_data` is not an answer. Do not read anything into its rates.
-- Do not tune a description against the same held out set. After 3 verdicts on a tool, ask the user before passing `--refresh`.
+- Do not tune a description against the same held out set. Each verdict on a set multiplies its p value by the number of verdicts the set has given (`looks`), so repeated checks lose power. Ask the user before passing `--refresh` for a fresh set.
 
 ## Setup
 
@@ -67,9 +67,10 @@ misroute improve api.json --model foundry:claude-opus-5-5 --helper openai:gpt-5.
 | `--domain` | glossary for writing requests, text or a file |
 | `--real-requests` | JSON lines of real user requests, the strongest evidence |
 | `--requests-from` | `interface` (default) or `descriptions` |
-| `--max-groups`, `--styles`, `--max-chars`, `--modes`, `--no-drafts` | tuning, rarely needed |
+| `--max-groups` | work on the first groups only, default every flagged group |
+| `--styles`, `--max-chars`, `--modes`, `--no-drafts` | candidate styles, a length cut (none by default), modes, and whether to draft weak tools outside groups |
 
-It audits the tools for free, runs discover, groups confused tools, writes candidates in the styles boundary, returns, example and minimal, drops candidates that claim what the interface lacks, races them on tuning requests and confirms original, baseline and winner on held out requests.
+It audits the tools for free, runs discover, groups tools joined by pairs that meet the flag rule (6 errors in one model and mode, from the thesis), writes candidates in the styles boundary, returns, example and minimal, drops candidates that claim what the interface lacks, races every candidate in full on tuning requests and confirms original, baseline and winner on held out requests. The estimate covers discover; the later stages are priced once discover has found the groups, and the run stops before racing if they would pass the budget.
 
 Each entry in `entries` has a `status`:
 
@@ -83,6 +84,10 @@ Each entry in `entries` has a `status`:
 
 Files in `--out`: `descriptions.yaml` (tool name to description), and for OpenAPI `overlay.yaml` (per operationId, with hints, suggested exclusions and evidence), `overlay.openapi.yaml` (OpenAPI Overlay 1.0) and with `--fastmcp` `server.py`. A person reviews them, by hand or in the Improve tab of `misroute ui`, which shows each group's numbers, what the model picked on held out requests and every candidate, and saves Accept, Reject, Edit and Exclude decisions. Saving rewrites the files: rejected entries go back to the original, edits are marked untested, and each operation in overlay.yaml gets `review`. `exclude: true` hides an operation in server.py. Suggest `misroute ui` to the user when they should look over the results.
 
+## Numbers behind the results
+
+Every threshold comes from a source or is derived. 0.05 and Holm are convention. The gate's 0.10, the flag rule of 6 errors and the 96 trial design (6 requests, 4 slots, both orders) come from the thesis. The minimum number of differing templates, and of pairs for the across pairs test, is the smallest count at which an exact sign flip test can reach 0.05. Monte Carlo draws are sized so the standard error at alpha is a tenth of alpha, and integer sign flip tests are exact for any size. FastMCP's 56 character name limit is read from its source. The rest are settings you choose: budgets, `max_tokens` (none by default, cut replies are retried with twice the tokens they used), guard windows and the pytest `min_accuracy`.
+
 ## Check verdicts
 
 | Verdict | Meaning | Exit code |
@@ -90,7 +95,7 @@ Files in `--out`: `descriptions.yaml` (tool name to description), and for OpenAP
 | `better` | the proposed description beats the baseline on held out requests | 0 |
 | `no_difference` | no significant difference, keep whichever reads clearer | 0 |
 | `worse` | the proposed description makes routing worse | 1 |
-| `insufficient_data` | fewer than 6 request templates differ, no answer | 2 |
+| `insufficient_data` | too few request templates differ for an exact sign flip test to reach p below 0.05 (six), no answer | 2 |
 
 The baseline is a neutral rewrite of the current description of the same length, or lint's drafted description when the current one is missing or only a path. Trials from one request template fail together, so the test counts templates: an exact sign flip test on per template error differences, Holm corrected across pairs or groups. `diff` is the error rate change with a 95% interval in `ci`.
 
@@ -115,7 +120,7 @@ Every `--json` output is one object with `schema_version` and `command`. Errors 
 |---|---|
 | `lint_descriptions`, `get_report`, `explain_pair`, `job_status`, `cancel_job` | free |
 | `draft_description`, `estimate_check` | one call or free |
-| `check_description`, `suggest_fix` | paid, refuse above `max_cost` |
-| `start_job` | paid, refuses above `max_cost`, `estimate_only` returns the cost |
+| `check_description`, `suggest_fix` | paid, `max_cost` is required |
+| `start_job` | paid, `max_cost` is required, `estimate_only` returns the cost |
 
 Use `start_job` for discover, probe, fix and improve, since they outlast a tool call, then poll `job_status`. For improve, `args` takes `models`, `helper`, `languages`, `requests_from`, `domain`, `real_requests`, `max_groups`, `styles`, `max_chars`, `out`, `fastmcp` and `drafts`, with the same meaning as the CLI options.
