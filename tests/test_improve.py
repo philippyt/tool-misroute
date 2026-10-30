@@ -132,3 +132,64 @@ def test_packaged_guide_matches_repo():
     root = Path(__file__).parent.parent
     for name in ("AGENTS.md", "llms.txt"):
         assert (root / "src/misroute/docs" / name).read_bytes() == (root / name).read_bytes(), name
+
+
+async def test_review_rewrites_files_from_the_ui(tmp_path, monkeypatch):
+    from starlette.testclient import TestClient
+    from misroute.ui.app import create
+
+    monkeypatch.chdir(tmp_path)
+    proj = project(tmp_path)
+    Path("misroute.yaml").write_text(yaml.safe_dump(proj.cfg.model_dump()), encoding="utf-8")
+    res = await improve(proj, out=tmp_path / "out")
+    client = TestClient(create(Path("misroute.yaml")))
+    assert client.get("/api/improve").json()["result"]["entries"]
+    assert 'id="improve"' in client.get("/").text
+    edit = "Lists the comments written on one case."
+    decisions = {
+        "Customers_Get": {"decision": "reject"},
+        "Cases_GetComments": {"decision": "edit", "description": edit},
+        "Health_Get": {"decision": "pending", "exclude": True},
+    }
+    assert client.post("/api/improve/review", json={"decisions": decisions}).status_code == 403
+    headers = {"x-misroute": "1"}
+    bad = client.post("/api/improve/review", json={"decisions": {"nope": {"decision": "accept"}}}, headers=headers)
+    assert bad.status_code == 400
+    saved = client.post("/api/improve/review", json={"decisions": decisions, "by": "reviewer"}, headers=headers).json()
+    assert saved["review"]["counts"]["reject"] == 1 and saved["review"]["counts"]["edit"] == 1
+    over = yaml.safe_load(Path(res["files"]["overlay"]).read_text(encoding="utf-8"))["operations"]
+    assert over["Customers_Get"]["description"] == over["Customers_Get"]["original"]
+    assert over["Customers_Get"]["review"] == "reject"
+    assert over["Cases_GetComments"]["description"] == edit and over["Cases_GetComments"]["status"] == "edited"
+    assert over["Health_Get"]["exclude"] is True
+    plain = yaml.safe_load(Path(res["files"]["descriptions"]).read_text(encoding="utf-8"))
+    assert "Customers_Get" not in plain and plain["Cases_GetComments"] == edit
+    stored = client.get("/api/improve").json()["result"]
+    assert next(e for e in stored["entries"] if e["tool"] == "Cases_GetComments")["review"]["by"] == "reviewer"
+    g = stored["groups"][0]
+    assert g["confirm"]["examples"] and {"original", "baseline", "winner"} <= set(g["confirm"]["examples"][0]["picked"])
+
+
+async def test_baseline_survives_a_writer_without_json():
+    from misroute.fix import clause
+    from misroute.improve.run import Improver
+    from misroute.server.catalog import Tool
+
+    class Writer:
+        def __init__(self, replies):
+            self.replies = list(replies)
+
+        async def complete(self, prompt, kind=None, rep=0):
+            return self.replies.pop(0) if self.replies else "Returns the comments on a case."
+
+    tool = Tool("get_comments", "Returns comments for a case id.")
+    assert await clause.neutral_one(Writer(["no json here", '{"a": "Lists comments on one case."}']), tool, 30)
+    with pytest.raises(ValueError):
+        await clause.neutral_one(Writer(["nope", "nope", "nope"]), tool, 30)
+
+    class Proj:
+        def role(self, name):
+            return Writer(["nope", "nope", "nope"])
+
+    texts, kinds = await Improver(Proj(), [], []).baseline([tool], ["get_comments"], {"get_comments": "x" * 30})
+    assert texts["get_comments"] and kinds["get_comments"].startswith("draft")

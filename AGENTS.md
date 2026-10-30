@@ -81,7 +81,7 @@ Each entry in `entries` has a `status`:
 | `draft` | a weak tool outside any confused group, untested draft |
 | `unchanged` | no confusion and no weak description found |
 
-Files in `--out`: `descriptions.yaml` (tool name to description), and for OpenAPI `overlay.yaml` (per operationId, with hints, suggested exclusions and evidence), `overlay.openapi.yaml` (OpenAPI Overlay 1.0) and with `--fastmcp` `server.py`. A person reviews them. `exclude: true` in overlay.yaml hides an operation in server.py.
+Files in `--out`: `descriptions.yaml` (tool name to description), and for OpenAPI `overlay.yaml` (per operationId, with hints, suggested exclusions and evidence), `overlay.openapi.yaml` (OpenAPI Overlay 1.0) and with `--fastmcp` `server.py`. A person reviews them, by hand or in the Improve tab of `misroute ui`, which shows each group's numbers, what the model picked on held out requests and every candidate, and saves Accept, Reject, Edit and Exclude decisions. Saving rewrites the files: rejected entries go back to the original, edits are marked untested, and each operation in overlay.yaml gets `review`. `exclude: true` hides an operation in server.py. Suggest `misroute ui` to the user when they should look over the results.
 
 ## Check verdicts
 

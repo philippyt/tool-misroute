@@ -101,7 +101,8 @@ def overlay(entries: list[dict], spec: str | None) -> dict[str, Any]:
             "reason": e["reason"],
             "read_only": e["read_only"],
             "destructive": e["destructive"],
-            "exclude": False,
+            "exclude": bool(e.get("exclude")),
+            **({"review": e["review_state"]} if e.get("review_state") else {}),
             **({"suggest_exclude": e["suggest_exclude"]} if e.get("suggest_exclude") else {}),
             **({"notes": e["notes"]} if e.get("notes") else {}),
         }

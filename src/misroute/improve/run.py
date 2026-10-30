@@ -182,24 +182,34 @@ class Improver:
                     best, best_score = {**best, name: o}, s
         return {"best": best, "errors": best_score, "start_errors": start, "tried": tried}
 
-    async def baseline(self, tools: list[Tool], group: list[str], winner: dict[str, str]) -> dict[str, str]:
+    async def baseline(
+        self, tools: list[Tool], group: list[str], winner: dict[str, str]
+    ) -> tuple[dict[str, str], dict[str, str]]:
         """Lint's draft for tools with a missing or path only description, else a neutral rewrite of the winner's
-        length, so a gain cannot come from length or any rewrite at all."""
+        length, so a gain cannot come from length or any rewrite at all. When the writer gives no usable rewrite
+        the draft stands in. Returns the texts and which kind each one is."""
         by = {t.name: t for t in tools}
         writer = self.proj.role("writer")
 
-        async def one(n: str) -> str:
+        async def one(n: str) -> tuple[str, str]:
             if descriptions.classify(by[n]):
-                return await descriptions.draft(writer, by[n], tools)
-            return await clause.neutral_one(writer, by[n], len(winner[n]))
+                return await descriptions.draft(writer, by[n], tools), "draft"
+            try:
+                return await clause.neutral_one(writer, by[n], len(winner[n])), "neutral"
+            except ValueError:
+                return await descriptions.draft(writer, by[n], tools), "draft, the neutral rewrite failed"
 
-        return dict(zip(group, await asyncio.gather(*(one(n) for n in group)), strict=True))
+        found = await asyncio.gather(*(one(n) for n in group))
+        return {n: f[0] for n, f in zip(group, found, strict=True)}, {
+            n: f[1] for n, f in zip(group, found, strict=True)
+        }
 
     async def confirm(self, tools: list[Tool], conds: dict[str, dict[str, str]], reqs: list[Request]) -> dict:
-        errs, rates = {}, {}
+        errs, rates, seen = {}, {}, {}
         for cond, desc in conds.items():
             ts = await self.trials(tools, desc, reqs, self.proj.cfg.slots, cond)
             errs[cond] = {t.key: t.error for t in ts}
+            seen[cond] = {t.key: t for t in ts}
             n = len(ts) or 1
             rates[cond] = {
                 "trials": len(ts),
@@ -220,7 +230,52 @@ class Improver:
                 keep = {r for r, x in lang.items() if x == code}
                 sub = {c: {k: v for k, v in e.items() if k[2] in keep} for c, e in errs.items()}
                 per_lang[code] = {f"{a}_vs_{b}": decide(sub[b], sub[a]) for a, b in PAIRS}
-        return {"rates": rates, "tests": tests, "by_language": per_lang, "templates": len(lang)}
+        return {
+            "rates": rates,
+            "tests": tests,
+            "by_language": per_lang,
+            "templates": len(lang),
+            "examples": examples(seen),
+        }
+
+
+def examples(seen: dict[str, dict[tuple, Trial]], limit: int = 24) -> list[dict]:
+    """Held out requests where any condition picked wrong, with each condition's picks. Fixed ones first, then
+    broken ones, then those every condition got wrong."""
+    keys = set.intersection(*(set(v) for v in seen.values())) if seen else set()
+    out: list[dict[str, Any]] = []
+    for k in sorted(keys):
+        row = {c: v[k] for c, v in seen.items()}
+        if not any(t.error for t in row.values()):
+            continue
+        first = next(iter(row.values()))
+        orig, win = row.get("original"), row.get("winner")
+        if orig and win and orig.error and not win.error:
+            outcome = "fixed"
+        elif orig and win and win.error and not orig.error:
+            outcome = "broke"
+        elif all(t.error for t in row.values()):
+            outcome = "all wrong"
+        else:
+            outcome = "mixed"
+        out.append(
+            {
+                "request": first.text,
+                "target": first.target,
+                "lang": first.lang,
+                "kind": first.kind,
+                "outcome": outcome,
+                "picked": {c: t.picks or [] for c, t in row.items()},
+            }
+        )
+    rank = {"fixed": 0, "broke": 1, "all wrong": 2, "mixed": 3}
+    seen_text: set[str] = set()
+    unique = []
+    for e in sorted(out, key=lambda e: rank[e["outcome"]]):
+        if e["request"] not in seen_text:
+            seen_text.add(e["request"])
+            unique.append(e)
+    return unique[:limit]
 
 
 def beats(test: dict) -> bool:
@@ -308,7 +363,7 @@ async def improve(
         race = await imp.race(tools, group, written, tuning)
         original = {n: by[n].description for n in group}
         winner = race["best"]
-        base = await imp.baseline(tools, group, winner)
+        base, base_kind = await imp.baseline(tools, group, winner)
         conf = await imp.confirm(tools, {"original": original, "baseline": base, "winner": winner}, held)
         style = {n: next((c["style"] for c in written[n] if c["text"] == winner[n]), "original") for n in group}
         results.append(
@@ -321,6 +376,7 @@ async def improve(
                 "race": {k: v for k, v in race.items() if k != "best"},
                 "original": original,
                 "baseline": base,
+                "baseline_kind": base_kind,
                 "winner": winner,
                 "style": style,
                 "confirm": conf,
@@ -329,7 +385,9 @@ async def improve(
     adjust(results)
     entries = await build_entries(proj, tools, results, found, drafts)
     result: dict[str, Any] = {
-        "source": spec or proj.cfg.server.tools or proj.cfg.server.url or " ".join(proj.cfg.server.command or []),
+        "source": str(Path(spec).resolve())
+        if spec
+        else proj.cfg.server.tools or proj.cfg.server.url or " ".join(proj.cfg.server.command or []),
         "audit": audit.summary(tools, found),
         "groups": results,
         "entries": entries,

@@ -9,12 +9,14 @@ from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.routing import Route
 from misroute.config import load_env
 from misroute.guard.wrapper import approve
+from misroute.improve import review
+from misroute.improve import run as improver
 from misroute.models.base import BudgetExceeded
 from misroute.project import Project
 from misroute.report.html import html
 from misroute.ui import setup
 
-PHASES = ("lint", "discover", "probe", "fix")
+PHASES = ("lint", "discover", "probe", "fix", "improve")
 
 
 class Runner:
@@ -30,7 +32,20 @@ class Runner:
     def running(self) -> bool:
         return self.task is not None and not self.task.done()
 
+    def improver(self, body: dict) -> tuple[Project, list[str]]:
+        base = self.project()
+        cfg, models = improver.configure(
+            base.cfg, body["models"] or None, body.get("helper") or None, languages=body.get("languages") or None
+        )
+        return Project(cfg, root=base.store.root), models
+
     async def estimate(self, body: dict) -> dict:
+        if body["phase"] == "improve":
+            proj, models = self.improver(body)
+            calls, cost = await improver.estimate(
+                proj, models, ["json"], body["groups"], len(improver.pick_styles(None))
+            )
+            return {"calls": calls, "cost": cost}
         proj = self.project()
         if body["phase"] == "lint":
             return {"calls": 0, "cost": 0.0}
@@ -38,7 +53,7 @@ class Runner:
         return {"calls": calls, "cost": cost}
 
     def start(self, body: dict, calls: int) -> None:
-        proj = self.project()
+        proj, tested = self.improver(body) if body["phase"] == "improve" else (self.project(), [])
         self.state = {"phase": body["phase"], "done": 0, "total": calls, "error": None, "spent": 0.0}
 
         def tick(n: int) -> None:
@@ -52,6 +67,15 @@ class Runner:
             "discover": lambda: proj.discover(ms, md),
             "probe": lambda: proj.probe(body["top"], None, ms, md),
             "fix": lambda: proj.fix(body["top"], None, ms, md, body["trials"]),
+            "improve": lambda: improver.improve(
+                proj,
+                tested,
+                ["json"],
+                body["groups"],
+                None,
+                out=self.config.parent / "improve",
+                fastmcp=body["fastmcp"] and bool(proj.cfg.server.openapi),
+            ),
         }[phase]()
 
         async def run() -> None:
@@ -100,6 +124,10 @@ def create(config: Path) -> Starlette:
             "modes": b.get("modes") or list(cfg.modes),
             "top": int(b.get("top") or 3),
             "trials": int(b.get("trials") or 96),
+            "helper": b.get("helper") or None,
+            "languages": [x.strip() for x in str(b.get("languages") or "").split(",") if x.strip()],
+            "groups": int(b.get("groups") or 5),
+            "fastmcp": bool(b.get("fastmcp")),
         }
 
     async def index(request: Request) -> Response:
@@ -151,17 +179,37 @@ def create(config: Path) -> Starlette:
     async def estimate(request: Request) -> Response:
         if bad := guarded(request):
             return bad
-        return JSONResponse(await runner.estimate(await body_of(request)))
+        try:
+            return JSONResponse(await runner.estimate(await body_of(request)))
+        except ValueError as e:
+            return JSONResponse({"error": str(e)}, status_code=400)
 
     async def run(request: Request) -> Response:
         if bad := guarded(request):
             return bad
         if runner.running:
             return JSONResponse({"error": "a run is already going"}, status_code=409)
-        body = await body_of(request)
-        est = await runner.estimate(body)
+        try:
+            body = await body_of(request)
+            est = await runner.estimate(body)
+        except ValueError as e:
+            return JSONResponse({"error": str(e)}, status_code=400)
         runner.start(body, est["calls"])
         return JSONResponse({"started": body["phase"], **est})
+
+    async def improve_get(request: Request) -> Response:
+        if not config.exists():
+            return JSONResponse({"result": None})
+        return JSONResponse({"result": runner.project().store.read("improve")})
+
+    async def improve_review(request: Request) -> Response:
+        if bad := guarded(request):
+            return bad
+        b = await request.json()
+        try:
+            return JSONResponse(review.save(runner.project().store, b.get("decisions") or {}, str(b.get("by") or "")))
+        except ValueError as e:
+            return JSONResponse({"error": str(e)}, status_code=400)
 
     async def guard(request: Request) -> Response:
         return JSONResponse(guard_entries(Path(runner.project().cfg.guard.log)))
@@ -183,6 +231,8 @@ def create(config: Path) -> Starlette:
             Route("/api/setup/save", setup_save, methods=["POST"]),
             Route("/api/estimate", estimate, methods=["POST"]),
             Route("/api/run", run, methods=["POST"]),
+            Route("/api/improve", improve_get),
+            Route("/api/improve/review", improve_review, methods=["POST"]),
             Route("/api/guard", guard),
             Route("/api/guard/approve", guard_approve, methods=["POST"]),
         ]

@@ -9,7 +9,7 @@ from misroute.store.runs import Store
 
 def heat(value: float) -> str:
     v = max(0.0, min(1.0, value))
-    return f"rgba(214, 69, 65, {0.08 + 0.8 * v:.2f})" if v > 0 else "transparent"
+    return f"rgba(255, 255, 255, {0.06 + 0.4 * v:.2f})" if v > 0 else "transparent"
 
 
 def heatmap(matrix: dict[str, dict[str, int]]) -> dict[str, Any]:

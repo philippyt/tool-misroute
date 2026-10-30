@@ -4,19 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ title }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root { --bg: #fbfbfa; --fg: #1d1d1b; --muted: #6b6b66; --line: #e3e2de; --card: #fff; --accent: #2b5fd9; --bad: #c0392b; }
-@media (prefers-color-scheme: dark) { :root { --bg: #161615; --fg: #ecebe8; --muted: #9a9a94; --line: #2c2c2a; --card: #1e1e1d; --accent: #7aa2ff; } }
-body { background: var(--bg); color: var(--fg); font: 15px/1.55 system-ui, sans-serif; margin: 0 auto; max-width: 980px; padding: 32px 16px; }
-h1 { font-size: 26px; margin: 0 0 6px; } h2 { font-size: 18px; margin: 0 0 4px; }
-a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
-.muted { color: var(--muted); }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 18px; margin: 18px 0; }
+:root { --bg: #000; --fg: #fff; }
+* { border-radius: 0; }
+body { background: var(--bg); color: var(--fg); font: 16px/1.6 "Familjen Grotesk", system-ui, sans-serif; margin: 0 auto; max-width: 960px; padding: 32px 16px 80px; }
+h1 { font-size: 28px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.01em; } h2 { font-size: 20px; font-weight: 700; margin: 0 0 8px; }
+a { color: var(--fg); text-underline-offset: 5px; }
+.muted { color: var(--fg); }
+.card { padding: 28px 0 8px; margin: 0; }
 .scroll { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-th, td { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: left; font-variant-numeric: tabular-nums; }
-th { color: var(--muted); font-weight: 600; font-size: 12px; }
-.write { color: var(--bad); }
+th, td { padding: 8px 24px 8px 0; text-align: left; font-variant-numeric: tabular-nums; }
+th { font-weight: 700; }
+.write { font-weight: 700; }
 </style>
 </head>
 <body>

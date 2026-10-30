@@ -4,22 +4,29 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>misroute report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root { --bg: #fbfbfa; --fg: #1d1d1b; --muted: #6b6b66; --line: #e3e2de; --bad: #c0392b; --good: #2e7d4f; --card: #fff; }
-@media (prefers-color-scheme: dark) { :root { --bg: #161615; --fg: #ecebe8; --muted: #9a9a94; --line: #2c2c2a; --card: #1e1e1d; } }
-body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, sans-serif; margin: 0 auto; max-width: 1100px; padding: 24px 16px; }
-h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 17px; margin: 32px 0 8px; } h3 { font-size: 14px; margin: 20px 0 6px; }
-.muted { color: var(--muted); }
-table { border-collapse: collapse; width: 100%; margin: 6px 0 12px; background: var(--card); }
-th, td { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: left; vertical-align: top; }
-th { font-weight: 600; color: var(--muted); font-size: 12px; }
+:root { --bg: #000; --fg: #fff; --line: #3a3a3a; }
+* { border-radius: 0; }
+body { background: var(--bg); color: var(--fg); font: 16px/1.6 "Familjen Grotesk", system-ui, sans-serif; margin: 0 auto; max-width: 960px; padding: 24px 16px 80px; }
+h1 { font-size: 26px; font-weight: 700; margin: 0 0 8px; letter-spacing: -0.01em; }
+h2 { font-size: 22px; font-weight: 700; margin: 44px 0 12px; }
+h3 { font-size: 18px; font-weight: 700; margin: 28px 0 10px; }
+p { margin: 0 0 12px; }
+.muted { color: var(--fg); }
+table { border-collapse: collapse; width: 100%; margin: 8px 0 16px; }
+th, td { padding: 8px 24px 8px 0; text-align: left; vertical-align: top; }
+th { font-weight: 700; }
 .scroll { overflow-x: auto; }
-.heat td { text-align: center; min-width: 34px; font-variant-numeric: tabular-nums; }
+.heat td { text-align: center; min-width: 36px; font-variant-numeric: tabular-nums; padding: 6px 4px; }
 .heat td.diag { outline: 1px solid var(--line); }
 .heat th.rot { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; }
-.write { color: var(--bad); font-weight: 600; }
-.good { color: var(--good); } .bad { color: var(--bad); }
-code { font-size: 12px; }
+.write { font-weight: 700; }
+.good { color: var(--fg); } .bad { color: var(--fg); font-weight: 700; }
+code { font: 14px ui-monospace, monospace; }
+a { color: var(--fg); }
 </style>
 </head>
 <body>

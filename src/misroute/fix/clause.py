@@ -75,11 +75,15 @@ async def neutral_one(writer, tool: Tool, length: int, attempts: int = 3) -> str
         prompt = NEUTRAL_ONE.format(
             n=length, name=tool.name, params=", ".join(tool.params), description=tool.description
         )
-        text = str(parse_json(await writer.complete(prompt, "neutral", rep=i))["a"]).strip()
+        try:
+            found = str(parse_json(await writer.complete(prompt, "neutral", rep=i))["a"]).strip()
+        except (ValueError, KeyError, TypeError):
+            continue
+        text = found or text
         if matched(text, " " * length):
             break
     if not text:
-        raise ValueError("writer returned an empty neutral edit")
+        raise ValueError("writer returned no usable neutral edit")
     return pad(text, length)
 
 

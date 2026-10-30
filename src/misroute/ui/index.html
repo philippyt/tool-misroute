@@ -4,63 +4,94 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>misroute</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root { --bg: #fbfbfa; --fg: #1d1d1b; --muted: #6b6b66; --line: #e3e2de; --card: #fff; --accent: #2b5fd9; --bad: #c0392b; --good: #2e7d4f; }
-@media (prefers-color-scheme: dark) { :root { --bg: #161615; --fg: #ecebe8; --muted: #9a9a94; --line: #2c2c2a; --card: #1e1e1d; --accent: #7aa2ff; } }
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, sans-serif; }
-header { display: flex; align-items: center; gap: 24px; padding: 12px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-header b { font-size: 16px; }
-nav button { background: none; border: 0; color: var(--muted); font: inherit; padding: 6px 2px; margin-right: 14px; cursor: pointer; border-bottom: 2px solid transparent; }
-nav button.on { color: var(--fg); border-color: var(--accent); }
-#status { margin-left: auto; color: var(--muted); font-size: 13px; }
-main { padding: 16px; max-width: 1100px; margin: 0 auto; }
+:root { --bg: #000; --fg: #fff; --line: #3a3a3a; }
+* { box-sizing: border-box; border-radius: 0; }
+html, body { background: var(--bg); color: var(--fg); }
+body { margin: 0; font: 16px/1.6 "Familjen Grotesk", system-ui, sans-serif; accent-color: #fff; }
+header { position: sticky; top: 0; background: var(--bg); z-index: 1; }
+.bar { max-width: 960px; margin: 0 auto; padding: 0 16px; display: flex; align-items: center; gap: 32px; }
+.logo { font-weight: 700; font-size: 19px; padding: 18px 0; }
+nav { display: flex; gap: 24px; }
+nav button { background: none; border: 0; color: var(--fg); font: inherit; font-weight: 400; padding: 18px 0; cursor: pointer; }
+nav button.on { font-weight: 700; text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 2px; }
+#status { margin-left: auto; }
+main { max-width: 960px; margin: 0 auto; padding: 0 16px 80px; }
 section { display: none; } section.on { display: block; }
-iframe { width: 100%; height: calc(100vh - 110px); border: 1px solid var(--line); border-radius: 6px; background: var(--card); }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 16px; margin-bottom: 16px; }
-label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
-select, input { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
-.row { display: flex; gap: 16px; flex-wrap: wrap; }
-.checks label { display: inline-flex; gap: 6px; color: var(--fg); font-size: 14px; margin-right: 12px; }
-button.primary { background: var(--accent); color: #fff; border: 0; border-radius: 4px; padding: 7px 14px; font: inherit; cursor: pointer; margin-top: 14px; margin-right: 8px; }
-button.primary:disabled { opacity: .5; cursor: default; }
-button.ghost { background: none; border: 1px solid var(--line); color: var(--fg); border-radius: 4px; padding: 7px 14px; font: inherit; cursor: pointer; margin-top: 14px; }
-progress { width: 100%; height: 8px; }
+.block { padding: 28px 0 12px; }
+h2 { font-size: 22px; font-weight: 700; margin: 0 0 12px; letter-spacing: -0.01em; line-height: 1.3; }
+h3 { font-size: 18px; font-weight: 700; margin: 0 0 12px; line-height: 1.3; }
+p { margin: 0 0 12px; }
+.muted, .small { color: var(--fg); }
+label { display: block; color: var(--fg); margin: 18px 0 8px; }
+input, select, textarea { font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); padding: 9px 11px; outline: none; }
+input:focus, select:focus, textarea:focus { border-color: var(--fg); }
+textarea { width: 100%; min-height: 80px; resize: vertical; line-height: 1.5; }
+input[type=checkbox] { padding: 0; width: 16px; height: 16px; }
+.row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+.checks { display: flex; gap: 22px; flex-wrap: wrap; }
+.checks label { display: inline-flex; align-items: center; gap: 10px; margin: 0; }
+button.primary, button.ghost { font: inherit; font-weight: 700; padding: 10px 20px; cursor: pointer; margin-top: 22px; margin-right: 10px; }
+button.primary { background: var(--fg); color: var(--bg); border: 1px solid var(--fg); }
+button.ghost { background: var(--bg); color: var(--fg); border: 1px solid var(--fg); }
+button:disabled { opacity: .35; cursor: default; }
+button.link { background: none; border: 0; color: var(--fg); font: inherit; padding: 0; cursor: pointer; }
+button.link.on, button.link:hover { font-weight: 700; text-decoration: underline; text-underline-offset: 5px; }
+button.choice { background: var(--bg); color: var(--fg); border: 1px solid var(--fg); font: inherit; padding: 7px 18px; cursor: pointer; }
+button.choice.on { background: var(--fg); color: var(--bg); font-weight: 700; }
+progress { width: 100%; height: 4px; appearance: none; border: 0; background: var(--line); }
+progress::-webkit-progress-bar { background: var(--line); } progress::-webkit-progress-value { background: var(--fg); } progress::-moz-progress-bar { background: var(--fg); }
 table { border-collapse: collapse; width: 100%; }
-th, td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
-th { color: var(--muted); font-weight: 600; font-size: 12px; }
-.muted { color: var(--muted); } .bad { color: var(--bad); } .good { color: var(--good); }
-code { font-size: 12px; }
+th, td { padding: 10px 24px 10px 0; text-align: left; vertical-align: top; }
+th { font-weight: 700; }
+code { font: 14px ui-monospace, monospace; }
+iframe { width: 100%; height: calc(100vh - 70px); border: 0; display: block; }
+.stats { display: flex; gap: 48px; margin: 8px 0 24px; flex-wrap: wrap; }
+.stat b { display: block; font-size: 34px; font-weight: 700; line-height: 1.1; margin-bottom: 6px; }
+.wrong { text-decoration: line-through; }
+.scroll { overflow-x: auto; }
+.item { padding: 28px 0 8px; }
+.item .meta { margin: 0 0 4px; }
+.item .before { margin: 14px 0 10px; }
+.item .actions { display: flex; gap: 10px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+.item .actions .checks { margin-left: 12px; }
+.gap { margin-top: 20px; }
 </style>
 </head>
 <body>
 <header>
-  <b>misroute</b>
-  <nav>
-    <button data-tab="setup">Setup</button>
-    <button data-tab="results" class="on">Results</button>
-    <button data-tab="run">Run</button>
-    <button data-tab="guard">Guard</button>
-  </nav>
-  <span id="status"></span>
+  <div class="bar">
+    <span class="logo">misroute</span>
+    <nav>
+      <button data-tab="setup">Setup</button>
+      <button data-tab="results" class="on">Results</button>
+      <button data-tab="improve">Improve</button>
+      <button data-tab="run">Run</button>
+      <button data-tab="guard">Guard</button>
+    </nav>
+    <span id="status"></span>
+  </div>
 </header>
 <main>
   <section id="setup">
-    <div class="card">
-      <h3 style="margin-top:0">MCP server</h3>
+    <div class="block">
+      <h2>Server</h2>
       <div class="row">
         <div><label for="server_kind">Connect with</label>
           <select id="server_kind"><option value="url">URL</option><option value="command">Local command</option><option value="openapi">OpenAPI file</option></select></div>
-        <div style="flex:1;min-width:260px"><label for="server_value" id="server_label">URL</label><input id="server_value" style="width:100%" placeholder="https://your-server/mcp"></div>
+        <div style="flex:1;min-width:260px"><label for="server_value" id="server_label">URL</label><input id="server_value" style="width:100%"></div>
       </div>
       <div class="row">
         <div style="flex:1;min-width:220px"><label for="server_token">Bearer token, optional</label><input id="server_token" type="password" style="width:100%" autocomplete="off"></div>
         <div style="flex:1;min-width:220px"><label for="include_tools">Only these tools, optional</label><input id="include_tools" style="width:100%" placeholder="*issue*, *pull_request*"></div>
       </div>
-      <p class="muted" id="token_note"></p>
+      <p class="muted small" id="token_note" style="margin-top:8px"></p>
     </div>
-    <div class="card">
-      <h3 style="margin-top:0">Model</h3>
+    <div class="block">
+      <h2>Model</h2>
       <div class="row">
         <div><label for="provider">Provider</label>
           <select id="provider">
@@ -79,50 +110,76 @@ code { font-size: 12px; }
       </div>
       <div class="row">
         <div style="flex:1;min-width:220px"><label for="api_key">API key</label><input id="api_key" type="password" style="width:100%" autocomplete="off"></div>
-        <div><label for="price_in">Dollars per million input tokens</label><input id="price_in" type="number" step="0.01" style="width:120px"></div>
-        <div><label for="price_out">Per million output tokens</label><input id="price_out" type="number" step="0.01" style="width:120px"></div>
-        <div><label for="budget_usd">Budget per run, dollars</label><input id="budget_usd" type="number" step="0.5" value="5" style="width:110px"></div>
+        <div><label for="price_in">Dollars per million input tokens</label><input id="price_in" type="number" step="0.01" style="width:130px"></div>
+        <div><label for="price_out">Per million output tokens</label><input id="price_out" type="number" step="0.01" style="width:130px"></div>
+        <div><label for="budget_usd">Budget per run</label><input id="budget_usd" type="number" step="0.5" value="5" style="width:110px"></div>
       </div>
-      <p class="muted" id="key_note"></p>
+      <p class="muted small" id="key_note" style="margin-top:8px"></p>
       <label>Modes</label>
       <div class="checks"><label><input type="checkbox" class="smode" value="json" checked>json</label><label><input type="checkbox" class="smode" value="code">code</label></div>
-      <button class="ghost" id="test">Test connection</button>
-      <button class="primary" id="save">Save</button>
+      <button class="ghost" id="test">Test connection</button><button class="primary" id="save">Save</button>
     </div>
-    <div class="card" id="setupResult" hidden></div>
+    <div class="block" id="setupResult" hidden></div>
   </section>
 
   <section id="results" class="on"><iframe id="report" src="/report" title="report"></iframe></section>
 
+  <section id="improve">
+    <div class="block" id="impEmpty" hidden>
+      <h2>Nothing to review yet</h2>
+      <p class="muted">Run improve from the Run tab, or <code>misroute improve &lt;spec or server&gt; --helper provider:model</code> in this folder.</p>
+    </div>
+    <div id="impBody" hidden>
+      <div class="block" id="impSummary"></div>
+      <div id="impGroups"></div>
+      <div class="block">
+        <h2>Review</h2>
+        <p>Accept, reject or edit each proposal. Saving writes the files in the output folder, never your spec or server.</p>
+        <div class="checks gap" id="impFilter"></div>
+      </div>
+      <div id="impRows"></div>
+      <div class="row" style="align-items:center">
+        <button class="primary" id="impSave">Save review</button>
+        <input id="reviewer" placeholder="Your name, optional" style="margin-top:18px;width:220px">
+        <span id="impSaved" class="muted small" style="margin-top:18px"></span>
+      </div>
+    </div>
+  </section>
+
   <section id="run">
-    <div class="card">
+    <div class="block">
+      <h2>Run</h2>
       <div class="row">
         <div><label for="phase">Phase</label>
-          <select id="phase"><option>lint</option><option selected>discover</option><option>probe</option><option>fix</option></select></div>
-        <div><label for="top">Pairs</label><input id="top" type="number" value="3" min="1" style="width:80px"></div>
-        <div><label for="trials">Trials per condition</label><input id="trials" type="number" value="96" min="8" step="8" style="width:100px"></div>
+          <select id="phase"><option>lint</option><option selected>discover</option><option>probe</option><option>fix</option><option>improve</option></select></div>
+        <div class="pairOpt"><label for="top">Pairs</label><input id="top" type="number" value="3" min="1" style="width:90px"></div>
+        <div class="pairOpt"><label for="trials">Trials per condition</label><input id="trials" type="number" value="96" min="8" step="8" style="width:110px"></div>
+        <div class="improveOpt" hidden><label for="helper">Helper model</label><select id="helper"></select></div>
+        <div class="improveOpt" hidden><label for="languages">Languages</label><input id="languages" placeholder="no,en" style="width:110px"></div>
+        <div class="improveOpt" hidden><label for="groups">Groups</label><input id="groups" type="number" value="5" min="1" style="width:80px"></div>
       </div>
-      <label>Models</label><div class="checks" id="models"></div>
+      <p class="muted small improveOpt" hidden style="margin-top:10px">The helper writes and judges the test requests. Pick one from another family than the tested models.</p>
+      <div class="checks improveOpt" hidden style="margin-top:12px"><label><input type="checkbox" id="fastmcp">Write a FastMCP server.py</label></div>
+      <label>Models under test</label><div class="checks" id="models"></div>
       <label>Modes</label><div class="checks" id="modes"></div>
-      <button class="ghost" id="estimate">Estimate</button>
-      <button class="primary" id="start" disabled>Start</button>
-      <p id="estimateText" class="muted"></p>
+      <button class="ghost" id="estimate">Estimate</button><button class="primary" id="start" disabled>Start</button>
+      <p id="estimateText" class="muted" style="margin-top:12px"></p>
     </div>
-    <div class="card" id="progressCard" hidden>
-      <div class="row" style="justify-content:space-between"><span id="progressText"></span><span id="spentText" class="muted"></span></div>
+    <div class="block" id="progressCard" hidden>
+      <div class="row" style="justify-content:space-between;margin-bottom:10px"><span id="progressText"></span><span id="spentText" class="muted"></span></div>
       <progress id="progress" value="0" max="1"></progress>
-      <p id="runError" class="bad"></p>
+      <p id="runError" style="margin-top:10px"></p>
     </div>
   </section>
 
   <section id="guard">
-    <div class="card">
-      <h3 style="margin-top:0">Held writes</h3>
+    <div class="block">
+      <h2>Held writes</h2>
       <table><thead><tr><th>Tool</th><th>After</th><th>Arguments</th><th></th></tr></thead><tbody id="held"></tbody></table>
-      <p id="heldEmpty" class="muted">Nothing held</p>
+      <p id="heldEmpty" class="muted" style="margin-top:12px">Nothing held</p>
     </div>
-    <div class="card">
-      <h3 style="margin-top:0">Recent events</h3>
+    <div class="block">
+      <h2>Recent events</h2>
       <table><thead><tr><th>Kind</th><th>Tool</th><th>Sibling</th><th>When</th></tr></thead><tbody id="events"></tbody></table>
     </div>
   </section>
@@ -136,21 +193,28 @@ let wasRunning = false;
 function show(tab) {
   document.querySelectorAll("nav button, section").forEach((x) => x.classList.toggle("on", x.id === tab || x.dataset.tab === tab));
   if (tab === "guard") loadGuard();
+  if (tab === "improve") loadImprove();
 }
 document.querySelectorAll("nav button").forEach((b) => b.onclick = () => { location.hash = b.dataset.tab; });
 window.onhashchange = () => show(location.hash.slice(1) || "results");
 
 function body() {
   const picked = (id) => [...$(id).querySelectorAll("input:checked")].map((i) => i.value);
-  return { phase: $("phase").value, top: +$("top").value, trials: +$("trials").value, models: picked("models"), modes: picked("modes") };
+  return { phase: $("phase").value, top: +$("top").value, trials: +$("trials").value, models: picked("models"), modes: picked("modes"),
+    helper: $("helper").value, languages: $("languages").value, groups: +$("groups").value, fastmcp: $("fastmcp").checked };
+}
+function phaseOpts() {
+  const imp = $("phase").value === "improve";
+  document.querySelectorAll(".improveOpt").forEach((x) => { x.hidden = !imp; });
+  document.querySelectorAll(".pairOpt").forEach((x) => { x.hidden = imp; });
 }
 
 $("estimate").onclick = async () => {
   const r = await post("/api/estimate", body());
-  $("estimateText").textContent = r.error ? r.error : `up to ${r.calls} model calls, up to $${r.cost.toFixed(2)}`;
+  $("estimateText").textContent = r.error ? r.error : `Up to ${r.calls} model calls, up to $${r.cost.toFixed(2)}`;
   $("start").disabled = !!r.error;
 };
-["phase", "top", "trials"].forEach((id) => $(id).onchange = () => { $("start").disabled = true; $("estimateText").textContent = ""; });
+["phase", "top", "trials", "helper", "languages", "groups", "fastmcp"].forEach((id) => $(id).onchange = () => { $("start").disabled = true; $("estimateText").textContent = ""; phaseOpts(); });
 
 $("start").onclick = async () => {
   const r = await post("/api/run", body());
@@ -162,7 +226,7 @@ $("start").onclick = async () => {
 async function poll() {
   const s = await fetch("/api/state").then((r) => r.json());
   if (!s.configured) {
-    $("status").textContent = s.config_error ? "config problem, see Setup" : "not set up";
+    $("status").textContent = s.config_error ? "Config problem, see Setup" : "Not set up";
     if (!location.hash) location.hash = "setup";
     return;
   }
@@ -170,17 +234,18 @@ async function poll() {
     $("models").innerHTML = s.models.map((m) => `<label><input type="checkbox" value="${esc(m.name)}" ${m.tested ? "checked" : ""}>${esc(m.name)}</label>`).join("");
     $("modes").innerHTML = ["json", "code"].map((m) => `<label><input type="checkbox" value="${m}" ${s.modes.includes(m) ? "checked" : ""}>${m}</label>`).join("");
     document.querySelectorAll("#models input, #modes input").forEach((i) => i.onchange = () => { $("start").disabled = true; });
+    $("helper").innerHTML = '<option value="">As configured</option>' + s.models.map((m) => `<option value="${esc(m.name)}" ${m.tested ? "" : "selected"}>${esc(m.name)}</option>`).join("");
   }
-  $("status").textContent = s.running ? `${s.phase} running` : (s.phase ? `${s.phase} ${s.error ? "stopped" : "done"}` : `budget $${s.budget.toFixed(2)}`);
+  $("status").textContent = s.running ? `${s.phase} running` : (s.phase ? `${s.phase} ${s.error ? "stopped" : "done"}` : `Budget $${s.budget.toFixed(2)}`);
   if (s.phase) {
     $("progressCard").hidden = false;
     $("progress").max = Math.max(s.total, 1);
     $("progress").value = Math.min(s.done, s.total);
-    $("progressText").textContent = `${s.phase} ${s.done} of about ${s.total} calls`;
-    $("spentText").textContent = `spent $${s.spent.toFixed(2)}`;
+    $("progressText").textContent = `${s.phase}, ${s.done} of about ${s.total} calls`;
+    $("spentText").textContent = `$${s.spent.toFixed(2)} spent`;
     $("runError").textContent = s.error || "";
   }
-  if (wasRunning && !s.running) $("report").src = "/report";
+  if (wasRunning && !s.running) { $("report").src = "/report"; if (s.phase === "improve" && !s.error) location.hash = "improve"; }
   wasRunning = s.running;
   if (s.running) setTimeout(poll, 1000);
 }
@@ -188,26 +253,145 @@ async function poll() {
 async function loadGuard() {
   const g = await fetch("/api/guard").then((r) => r.json());
   $("held").innerHTML = g.held.map((h) => `<tr><td>${esc(h.tool)}</td><td>${esc(h.other)}</td><td><code>${esc(JSON.stringify(h.args))}</code></td>
-    <td>${h.approved ? '<span class="good">approved</span>' : `<button class="ghost" style="margin:0" data-id="${esc(h.id)}">Approve</button>`}</td></tr>`).join("");
+    <td>${h.approved ? '<span class="muted">Approved</span>' : `<button class="choice" data-id="${esc(h.id)}">Approve</button>`}</td></tr>`).join("");
   $("heldEmpty").hidden = g.held.length > 0;
   $("held").querySelectorAll("button").forEach((b) => b.onclick = async () => { await post("/api/guard/approve", { id: b.dataset.id }); loadGuard(); });
-  $("events").innerHTML = g.events.slice().reverse().map((e) => `<tr><td class="${e.kind === "hold" || e.kind === "hedge" ? "bad" : ""}">${esc(e.kind)}</td>
+  $("events").innerHTML = g.events.slice().reverse().map((e) => `<tr><td>${esc(e.kind)}</td>
     <td>${esc(e.tool)}</td><td>${esc(e.other)}</td><td class="muted">${new Date(e.at * 1000).toLocaleTimeString()}</td></tr>`).join("");
 }
+
+let imp = null, decisions = {}, impFilter = "changed";
+const pct = (x) => `${Math.round(x * 100)}%`;
+const LANGS = { no: "Norwegian", nb: "Norwegian", nn: "Nynorsk", en: "English", sv: "Swedish", da: "Danish", de: "German", fi: "Finnish" };
+
+async function loadImprove() {
+  const r = await fetch("/api/improve").then((x) => x.json());
+  imp = r.result;
+  $("impEmpty").hidden = !!imp;
+  $("impBody").hidden = !imp;
+  if (!imp) return;
+  decisions = {};
+  imp.entries.forEach((e) => {
+    const v = e.review || {};
+    decisions[e.tool] = { decision: v.decision || "pending", description: v.description || "", exclude: !!v.exclude };
+  });
+  renderSummary(); renderGroups(); renderFilter(); renderRows();
+}
+
+const changed = (e) => e.description !== e.original || decisions[e.tool].decision === "edit";
+
+function renderSummary() {
+  const n = imp.entries.filter(changed).length, groups = (imp.groups || []).length;
+  const langs = (imp.languages || []).map((l) => LANGS[l] || l).join(" and ");
+  const notes = (imp.roles_warning || []).length ? '<p class="gap">The helper is the model under test or from its family, so these results may favour the proposals. Set a helper from another family.</p>' : "";
+  $("impSummary").innerHTML = `<h2>${n} ${n === 1 ? "proposal" : "proposals"} across ${imp.audit.tools} operations</h2>
+    <p>${groups} ${groups === 1 ? "group" : "groups"} of tools the model confused.</p>
+    <p>Requests in ${esc(langs)}, $${(imp.cost_usd || 0).toFixed(2)} spent.</p>${notes}`;
+}
+
+function verdict(t) {
+  const p = t.p_holm < 0.001 ? "< 0.001" : t.p_holm.toFixed(3);
+  if (t.verdict === "better") return `The proposal beats a plain rewrite. ${t.discordant_templates} of ${t.templates} request types changed outcome, p ${p}.`;
+  if (t.verdict === "worse") return `The proposal is worse than a plain rewrite. ${t.discordant_templates} of ${t.templates} request types changed outcome.`;
+  if (t.verdict === "insufficient_data") return `Too few requests changed outcome to decide, ${t.discordant_templates} of ${t.templates}.`;
+  return `No clear difference from a plain rewrite. ${t.discordant_templates} of ${t.templates} request types changed outcome.`;
+}
+const EXPORTS = { winner: "Proposes the new descriptions.", baseline: "Proposes the plain rewrite.", original: "Keeps the original descriptions." };
+
+function pick(p, target) {
+  if (!p.length) return '<span class="muted">nothing</span>';
+  const ok = p[0] === target && new Set(p).size === 1;
+  return ok ? esc(p.join(" + ")) : `<span class="wrong">${esc(p.join(" + "))}</span>`;
+}
+
+function groupBlock(g) {
+  const r = g.confirm.rates;
+  const stat = (c, label) => r[c] ? `<div class="stat"><b>${pct(r[c].error_rate)}</b><span>${label}</span></div>` : "";
+  const langs = Object.entries(g.confirm.by_language || {}).map(([code, x]) => `${LANGS[code] || code} ${x.winner_vs_baseline.verdict.replace("_", " ")}`).join(", ");
+  const ex = (g.confirm.examples || []).slice(0, 10);
+  const rows = ex.map((e) => `<tr><td>${esc(e.request)}</td><td>${esc(e.target)}</td><td>${pick(e.picked.original || [], e.target)}</td><td>${pick(e.picked.winner || [], e.target)}</td></tr>`).join("");
+  return `<div class="block"><h3>${g.tools.map(esc).join(", ")}</h3>
+    <div class="stats">${stat("original", "wrong with the original")}${stat("baseline", "wrong with a plain rewrite")}${stat("winner", "wrong with the proposal")}</div>
+    <p>${verdict(g.confirm.tests.winner_vs_baseline)}</p>
+    <p>${EXPORTS[g.export] || ""}</p>
+    ${langs ? `<p>${esc(langs)}</p>` : ""}
+    <p>Measured on ${g.requests.held_out} held out requests the proposals were not tuned on.</p>
+    ${ex.length ? `<p class="gap"><button class="link" data-ex="${g.group}">Show requests</button></p>
+    <div class="scroll" id="ex${g.group}" hidden><table><thead><tr><th>Request</th><th>Right tool</th><th>Original picked</th><th>Proposal picked</th></tr></thead><tbody>${rows}</tbody></table></div>` : ""}</div>`;
+}
+
+function renderGroups() {
+  $("impGroups").innerHTML = (imp.groups || []).map(groupBlock).join("");
+  $("impGroups").querySelectorAll("[data-ex]").forEach((b) => b.onclick = () => {
+    const t = $(`ex${b.dataset.ex}`);
+    t.hidden = !t.hidden;
+    b.textContent = t.hidden ? "Show requests" : "Hide requests";
+  });
+}
+
+function renderFilter() {
+  const all = imp.entries.length, n = imp.entries.filter(changed).length;
+  $("impFilter").innerHTML = `<button class="link ${impFilter === "changed" ? "on" : ""}" data-f="changed">Proposals ${n}</button>
+    <button class="link ${impFilter === "all" ? "on" : ""}" data-f="all">All operations ${all}</button>`;
+  $("impFilter").querySelectorAll("button").forEach((b) => b.onclick = () => { impFilter = b.dataset.f; renderFilter(); renderRows(); });
+}
+
+const STATUS = { tested: "Tested, beat a plain rewrite", "tested baseline": "Tested, a plain rewrite won", kept: "Tested, original kept",
+  draft: "Draft, untested", unchanged: "No change", edited: "Edited, untested" };
+
+function row(e) {
+  const d = decisions[e.tool];
+  const edited = d.decision === "edit";
+  const text = edited ? d.description : e.description;
+  const status = STATUS[edited ? "edited" : e.status] || e.status;
+  const choice = (k, label) => `<button class="choice ${d.decision === k ? "on" : ""}" data-t="${esc(e.tool)}" data-d="${k}">${label}</button>`;
+  const decide = changed(e) ? choice("accept", "Accept") + choice("reject", "Reject") : "";
+  const hide = `<div class="checks"><label title="${esc(e.suggest_exclude || "")}"><input type="checkbox" data-x="${esc(e.tool)}" ${d.exclude ? "checked" : ""}>Hide from agents${e.suggest_exclude ? ", suggested" : ""}</label></div>`;
+  return `<div class="item"><h3 style="margin:0 0 8px">${esc(e.tool)}</h3>${e.route ? `<p class="meta">${esc(e.route)}</p>` : ""}<p class="meta">${esc(status)}</p>
+    <p class="before">Before: ${esc(e.original)}</p>
+    <textarea data-t="${esc(e.tool)}">${esc(text)}</textarea>
+    <div class="actions">${decide}${hide}</div></div>`;
+}
+
+function renderRows() {
+  const list = imp.entries.filter((e) => impFilter === "all" || changed(e));
+  $("impRows").innerHTML = list.map(row).join("") || '<p class="muted item">No proposals</p>';
+  $("impRows").querySelectorAll("button.choice").forEach((b) => b.onclick = () => {
+    const d = decisions[b.dataset.t];
+    d.decision = d.decision === b.dataset.d ? "pending" : b.dataset.d;
+    d.description = "";
+    renderRows();
+  });
+  $("impRows").querySelectorAll("textarea").forEach((t) => t.onchange = () => {
+    const e = imp.entries.find((x) => x.tool === t.dataset.t), d = decisions[t.dataset.t];
+    const v = t.value.trim();
+    if (v && v !== e.description) { d.decision = "edit"; d.description = v; } else if (d.decision === "edit") { d.decision = "pending"; d.description = ""; }
+    renderFilter(); renderRows();
+  });
+  $("impRows").querySelectorAll("input[data-x]").forEach((c) => c.onchange = () => { decisions[c.dataset.x].exclude = c.checked; });
+}
+
+$("impSave").onclick = async () => {
+  const r = await post("/api/improve/review", { decisions, by: $("reviewer").value.trim() });
+  if (r.error) { $("impSaved").textContent = r.error; return; }
+  const c = r.review.counts;
+  $("impSaved").textContent = `Saved. ${c.accept || 0} accepted, ${c.reject || 0} rejected, ${c.edit || 0} edited.`;
+  loadImprove();
+};
 
 const LABELS = { url: ["URL", "https://your-server/mcp"], command: ["Command", "npx your-mcp-server"], openapi: ["Path to OpenAPI file", "api.json"] };
 const ENDPOINTS = {
   "openai-compatible": "https://openrouter.ai/api/v1",
-  anthropic: "empty for the Anthropic API",
+  anthropic: "Empty for the Anthropic API",
   "anthropic-foundry": "https://your-resource.services.ai.azure.com/anthropic",
   "azure-openai": "https://your-resource.openai.azure.com",
-  bedrock: "empty",
+  bedrock: "Empty",
 };
 function refreshSetup() {
   const [label, hint] = LABELS[$("server_kind").value];
   $("server_label").textContent = label;
   $("server_value").placeholder = hint;
-  $("base_url").placeholder = ENDPOINTS[$("provider").value];
+  $("base_url").placeholder = ENDPOINTS[$("provider").value] || "";
   $("api_version_box").hidden = $("provider").value !== "azure-openai";
 }
 $("server_kind").onchange = refreshSetup;
@@ -224,21 +408,21 @@ function setupForm() {
 function showSetup(html) { $("setupResult").hidden = false; $("setupResult").innerHTML = html; }
 
 $("test").onclick = async () => {
-  showSetup('<span class="muted">Testing</span>');
+  showSetup('<p class="muted">Testing</p>');
   const r = await post("/api/setup/test", setupForm());
-  if (r.error) return showSetup(`<span class="bad">${esc(r.error)}</span>`);
-  const t = r.tools.error ? `<span class="bad">Server: ${esc(r.tools.error)}</span>`
-    : `<span class="good">Server: ${r.tools.count} tools</span> <span class="muted">${esc(r.tools.names.join(", "))}</span>`;
-  const m = r.model.error ? `<span class="bad">Model: ${esc(r.model.error)}</span>`
-    : `<span class="good">Model replied ${esc(JSON.stringify(r.model.reply))}</span> <span class="muted">${r.model.tokens_in} tokens in, ${r.model.tokens_out} out</span>`;
-  showSetup(`<p style="margin:0 0 8px">${t}</p><p style="margin:0">${m}</p>`);
+  if (r.error) return showSetup(`<p>${esc(r.error)}</p>`);
+  const t = r.tools.error ? `<p>Server failed: ${esc(r.tools.error)}</p>`
+    : `<p>Server: ${r.tools.count} tools</p><p class="muted small">${esc(r.tools.names.join(", "))}</p>`;
+  const m = r.model.error ? `<p>Model failed: ${esc(r.model.error)}</p>`
+    : `<p>Model replied ${esc(JSON.stringify(r.model.reply))} <span class="muted small">${r.model.tokens_in} tokens in, ${r.model.tokens_out} out</span></p>`;
+  showSetup(t + m);
 };
 
 $("save").onclick = async () => {
   const r = await post("/api/setup/save", setupForm());
-  if (r.error) return showSetup(`<span class="bad">${esc(r.error)}</span>`);
-  const keys = r.env.length ? ` <span class="muted">keys in .env: ${esc(r.env.join(", "))}</span>` : "";
-  showSetup(`<span class="good">Saved ${esc(r.saved)}</span>${keys}`);
+  if (r.error) return showSetup(`<p>${esc(r.error)}</p>`);
+  const keys = r.env.length ? ` <span class="muted">Keys in .env: ${esc(r.env.join(", "))}</span>` : "";
+  showSetup(`<p>Saved ${esc(r.saved)}${keys}</p>`);
   $("models").innerHTML = "";
   $("report").src = "/report";
   $("server_token").value = "";
@@ -260,6 +444,7 @@ async function loadSetup() {
 
 loadSetup();
 show(location.hash.slice(1) || "results");
+phaseOpts();
 poll();
 </script>
 </body>
