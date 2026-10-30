@@ -488,6 +488,13 @@ async def build_entries(
     return out
 
 
+def leaves(e: BaseException) -> list[BaseException]:
+    """The underlying errors inside nested exception groups."""
+    if isinstance(e, BaseExceptionGroup):
+        return [x for sub in e.exceptions for x in leaves(sub)]
+    return [e]
+
+
 async def served(
     proj, server_py: Path, entries: list[dict], results: list[dict], held_by: dict[int, list[Request]], imp: Improver
 ) -> dict[str, Any]:
@@ -496,13 +503,14 @@ async def served(
     from misroute.config import ServerConfig
     from misroute.project import Project
 
-    cmd = ["uv", "run", "-q", "--with", f"fastmcp=={export.FASTMCP}", "--with", "pyyaml", "python", str(server_py)]
+    cmd = ["uv", "run", "-q", "--no-project", "--with", f"fastmcp=={export.FASTMCP}", "--with", "pyyaml"]
+    cmd += ["python", str(server_py)]
     cfg = proj.cfg.model_copy(update={"server": ServerConfig(command=cmd)})
     fm = Project(cfg, root=proj.store.root)
     try:
         served_tools = await fm.tools()
     except Exception as e:
-        return {"ok": False, "error": f"{type(e).__name__}: {e}"[:400]}
+        return {"ok": False, "error": "; ".join(f"{type(x).__name__}: {x}" for x in leaves(e))}
     want = {e["tool"]: e["description"] for e in entries}
     got = {t.name: t for t in served_tools}
     missing = sorted(set(want) - set(got))

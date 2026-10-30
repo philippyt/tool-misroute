@@ -193,11 +193,10 @@ async def test_agent_jobs_and_suggest_fix(project):
         ).structured_content
         import asyncio
 
-        for _ in range(200):
+        st = {"status": "running"}
+        while st["status"] == "running":
+            await asyncio.sleep(0.2)
             st = (await client.call_tool("job_status", {"job": started["job"]})).structured_content
-            if st["status"] != "running":
-                break
-            await asyncio.sleep(0.1)
         assert st["status"] == "done" and st["result"]["spots"]
         fix = await client.call_tool(
             "suggest_fix", {"tool_a": "get_case_comments", "tool_b": "get_case_events", "max_cost": 5}

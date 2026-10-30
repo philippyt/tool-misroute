@@ -8,6 +8,7 @@ on:
 jobs:
   check:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -24,4 +25,5 @@ jobs:
       - run: uv run ruff format --check
       - run: uv run ty check src
       - run: uv run pytest -q
+      - run: uv run -q --no-project --with fastmcp==4.1.4 --with pyyaml python -c "import fastmcp"
       - run: uv run pytest -q -m fastmcp
