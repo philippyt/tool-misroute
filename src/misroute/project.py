@@ -165,7 +165,8 @@ class Project:
         out: dict[str, list[Request]] = {}
         wanted = only or tools
         key = self.request_key
-        missing = [t for t in wanted if key(t) not in cached]
+        full = self.cfg.requests_per_tool * len(self.cfg.request_languages or ["en"])
+        missing = [t for t in wanted if len(cached.get(key(t)) or []) < full]
         fresh = await asyncio.gather(*(self.requests_for(t, tools) for t in missing))
         for t, reqs in zip(missing, fresh, strict=True):
             cached[key(t)] = [asdict(r) for r in reqs]

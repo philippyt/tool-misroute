@@ -85,3 +85,14 @@ async def test_spec_requests_in_two_languages(tmp_path):
     assert set(res["by_language"]) == {"en", "no"} and res["request_source"] == "spec"
     reqs = await project.request_set(await project.tools())
     assert {r.lang for rs in reqs.values() for r in rs} == {"en", "no"}
+
+
+async def test_short_request_sets_are_retried_on_the_next_run(tmp_path):
+    cfg = Config.model_validate(
+        {"server": {"tools": "x"}, "models": [{"name": "mock", "provider": "mock"}], "requests_per_tool": 2}
+    )
+    project = Project(cfg, root=tmp_path)
+    project.store.write("requests", {TOOL.name: []})
+    project._tools = [TOOL, OTHER]
+    found = await project.request_set([TOOL, OTHER], [TOOL])
+    assert found[TOOL.name]
