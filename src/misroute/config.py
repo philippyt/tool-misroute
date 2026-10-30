@@ -92,6 +92,8 @@ class Config(BaseModel):
         from misroute.models.presets import expand
 
         data = dict(data)
+        if isinstance(data.get("request_languages"), list):
+            data["request_languages"] = ["no" if x is False else x for x in data["request_languages"]]
         models = [expand(m) if isinstance(m, str) else m for m in data.get("models") or []]
         names = {m["name"] if isinstance(m, dict) else m.name for m in models}
         for role in ("generator", "validator", "writer"):

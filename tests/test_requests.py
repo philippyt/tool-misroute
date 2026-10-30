@@ -96,3 +96,10 @@ async def test_short_request_sets_are_retried_on_the_next_run(tmp_path):
     project._tools = [TOOL, OTHER]
     found = await project.request_set([TOOL, OTHER], [TOOL])
     assert found[TOOL.name]
+
+
+def test_yaml_no_is_norwegian_not_false():
+    import yaml
+
+    data = yaml.safe_load("server: {tools: x}\nmodels: [mock:m]\nrequest_languages: [no, en]\n")
+    assert Config.model_validate(data).request_languages == ["no", "en"]
