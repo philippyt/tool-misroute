@@ -86,10 +86,8 @@ code { font-size: 12px; }
       <p class="muted" id="key_note"></p>
       <label>Modes</label>
       <div class="checks"><label><input type="checkbox" class="smode" value="json" checked>json</label><label><input type="checkbox" class="smode" value="code">code</label></div>
-      <div class="checks" style="margin-top:8px"><label><input type="checkbox" id="no_temperature">model rejects a temperature setting, for example Opus</label></div>
       <button class="ghost" id="test">Test connection</button>
       <button class="primary" id="save">Save</button>
-      <p class="muted">Keys go to .env next to misroute.yaml, never into the YAML. Testing lists the server's tools for free and makes one small model call</p>
     </div>
     <div class="card" id="setupResult" hidden></div>
   </section>
@@ -219,7 +217,6 @@ const FIELDS = ["server_kind", "server_value", "server_token", "include_tools", 
 function setupForm() {
   const f = Object.fromEntries(FIELDS.map((id) => [id, $(id).value.trim()]));
   f.modes = [...document.querySelectorAll(".smode:checked")].map((i) => i.value);
-  f.no_temperature = $("no_temperature").checked;
   f.keep_token = true;
   return f;
 }

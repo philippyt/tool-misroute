@@ -54,3 +54,53 @@ def test_message_conversion():
         msgs, "sys"
     )
     assert o[0]["role"] == "system" and o[2]["tool_calls"][0]["id"] == "a1" and o[3]["tool_call_id"] == "a1"
+
+
+async def test_temperature_dropped_when_rejected():
+    import httpx2
+    import openai
+
+    calls = []
+
+    class Completions:
+        async def create(self, **kw):
+            calls.append(kw)
+            if "temperature" in kw:
+                request = httpx2.Request("POST", "http://x")
+                response = httpx2.Response(400, request=request)
+                raise openai.BadRequestError(
+                    "temperature is not supported for this model", response=response, body=None
+                )
+
+            class Msg:
+                content, tool_calls = "ok", None
+
+            class Choice:
+                message = Msg()
+
+            class Resp:
+                choices, usage = [Choice()], None
+
+            return Resp()
+
+    adapter = OpenAICompatAdapter(ModelConfig(name="o", provider="openai-compatible", base_url="http://x"))
+    adapter.client = type("C", (), {"chat": type("Ch", (), {"completions": Completions()})()})()
+    assert (await adapter.chat("hi", [])).text == "ok"
+    assert (await adapter.chat("hi", [])).text == "ok"
+    assert ["temperature" in c for c in calls] == [True, False, False]
+
+
+def test_azure_openai_client(monkeypatch):
+    from misroute.models import build
+
+    monkeypatch.setenv("AZ_KEY", "secret")
+    cfg = ModelConfig(
+        name="az",
+        provider="azure-openai",
+        model="gpt-deploy",
+        base_url="https://x.openai.azure.com",
+        api_key_env="AZ_KEY",
+        options={"api_version": "2024-10-21"},
+    )
+    client = build(cfg).client
+    assert type(client).__name__ == "AsyncAzureOpenAI" and "x.openai.azure.com" in str(client.base_url)

@@ -86,7 +86,14 @@ class OpenAICompatAdapter:
             kw["tools"] = to_openai(tools)
         if extra := self.cfg.options.get("extra"):
             kw["extra_body"] = extra
-        resp = await self.client.chat.completions.create(**kw)
+        try:
+            resp = await self.client.chat.completions.create(**kw)
+        except openai.BadRequestError as e:
+            if "temperature" not in kw or "temperature" not in str(e).lower():
+                raise
+            self.cfg.options["temperature"] = None
+            kw.pop("temperature")
+            resp = await self.client.chat.completions.create(**kw)
         msg = resp.choices[0].message
         calls = [Call(c.function.name, parse_args(c.function.arguments), c.id) for c in msg.tool_calls or []]
         text = msg.content or ""

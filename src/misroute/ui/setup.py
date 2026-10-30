@@ -37,8 +37,6 @@ def model_block(form: dict) -> dict[str, Any]:
     options: dict[str, Any] = {}
     if provider == "azure-openai" and form.get("api_version"):
         options["api_version"] = form["api_version"]
-    if form.get("no_temperature"):
-        options["temperature"] = None
     if options:
         out["options"] = options
     return out
