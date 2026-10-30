@@ -4,6 +4,7 @@ GOOD = "Written comments that caseworkers posted on a case. Not for timeline eve
 
 
 async def test_clause_on_confused_tool_is_better(project):
+    project.cfg.requests_per_tool = 16
     await project.discover(modes=["json"])
     res = await check(project, "get_case_comments", GOOD)
     assert res["neighbours"][0] == "get_case_events"

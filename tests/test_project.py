@@ -9,6 +9,7 @@ async def test_lint(project):
 
 
 async def test_discover_probe_fix_report(project, tmp_path):
+    project.cfg.requests_per_tool = 12
     res = await project.discover()
     pairs = {(s["a"], s["b"]): s for s in res["spots"]}
     assert ("get_case_comments", "get_case_events") in pairs

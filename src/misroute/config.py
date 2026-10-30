@@ -112,9 +112,48 @@ class Config(BaseModel):
         roles = {self.generator, self.validator, self.writer} - {None}
         return [m.name for m in self.models if m.name not in roles] or [m.name for m in self.models]
 
+    def role_warnings(self) -> list[str]:
+        """Roles played by a tested model or its family, which lets one model write, judge and pass its own test."""
+        tested = [self.model(n) for n in self.tested()]
+        out = []
+        for role in ("generator", "validator", "writer"):
+            rm = self.role(role)
+            for t in tested:
+                if rm.name == t.name:
+                    out.append(f"{role} is the model under test ({t.name}), set {role} to a model from another family")
+                elif family(rm) == family(t):
+                    out.append(f"{role} {rm.name} is the same family as the tested {t.name}, prefer another family")
+        return list(dict.fromkeys(out))
+
     def role(self, role: str) -> ModelConfig:
         name = getattr(self, role) or self.models[0].name
         return self.model(name)
+
+
+FAMILIES = (
+    ("claude", "anthropic"),
+    ("gpt", "openai"),
+    ("o1", "openai"),
+    ("o3", "openai"),
+    ("o4", "openai"),
+    ("gemini", "google"),
+    ("gemma", "google"),
+    ("deepseek", "deepseek"),
+    ("qwen", "qwen"),
+    ("llama", "meta"),
+    ("mistral", "mistral"),
+    ("mixtral", "mistral"),
+    ("grok", "xai"),
+    ("phi", "microsoft"),
+    ("command", "cohere"),
+)
+
+
+def family(m: ModelConfig) -> str:
+    if m.options.get("family"):
+        return str(m.options["family"])
+    model = m.model_id.lower()
+    return next((fam for key, fam in FAMILIES if key in model), m.provider)
 
 
 def env_path(config: str | Path) -> Path:

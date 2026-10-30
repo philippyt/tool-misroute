@@ -234,6 +234,7 @@ class Project:
             gate_failed=[list(g) for g in gated],
             removal={k: dict(v) for k, v in moved.items()},
             short=self.shortfall(reqs),
+            roles_warning=self.cfg.role_warnings(),
             untested=sorted(k for k, v in reqs.items() if not v),
             catalog=catalog_hash(tools),
             spent=self.budget.spent,
@@ -387,7 +388,13 @@ class Project:
         cat = catalog_hash(tools)
         run = self.store.run_id("fix", cat)
         self.store.save(run, "fix", cat, all_trials, {"models": models_, "modes": modes, "trials": trials})
-        result = {"run": run, "pairs": pair_rows, "across": summary, "spent": self.budget.spent}
+        result = {
+            "run": run,
+            "pairs": pair_rows,
+            "across": summary,
+            "spent": self.budget.spent,
+            "roles_warning": self.cfg.role_warnings(),
+        }
         self.store.write("fix", result)
         return result
 
@@ -402,7 +409,8 @@ class Project:
 
     def verdict(self, a, b, model, mode, cell, edits, gate_p, by) -> dict:
         err = {c: {t.key: t.error for t in cell if t.condition == c} for c in CONDS}
-        fixed, broke, p = stats.mcnemar(err["baseline"], err["clause"])
+        hedges = {c: {t.key: t.hedge for t in cell if t.condition == c} for c in ("baseline", "clause")}
+        test = stats.template_test(err["baseline"], err["clause"])
         return {
             "pair": f"{a}|{b}",
             "baseline_kind": edits["baseline_kind"],
@@ -413,9 +421,8 @@ class Project:
             "n": len(err["clause"]),
             "errors": {c: sum(v.values()) for c, v in err.items()},
             "flagged": sum(err["original"].values()) >= stats.FLAG_MIN_ERRORS,
-            "fixed": fixed,
-            "broke": broke,
-            "p": p,
+            **test,
+            "hedge_p": stats.template_test(hedges["baseline"], hedges["clause"])["p"],
             "directions": {c: confusion.directions([t for t in cell if t.condition == c], a, b) for c in CONDS},
             "leakage": {c: dict(confusion.leakage([t for t in cell if t.condition == c], a, b)) for c in CONDS},
             "edits": edits,
@@ -430,6 +437,8 @@ class Project:
             d = r["errors"]["clause"] - r["errors"]["baseline"]
             if not r["flagged"]:
                 r["verdict"] = "not flagged"
+            elif 0 < r["discordant_templates"] < stats.MIN_DISCORDANT_TEMPLATES:
+                r["verdict"] = f"too few request templates differ ({r['discordant_templates']}), run more requests"
             elif r.get("p_holm", 1) < 0.05:
                 r["verdict"] = "clause helps" if d < 0 else "clause hurts"
             else:

@@ -7,7 +7,6 @@ from misroute.server.catalog import Tool, replace_descriptions
 from misroute.trial import Request, Trial
 
 MAX_VERDICTS = 3
-MIN_DISCORDANT = 6
 
 
 def split(req: Request, salt: int) -> str:
@@ -34,13 +33,20 @@ def rates(trials: list[Trial], focus: set[str]) -> dict[str, Any]:
     }
 
 
-def decide(base: dict, prop: dict) -> tuple[str, str, int, int, float]:
-    fixed, broke, p = stats.mcnemar(base, prop)
-    if fixed + broke < MIN_DISCORDANT:
-        return "insufficient_data", f"{fixed + broke} discordant trials, need {MIN_DISCORDANT}", fixed, broke, p
-    if p >= 0.05:
-        return "no_difference", f"p {p:.3f}", fixed, broke, p
-    return ("better" if fixed > broke else "worse"), f"p {p:.3f}", fixed, broke, p
+def decide(base: dict, prop: dict) -> dict:
+    """Verdict on the request template level, with trial level counts and the effect size alongside."""
+    test = stats.template_test(base, prop)
+    n, p = test["discordant_templates"], test["p"]
+    if n == 0 and test["templates"] >= stats.MIN_DISCORDANT_TEMPLATES:
+        verdict, reason = "no_difference", f"no change on any of {test['templates']} templates"
+    elif n < stats.MIN_DISCORDANT_TEMPLATES:
+        verdict, reason = "insufficient_data", f"{n} request templates differ, need {stats.MIN_DISCORDANT_TEMPLATES}"
+    elif p >= 0.05:
+        verdict, reason = "no_difference", f"p {p:.3f} over {n} differing templates"
+    else:
+        verdict = "better" if test["diff"] < 0 else "worse"
+        reason = f"p {p:.3f} over {n} differing templates"
+    return {"verdict": verdict, "reason": reason, **test}
 
 
 async def check(
@@ -108,20 +114,17 @@ async def check(
         out[name] = res
         out[f"{name}_errors"] = errs
     if spent:
-        verdict, reason = "insufficient_data", f"held out set used for {MAX_VERDICTS} verdicts, rerun with refresh"
-        fixed = broke = 0
-        p = 1.0
-    else:
-        verdict, reason, fixed, broke, p = decide(
-            out["held_out_errors"]["baseline"], out["held_out_errors"]["proposed"]
-        )
-        vs_current = decide(out["held_out_errors"]["current"], out["held_out_errors"]["proposed"])
-        out["vs_current"] = {
-            "verdict": vs_current[0],
-            "fixed": vs_current[2],
-            "broke": vs_current[3],
-            "p": vs_current[4],
+        result: dict = {
+            "verdict": "insufficient_data",
+            "reason": f"held out set used for {MAX_VERDICTS} verdicts, rerun with refresh",
+            "fixed": 0,
+            "broke": 0,
+            "p": 1.0,
         }
+    else:
+        result = decide(out["held_out_errors"]["baseline"], out["held_out_errors"]["proposed"])
+        vs = decide(out["held_out_errors"]["current"], out["held_out_errors"]["proposed"])
+        out["vs_current"] = {k: vs[k] for k in ("verdict", "fixed", "broke", "p", "diff", "ci")}
         entry["verdicts"] += 1
     state[tool_name] = entry
     proj.store.write("checks", state)
@@ -129,17 +132,14 @@ async def check(
         out.pop(f"{name}_errors")
     held = out.get("held_out", {})
     out.update(
-        verdict=verdict,
-        reason=reason,
+        **result,
         held_out=not spent,
-        fixed=fixed,
-        broke=broke,
-        p=p,
         trials=held.get("proposed", {}).get("trials", 0),
         wrong_rate={c: v["wrong_rate"] for c, v in held.items()},
         hedge_rate={c: v["hedge_rate"] for c, v in held.items()},
         leakage=sorted({k for v in held.values() for k in v["leakage"]}),
         verdicts_left=max(MAX_VERDICTS - entry["verdicts"], 0),
+        roles_warning=proj.cfg.role_warnings(),
         round=entry["round"],
         cost_usd=round(proj.budget.spent - start, 4),
     )

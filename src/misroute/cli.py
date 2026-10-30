@@ -129,6 +129,15 @@ def run(opts: Opts, proj: Project, coro, total: int):
             fail(opts, str(e))
 
 
+def warned(res: dict, text):
+    def show() -> None:
+        text()
+        for w in res.get("roles_warning", []):
+            out.print(w, style="yellow")
+
+    return show
+
+
 def split(v: str | None) -> list[str] | None:
     return [x.strip() for x in v.split(",") if x.strip()] if v else None
 
@@ -424,7 +433,7 @@ def discover(
             )
         out.print(f"spent ${res['spent']:.2f}, results in {proj.store.root}")
 
-    emit(opts, res, text)
+    emit(opts, res, warned(res, text))
 
 
 @app.command()
@@ -511,7 +520,7 @@ def fix(
         if cheap:
             out.print("cheap mode, per pair numbers are indicative")
 
-    emit(opts, res, text, OK if any(r["flagged"] for r in res["pairs"]) else INSUFFICIENT)
+    emit(opts, res, warned(res, text), OK if any(r["flagged"] for r in res["pairs"]) else INSUFFICIENT)
 
 
 def check_code(verdict: str) -> int:
@@ -552,7 +561,7 @@ def check(
             out.print(f"  leakage to {', '.join(res['leakage'])}")
         out.print(f"  held out {res['held_out']}, verdicts left {res['verdicts_left']}, spent ${res['cost_usd']:.2f}")
 
-    emit(opts, res, text, check_code(res["verdict"]))
+    emit(opts, res, warned(res, text), check_code(res["verdict"]))
 
 
 @app.command()

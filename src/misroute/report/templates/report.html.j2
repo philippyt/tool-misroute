@@ -38,6 +38,7 @@ code { font-size: 12px; }
 {% endif %}
 
 {% if discover %}
+{% for w in discover.roles_warning or [] %}<p class="bad">{{ w }}</p>{% endfor %}
 <h2>Risky spots</h2>
 {% for u in discover.untested %}<p class="bad"><b>Untested {{ u }}</b>: the validator kept none of its requests, so a low score here does not clear it</p>{% endfor %}
 <table><tr><th>Pair</th><th>Score</th><th>Signals</th><th>Seen in</th><th>Note</th></tr>
