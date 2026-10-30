@@ -107,6 +107,15 @@ class Config(BaseModel):
         data["models"] = models
         return data
 
+    @model_validator(mode="after")
+    def _roles_exist(self):
+        names = [m.name for m in self.models]
+        for role in ("generator", "validator", "writer"):
+            value = getattr(self, role)
+            if value and value not in names:
+                raise ValueError(f"{role} {value} is not a configured model, models are {', '.join(names)}")
+        return self
+
     def model(self, name: str) -> ModelConfig:
         for m in self.models:
             if m.name == name:

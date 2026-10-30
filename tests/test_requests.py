@@ -103,3 +103,10 @@ def test_yaml_no_is_norwegian_not_false():
 
     data = yaml.safe_load("server: {tools: x}\nmodels: [mock:m]\nrequest_languages: [no, en]\n")
     assert Config.model_validate(data).request_languages == ["no", "en"]
+
+
+def test_role_must_name_a_configured_model():
+    import pytest
+
+    with pytest.raises(ValueError, match="not a configured model"):
+        Config.model_validate({"server": {"tools": "x"}, "models": ["mock:m"], "writer": "nope"})
