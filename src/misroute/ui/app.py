@@ -59,6 +59,7 @@ class Runner:
             self.state["spent"] = proj.budget.spent
 
         proj.progress = tick
+        proj.add_total = lambda n: self.state.update(total=self.state["total"] + n)
         phase, ms, md = body["phase"], body["models"], body["modes"]
         coro = {
             "lint": lambda: proj.lint(draft=True),

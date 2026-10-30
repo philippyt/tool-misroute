@@ -195,3 +195,23 @@ async def test_baseline_survives_a_writer_without_json():
 
     texts, kinds = await Improver(Proj(), [], []).baseline([tool], ["get_comments"], {"get_comments": "x" * 30})
     assert texts["get_comments"] and kinds["get_comments"].startswith("draft")
+
+
+def test_export_rule_needs_more_than_beating_a_weak_rewrite():
+    from misroute.improve.run import adjust
+
+    def test(verdict, p=0.01):
+        return {"verdict": verdict, "p": p}
+
+    def group(wb, wo, bo):
+        tests = {"winner_vs_baseline": wb, "winner_vs_original": wo, "baseline_vs_original": bo}
+        return {"winner": {"t": "new"}, "original": {"t": "old"}, "confirm": {"tests": tests}}
+
+    proven = group(test("better"), test("better"), test("no_difference", 0.5))
+    unproven = group(test("better"), test("no_difference", 0.3), test("worse"))
+    harmful = group(test("better"), test("worse"), test("worse"))
+    adjust([proven, unproven, harmful])
+    assert proven["export"] == "winner" and proven["beats_original"]
+    assert unproven["export"] == "winner" and not unproven["beats_original"]
+    assert "not shown better than the original" in unproven["why"]
+    assert harmful["export"] == "original" and "worse than the original" in harmful["why"]

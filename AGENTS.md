@@ -76,7 +76,7 @@ Each entry in `entries` has a `status`:
 
 | Status | Meaning |
 |---|---|
-| `tested` | the winner beat the baseline on held out requests |
+| `tested` | the winner beat a plain rewrite on held out requests and is not worse than the original. `beats_original` says whether it was also shown better than the original, report that separately |
 | `tested baseline` | only the baseline beat the original |
 | `kept` | no tested change beat the original |
 | `draft` | a weak tool outside any confused group, untested draft |

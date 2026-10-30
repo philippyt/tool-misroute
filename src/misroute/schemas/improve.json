@@ -239,6 +239,9 @@
         "type": "object"
        }
       }
+     },
+     "beats_original": {
+      "type": "boolean"
      }
     }
    }
@@ -299,6 +302,10 @@
       "items": {
        "type": "string"
       }
+     },
+     "beats_original": {
+      "type": "boolean",
+      "description": "the exported description was also shown better than the original"
      }
     }
    }

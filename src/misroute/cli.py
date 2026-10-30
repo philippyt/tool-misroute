@@ -121,16 +121,19 @@ def gate(opts: Opts, calls: int, cost: float, note: str = "") -> None:
 
 def run(opts: Opts, proj: Project, coro, total: int):
     if opts.progress == "ndjson" or (opts.json and opts.progress == "bar"):
-        state = {"done": 0, "at": 0.0}
+        state = {"done": 0, "at": 0.0, "total": total}
 
         def tick(n: int) -> None:
             state["done"] += n
             now = time.monotonic()
-            if opts.progress == "ndjson" and (now - state["at"] > 1 or state["done"] >= total):
+            if opts.progress == "ndjson" and (now - state["at"] > 1 or state["done"] >= state["total"]):
                 state["at"] = now
-                print(json.dumps({"event": "progress", "done": state["done"], "total": total}), file=sys.stderr)
+                print(
+                    json.dumps({"event": "progress", "done": state["done"], "total": state["total"]}), file=sys.stderr
+                )
 
         proj.progress = tick
+        proj.add_total = lambda n: state.update(total=state["total"] + n)
         try:
             return asyncio.run(coro)
         except BudgetExceeded as e:
@@ -138,6 +141,7 @@ def run(opts: Opts, proj: Project, coro, total: int):
     with Progress(console=err, transient=True, disable=opts.progress == "none") as bar:
         task = bar.add_task("running", total=total)
         proj.progress = lambda n: bar.advance(task, n)
+        proj.add_total = lambda n: bar.update(task, total=(bar.tasks[0].total or 0) + n)
         try:
             return asyncio.run(coro)
         except BudgetExceeded as e:

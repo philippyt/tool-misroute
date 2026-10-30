@@ -25,11 +25,13 @@ Operations it is confused with:
 
 Reply with JSON only: {{"candidates": [{{"style": "...", "text": "..."}}]}}"""
 
-FAITHFUL = """Does this description of an API operation claim anything its interface does not support, such as fields,
-filters, actions or data that are not there? Plain summaries and reasonable paraphrase are fine.
+FAITHFUL = """Does this description of an API operation claim anything that neither its interface nor its current
+documentation supports, such as fields, filters, actions or data that are not there? Plain summaries, reasonable
+paraphrase and facts taken from the current documentation are fine.
 
 Operation: {name}
 {view}
+Current documentation: {current}
 Description: {text}
 
 Reply with JSON only: {{"faithful": true, "reason": "..."}} or {{"faithful": false, "reason": "..."}}"""
@@ -70,7 +72,10 @@ async def write(
 async def faithful(validator, tool: Tool, text: str) -> tuple[bool, str]:
     try:
         data = parse_json(
-            await validator.complete(FAITHFUL.format(name=tool.name, view=view(tool), text=text), kind="faithful")
+            await validator.complete(
+                FAITHFUL.format(name=tool.name, view=view(tool), current=tool.description or "none", text=text),
+                kind="faithful",
+            )
         )
     except (ValueError, KeyError, TypeError):
         return True, "unchecked, the validator reply did not parse"

@@ -295,8 +295,9 @@ def beats(test: dict) -> bool:
 
 
 def adjust(found: list[dict]) -> None:
-    """Holm across groups for each comparison, then the export rule: the winner when it beats the baseline, else
-    the baseline when it beats the original, else keep the original."""
+    """Holm across groups for each comparison, then the export rule: the winner when it beats the baseline and
+    is not worse than the original, else the baseline when it beats the original, else keep the original.
+    beats_original records whether the exported text was also shown better than the original."""
     for name in ("winner_vs_baseline", "baseline_vs_original", "winner_vs_original"):
         ps = [g["confirm"]["tests"][name]["p"] for g in found]
         for g, p in zip(found, stats.holm(ps), strict=True):
@@ -305,14 +306,26 @@ def adjust(found: list[dict]) -> None:
         t = g["confirm"]["tests"]
 
         changed = g["winner"] != g["original"]
-        if changed and beats(t["winner_vs_baseline"]):
-            g["export"], g["why"] = "winner", "beats the baseline on held out requests"
+        worse = t["winner_vs_original"]["verdict"] == "worse" and t["winner_vs_original"]["p_holm"] < stats.ALPHA
+        if changed and beats(t["winner_vs_baseline"]) and not worse:
+            g["export"], g["beats_original"] = "winner", beats(t["winner_vs_original"])
+            g["why"] = (
+                "beats a plain rewrite and the original on held out requests"
+                if g["beats_original"]
+                else "beats a plain rewrite on held out requests, not shown better than the original"
+            )
         elif beats(t["baseline_vs_original"]):
-            g["export"], g["why"] = "baseline", "the baseline beats the original, the winner does not beat the baseline"
+            g["export"], g["beats_original"] = "baseline", True
+            g["why"] = "a plain rewrite beats the original, the winner does not beat the plain rewrite"
         else:
             x = t["winner_vs_baseline"]
-            g["export"] = "original"
-            g["why"] = x["reason"] if x["verdict"] == "insufficient_data" else "no tested change beats the original"
+            g["export"], g["beats_original"] = "original", False
+            if changed and beats(x) and worse:
+                g["why"] = "the winner beats a plain rewrite but is worse than the original"
+            elif x["verdict"] == "insufficient_data":
+                g["why"] = x["reason"]
+            else:
+                g["why"] = "no tested change beats the original"
 
 
 async def estimate(proj, models_: list[str], modes: list[str]) -> tuple[int, float]:
@@ -365,6 +378,7 @@ async def improve(
     domain = proj.domain()
     found_groups = groups(spots, n_groups)
     calls, cost = stage_cost(proj, found_groups, spots, models_, modes, len(imp.styles))
+    proj.add_total(calls)
     if proj.budget.spent + cost > proj.budget.limit:
         raise BudgetExceeded(
             f"discover found {len(found_groups)} groups, racing them needs about {calls} calls and ${cost:.2f}, "
@@ -453,6 +467,7 @@ async def build_entries(
             status = {"winner": "tested", "baseline": "tested baseline", "original": "kept"}[g["export"]]
             status = "kept" if text == g["original"][n] else status
             chosen[n] = {
+                "beats_original": g["beats_original"] and text != g["original"][n],
                 "description": text,
                 "status": status,
                 "reason": g["why"],

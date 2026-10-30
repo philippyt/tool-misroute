@@ -217,6 +217,7 @@ def create(proj: Project) -> MCPServer:
             job["done"] += n
 
         target.progress = tick
+        target.add_total = lambda n: job.update(total=job["total"] + n)
         runs = {
             "discover": lambda: proj.discover(models, modes),
             "probe": lambda: proj.probe(top, pairs, models, modes),

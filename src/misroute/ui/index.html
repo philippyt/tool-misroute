@@ -344,7 +344,8 @@ function row(e) {
   const d = decisions[e.tool];
   const edited = d.decision === "edit";
   const text = edited ? d.description : e.description;
-  const status = STATUS[edited ? "edited" : e.status] || e.status;
+  let status = STATUS[edited ? "edited" : e.status] || e.status;
+  if (!edited && e.status === "tested") status = e.beats_original ? "Tested, beat a plain rewrite and the original" : "Tested, beat a plain rewrite, not shown better than the original";
   const choice = (k, label) => `<button class="choice ${d.decision === k ? "on" : ""}" data-t="${esc(e.tool)}" data-d="${k}">${label}</button>`;
   const decide = changed(e) ? choice("accept", "Accept") + choice("reject", "Reject") : "";
   const hide = `<div class="checks"><label title="${esc(e.suggest_exclude || "")}"><input type="checkbox" data-x="${esc(e.tool)}" ${d.exclude ? "checked" : ""}>Hide from agents${e.suggest_exclude ? ", suggested" : ""}</label></div>`;

@@ -63,6 +63,7 @@ class Project:
         self._adapters: dict[str, Metered] = {}
         self._tools: list[Tool] | None = None
         self.progress: Progress = lambda n: None
+        self.add_total: Progress = lambda n: None
         self.rejected: dict[str, Counter] = {}
         self.unreadable: Counter = Counter()
 

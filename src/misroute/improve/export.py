@@ -99,6 +99,7 @@ def overlay(entries: list[dict], spec: str | None) -> dict[str, Any]:
             "description": e["description"],
             "original": e["original"],
             "status": e["status"],
+            "beats_original": bool(e.get("beats_original")),
             "reason": e["reason"],
             "read_only": e["read_only"],
             "destructive": e["destructive"],
