@@ -96,7 +96,15 @@ modes: [json, code]
 budget_usd: 5
 ```
 
-The generator writes test requests and the validator keeps only those it routes to the right tool. A model from another family than the one under test works best for both.
+The generator writes test requests and the validator keeps only those it routes to the right tool. Use a model from another family than the one under test for both, misroute warns when a role shares a family with a tested model.
+
+When the descriptions are the thing under test, or barely exist as in most Swagger files, write requests from the interface instead. With `request_source: spec` the generator and validator see the route, parameters and returned fields, never the descriptions. `domain` adds a short glossary, as text or a file, and `request_languages` writes requests in each listed language with results per language.
+
+```yaml
+request_source: spec
+request_languages: [en, no]
+domain: Municipal operations. A work order is a planned job, an incident is a reported fault.
+```
 
 ## Commands
 
@@ -130,7 +138,7 @@ Code mode runs each program in Monty against recorded fakes and reports faked to
 
 ## Fix and check
 
-`fix` writes one boundary sentence per tool and runs the original, a baseline and the clause on identical requests. The baseline is a neutral rewrite of the same length, or lint's drafted description when a tool has none. Verdicts use an exact McNemar test with Holm correction per pair and a sign flip test across pairs, and every result shows errors in both directions and leakage to other tools.
+`fix` writes one boundary sentence per tool and runs the original, a baseline and the clause on identical requests. The baseline is a neutral rewrite of the same length, or lint's drafted description when a tool has none. Trials from one request template fail together, so verdicts count templates, not trials: an exact sign flip test on per template error differences, with Holm correction across pairs. Fewer than six templates that differ gives no verdict. Every result also shows the error rate change with a 95% interval, a trial level mid p McNemar, errors in both directions and leakage to other tools.
 
 `check` tests one proposed description. It splits requests into a tuning set and a held out set, gives its verdict on the held out set only, and requires a fresh held out set after three verdicts on the same tool, so a description cannot be tuned to the test requests.
 

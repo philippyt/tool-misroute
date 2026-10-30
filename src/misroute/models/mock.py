@@ -127,7 +127,7 @@ class MockAdapter:
     async def complete(self, prompt: str, kind: str | None = None) -> str:
         field = dict(re.findall(r"^([A-Z][\w ]*): (.*)$", prompt, re.M))
         if kind in ("goal", "borrowed"):
-            own = sorted(bag(field.get("Description", "") + " " + field.get("Tool", "")))
+            own = sorted(bag(" ".join(field.get(k, "") for k in ("Description", "Tool", "Route", "Returns"))))
             extra = sorted(bag(field.get("Sibling", ""))) if kind == "borrowed" else []
             n = int(field.get("Count", 6))
             reqs = [

@@ -75,6 +75,24 @@ def test_openapi_tools(tmp_path):
     path = tmp_path / "spec.json"
     path.write_text(json.dumps(spec))
     by = {t.name: t for t in tools(path)}
-    assert by["Items_Get"].description == "GET /api/items/{id}" and by["Items_Get"].required == ["id"]
-    assert by["Items_Create"].is_write and by["Items_Create"].params["body"]["properties"]["name"]
+    assert by["Items_Get"].description == "Executes GET /api/items/{id}" and by["Items_Get"].required == ["id"]
+    assert by["Items_Get"].route == "GET /api/items/{id}" and by["Items_Get"].op_id == "Items_Get"
+    assert by["Items_Create"].is_write and by["Items_Create"].params["name"]
     assert not by["Items_GetAsGeoJson"].is_write
+
+
+def test_openapi_names_match_fastmcp():
+    from misroute.server.openapi import args, name_of, repair
+
+    assert name_of("post", "/x/y-z/{id}", {}) == "POST_xy_zid"
+    assert name_of("get", "/a", {"operationId": "Weird op.name-with Dashes!"}) == "Weird_op_name_with_Dashes"
+    assert len(name_of("get", "/a", {"operationId": "A" * 80})) == 56
+    body = {"content": {"application/json": {"schema": {"type": "object", "properties": {"id": {}, "a": {}}}}}}
+    op = {"parameters": [{"name": "id", "in": "path", "required": True}], "requestBody": body}
+    assert args({}, [], op) == {
+        "type": "object",
+        "properties": {"id__path": {"description": ""}, "id": {}, "a": {}},
+        "required": ["id__path"],
+    }
+    doc = {"components": {"securitySchemes": {"aad": {"flows": {"implicit": {"authorizationUrl": "x"}}}}}}
+    assert repair(doc) and doc["components"]["securitySchemes"]["aad"]["flows"]["implicit"]["scopes"] == {}

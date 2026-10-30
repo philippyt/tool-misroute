@@ -24,6 +24,22 @@ Progress = Callable[[int], None]
 CONDS = ("original", "baseline", "clause")
 
 
+def by_language(trials: list[Trial]) -> dict[str, dict[str, Any]]:
+    """Wrong and error rates per request language, empty when every request is in one language."""
+    langs = sorted({t.lang for t in trials})
+    if len(langs) < 2:
+        return {}
+    out = {}
+    for lang in langs:
+        ts = [t for t in trials if t.lang == lang]
+        out[lang] = {
+            "trials": len(ts),
+            "wrong_rate": sum(t.wrong for t in ts) / len(ts),
+            "error_rate": sum(t.error for t in ts) / len(ts),
+        }
+    return out
+
+
 def orders(tools: list[Tool], k: int) -> list[list[Tool]]:
     n = len(tools)
     out = []
@@ -106,17 +122,31 @@ class Project:
         self.store.write("lint", out)
         return out
 
+    def domain(self) -> str:
+        text = self.cfg.domain or ""
+        if text and len(text) < 260 and "\n" not in text and Path(text).is_file():
+            return Path(text).read_text(encoding="utf-8")
+        return text
+
     async def requests_for(
         self, tool: Tool, tools: list[Tool], sibling: Tool | None = None, seed: int = 0
     ) -> list[Request]:
+        """requests_per_tool validated requests in each configured language."""
+        langs = self.cfg.request_languages or ["en"]
+        found = await asyncio.gather(*(self.requests_in(tool, tools, sibling, seed, lang) for lang in langs))
+        return [r for rs in found for r in rs]
+
+    async def requests_in(
+        self, tool: Tool, tools: list[Tool], sibling: Tool | None, seed: int, lang: str
+    ) -> list[Request]:
         gen, val = self.role("generator"), self.role("validator")
-        n, kept = self.cfg.requests_per_tool, []
+        n, kept, src = self.cfg.requests_per_tool, [], self.cfg.request_source
         for attempt in range(seed * 10, seed * 10 + 3):
             try:
-                reqs = await generate.generate(gen, tool, n, self.cfg.slots, sibling, attempt)
+                reqs = await generate.generate(gen, tool, n, self.cfg.slots, sibling, attempt, src, lang, self.domain())
             except (ValueError, KeyError, TypeError):
                 continue
-            ok, picks = await validate.keep_valid(val, reqs, tools)
+            ok, picks = await validate.keep_valid(val, reqs, tools, src)
             self.rejected.setdefault(tool.name, Counter()).update(p or "(no tool)" for p in picks)
             kept += [r for r in ok if r.id not in {k.id for k in kept}]
             if len(kept) >= n:
@@ -127,17 +157,24 @@ class Project:
         cached = self.store.read("requests") or {}
         out: dict[str, list[Request]] = {}
         wanted = only or tools
-        missing = [t for t in wanted if t.name not in cached]
+        key = self.request_key
+        missing = [t for t in wanted if key(t) not in cached]
         fresh = await asyncio.gather(*(self.requests_for(t, tools) for t in missing))
         for t, reqs in zip(missing, fresh, strict=True):
-            cached[t.name] = [asdict(r) for r in reqs]
+            cached[key(t)] = [asdict(r) for r in reqs]
         self.store.write("requests", cached)
         for t in wanted:
-            out[t.name] = [Request(**r) for r in cached[t.name]]
+            out[t.name] = [Request(**r) for r in cached[key(t)]]
         if self.cfg.real_requests:
             for r in generate.load_real(self.cfg.real_requests, wanted):
                 out[r.tool].append(r)
         return out
+
+    def request_key(self, tool: Tool) -> str:
+        langs = self.cfg.request_languages or ["en"]
+        if self.cfg.request_source == "description" and langs == ["en"]:
+            return tool.name
+        return f"{tool.name}|{self.cfg.request_source}|{','.join(langs)}"
 
     async def run_trials(self, trials: list[Trial], tools_for: Callable[[Trial], list[Tool]]) -> list[Trial]:
         async with Sandbox() as box:
@@ -185,13 +222,15 @@ class Project:
                         for o in range(self.cfg.rotations):
                             slot, text = texts[o % len(texts)]
                             for rep in range(self.repeats(m, mode)):
-                                out.append(Trial(m, mode, r.tool, r.id, text, r.kind, slot, o, rep, "discover"))
+                                t = Trial(m, mode, r.tool, r.id, text, r.kind, slot, o, rep, "discover", lang=r.lang)
+                                out.append(t)
         return out
 
     async def discover_cost(self, models_: list[str], modes: list[str]) -> tuple[int, float]:
         tools = await self.tools()
-        per = len(tools) * self.cfg.requests_per_tool * self.cfg.rotations
-        gen = len(tools) * (1 + self.cfg.requests_per_tool)
+        langs = len(self.cfg.request_languages or ["en"])
+        per = len(tools) * self.cfg.requests_per_tool * self.cfg.rotations * langs
+        gen = len(tools) * (1 + self.cfg.requests_per_tool) * langs
         calls, cost = gen, self.estimate(gen, self.cfg.role("generator").name, [])
         for m in models_:
             for mode in modes:
@@ -235,6 +274,8 @@ class Project:
             removal={k: dict(v) for k, v in moved.items()},
             short=self.shortfall(reqs),
             roles_warning=self.cfg.role_warnings(),
+            request_source=self.cfg.request_source,
+            by_language=by_language(trials),
             untested=sorted(k for k, v in reqs.items() if not v),
             catalog=catalog_hash(tools),
             spent=self.budget.spent,
@@ -263,7 +304,11 @@ class Project:
             for name in cand:
                 for r in reqs.get(name, []):
                     slot, text = r.texts()[0]
-                    trials.append(Trial(m, "json", name, r.id, text, r.kind, slot, 0, 0, "removal", f"removed:{name}"))
+                    trials.append(
+                        Trial(
+                            m, "json", name, r.id, text, r.kind, slot, 0, 0, "removal", f"removed:{name}", lang=r.lang
+                        )
+                    )
         return await self.run_trials(trials, lambda t: [x for x in tools if x.name != t.target])
 
     def summarize(self, trials: list[Trial], tools: list[Tool], models_: list[str], modes: list[str]) -> dict:
@@ -313,7 +358,7 @@ class Project:
                 for r in reqs:
                     for slot, text in r.texts()[:slots]:
                         for o in range(2):
-                            out.append(Trial(m, mode, r.tool, r.id, text, r.kind, slot, o, 0, **kw))
+                            out.append(Trial(m, mode, r.tool, r.id, text, r.kind, slot, o, 0, lang=r.lang, **kw))
         return out
 
     async def probe(self, top: int = 5, pairs=None, models_=None, modes=None, slots: int = 2) -> dict:

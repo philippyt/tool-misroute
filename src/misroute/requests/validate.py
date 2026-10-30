@@ -1,5 +1,6 @@
 import random
 import re
+from misroute.requests.generate import brief
 from misroute.server.catalog import Tool
 from misroute.trial import Request
 
@@ -12,11 +13,12 @@ Request: {request}
 Reply with the tool name only."""
 
 
-async def pick(adapter, req: Request, tools: list[Tool], seed: int = 0) -> str | None:
-    """The tool the validator picks for the request, or None when its reply names no tool."""
+async def pick(adapter, req: Request, tools: list[Tool], seed: int = 0, source: str = "description") -> str | None:
+    """The tool the validator picks for the request, or None when its reply names no tool. With source spec it sees
+    each tool's interface instead of its description."""
     shuffled = tools[:]
     random.Random(f"{req.id}{seed}").shuffle(shuffled)
-    listing = "\n".join(f"- {t.name}: {t.description or 'no description'}" for t in shuffled)
+    listing = "\n".join(f"- {t.name}: {shown(t, source)}" for t in shuffled)
     text = req.texts()[0][1]
     reply = await adapter.complete(PROMPT.format(tools=listing, request=text), kind="validate", rep=seed)
     names = {t.name for t in tools}
@@ -24,11 +26,17 @@ async def pick(adapter, req: Request, tools: list[Tool], seed: int = 0) -> str |
     return found[0] if found else None
 
 
-async def keep_valid(adapter, reqs: list[Request], tools: list[Tool]) -> tuple[list[Request], list[str | None]]:
+def shown(tool: Tool, source: str) -> str:
+    return brief(tool) if source == "spec" else tool.description or "no description"
+
+
+async def keep_valid(
+    adapter, reqs: list[Request], tools: list[Tool], source: str = "description"
+) -> tuple[list[Request], list[str | None]]:
     """Requests the validator routes to their own tool, and the validator's pick for each rejected one."""
     ok, picks = [], []
     for r in reqs:
-        chosen = await pick(adapter, r, tools)
+        chosen = await pick(adapter, r, tools, source=source)
         if chosen == r.tool:
             ok.append(r)
         else:

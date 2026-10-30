@@ -10,6 +10,7 @@ class Request:
     slots: list[str]
     kind: str = "goal"
     sibling: str | None = None
+    lang: str = "en"
 
     def texts(self) -> list[tuple[str, str]]:
         if "{slot}" not in self.template or not self.slots:
@@ -37,6 +38,7 @@ class Trial:
     failure: str | None = None
     probs: dict[str, float] | None = None
     detail: str = ""
+    lang: str = "en"
 
     @property
     def picks(self) -> list[str]:

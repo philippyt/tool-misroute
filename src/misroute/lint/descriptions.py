@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from misroute.server.catalog import Tool, words
 
-PATH = re.compile(r"^\s*(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)?\s*/[\w{}\-./:]*\s*$", re.I)
+PATH = re.compile(r"^\s*(Executes\s+)?(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)?\s*/[\w{}\-./:]*\s*$", re.I)
 
 
 @dataclass

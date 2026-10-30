@@ -59,6 +59,45 @@
   },
   "cost_usd": {
    "type": "number"
+  },
+  "templates": {
+   "type": "integer",
+   "description": "request templates compared, the unit of the test"
+  },
+  "discordant_templates": {
+   "type": "integer"
+  },
+  "p": {
+   "type": "number",
+   "description": "exact two sided sign flip over per template differences"
+  },
+  "p_trial_midp": {
+   "type": "number",
+   "description": "trial level mid p McNemar, reported only"
+  },
+  "fixed": {
+   "type": "integer"
+  },
+  "broke": {
+   "type": "integer"
+  },
+  "diff": {
+   "type": "number",
+   "description": "error rate change, treatment minus baseline"
+  },
+  "ci": {
+   "type": "array",
+   "items": {
+    "type": "number"
+   },
+   "minItems": 2,
+   "maxItems": 2
+  },
+  "roles_warning": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
   }
  },
  "required": [

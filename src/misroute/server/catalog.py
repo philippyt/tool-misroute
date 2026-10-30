@@ -57,6 +57,8 @@ class Tool:
     output_schema: dict[str, Any] | None = None
     read_only: bool | None = None
     destructive: bool | None = None
+    route: str = ""
+    op_id: str = ""
 
     @property
     def is_write(self) -> bool:

@@ -148,6 +148,36 @@
   },
   "run": {
    "type": "string"
+  },
+  "roles_warning": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "request_source": {
+   "enum": [
+    "description",
+    "spec"
+   ]
+  },
+  "by_language": {
+   "type": "object",
+   "description": "Wrong and error rates per request language, empty with one language",
+   "additionalProperties": {
+    "type": "object",
+    "properties": {
+     "trials": {
+      "type": "integer"
+     },
+     "wrong_rate": {
+      "type": "number"
+     },
+     "error_rate": {
+      "type": "number"
+     }
+    }
+   }
   }
  },
  "required": [
