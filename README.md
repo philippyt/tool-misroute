@@ -84,6 +84,8 @@ Write models as `provider:model`:
 
 Prices come from the public OpenRouter catalog, cached for a week, and local models cost nothing. Set `price_in` and `price_out` to override. Every paid run shows an estimate first and stops at `budget_usd`. Behind a company TLS proxy, set `system_certs: true`.
 
+On a corporate machine three more things commonly bite. A custom pip index hides misroute: install with `pip install misroute --index-url https://pypi.org/simple/`. A TLS-inspecting proxy breaks every HTTPS call until `system_certs: true` (or `MISROUTE_SYSTEM_CERTS=1`) is set. And an internal OpenAI-compatible relay is a plain `openai-compatible` model with `base_url` and `api_key_env` pointing at it - do not use the `openai:` shorthand for a non-OpenAI endpoint, the key will be sent to api.openai.com and refused there.
+
 ```yaml
 server:
   url: https://your-server/mcp
@@ -142,6 +144,8 @@ Code mode runs each program in Monty against recorded fakes and reports faked to
 ## Fix and check
 
 `fix` writes one boundary sentence per tool and runs the original, a baseline and the clause on identical requests. The baseline is a neutral rewrite of the same length, or lint's drafted description when a tool has none. Trials from one request template fail together, so verdicts count templates, not trials: an exact sign flip test on per template error differences, with Holm correction across pairs. Below the number of differing templates an exact sign flip test needs to reach p below 0.05, which is six, there is no verdict. Every result also shows the error rate change with a 95% interval, a trial level mid p McNemar, errors in both directions and leakage to other tools.
+
+The verdict answers the deploy question, not only the methodology question. Beating the baseline proves the clause's content matters beyond a same-length edit; `deploy` additionally requires the clause to beat the original description (`vs_original` in the JSON). A clause that beats the baseline while losing to the original reads `do not deploy`: the current text is load bearing and the clause adds nothing on top. That happens on long descriptions, where one appended sentence drowns - fix warns when a description is more than five times the clause and suggests `improve` for a full rewrite.
 
 `check` tests one proposed description. It splits requests into a tuning set and a held out set, gives its verdict on the held out set only, and multiplies each verdict's p value by the number of verdicts that held out set has already given, so tuning a description against the same requests costs power. `--refresh` draws a fresh set.
 

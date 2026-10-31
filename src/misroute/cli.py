@@ -16,8 +16,6 @@ from rich.table import Table
 from misroute import export, mcpconfig
 from misroute.config import Config, env_path, write_env
 from misroute.doctor import system_certs
-from misroute.fix.stats import ALPHA
-from misroute.fix.stats import MIN_PAIRS_SIGNFLIP as MIN_PAIRS
 from misroute.models.base import BudgetExceeded
 from misroute.models.presets import detect
 from misroute.project import Project
@@ -544,10 +542,19 @@ def fix(
     max_cost: MaxCost = None,
     estimate_only: EstimateOnly = False,
     progress: ProgressMode = "bar",
+    strict_roles: Annotated[
+        bool, typer.Option("--strict-roles", help="refuse to run when a role shares a family with a tested model")
+    ] = False,
 ) -> None:
     """Test a boundary clause against a neutral edit or a drafted description"""
     opts = Opts("fix", json_, yes, max_cost, estimate_only, progress)
     proj = load(opts, config)
+    # In fix the writer authors the clause under test and the validator keeps
+    # the requests it is tested on, so same-family roles make the result
+    # circular rather than merely biased.
+    if strict_roles and proj.cfg.role_warnings():
+        fail(opts, "; ".join(proj.cfg.role_warnings()))
+        return
     ms = split(models) or proj.cfg.tested()
     md = split(modes) or list(proj.cfg.modes)
     calls, cost = asyncio.run(proj.cost("fix", ms, md, top, pairs(pair), trials))
@@ -555,7 +562,9 @@ def fix(
     res = run(opts, proj, proj.fix(top, pairs(pair), ms, md, trials), calls)
 
     def text() -> None:
-        t = table("tool", "sibling", "model", "mode", "original", "baseline", "with clause", "p", "verdict")
+        t = table(
+            "tool", "sibling", "model", "mode", "original", "baseline", "with clause", "vs original", "p", "verdict"
+        )
         for r in res["pairs"]:
             e, p = r["errors"], r.get("p_holm")
             t.add_row(
@@ -565,15 +574,25 @@ def fix(
                 str(e["original"]),
                 f"{e['baseline']} {r['baseline_kind']}",
                 str(e["clause"]),
+                f"{e['clause'] - e['original']:+d} (p {r['vs_original']['p']:.3f})",
                 "" if p is None else f"{p:.3f}",
                 r["verdict"],
             )
         out.print(t)
+        for pair_name, ratio in sorted({(r["pair"], r["edits"].get("host_ratio", 0)) for r in res["pairs"]}):
+            if ratio > 5:
+                out.print(
+                    f"{pair_name}: a description is {ratio:.0f}x the clause, one appended sentence may drown; "
+                    "consider improve for a full rewrite",
+                    style="yellow",
+                )
+        # below the pair minimum the across-pairs sign flip cannot reach
+        # significance; printing its p reads as a failed result instead of an
+        # inapplicable one
         for a in res["across"]:
-            note = f"  under {MIN_PAIRS} pairs, cannot reach p below {ALPHA}" if a["underpowered"] else ""
-            out.print(
-                f"{a['model']} {a['mode']}  {a['pairs']} flagged  mean {a['mean_diff']:+.2f}  p {a['p']:.3f}{note}"
-            )
+            if a["underpowered"]:
+                continue
+            out.print(f"{a['model']} {a['mode']}  {a['pairs']} flagged  mean {a['mean_diff']:+.2f}  p {a['p']:.3f}")
 
     emit(opts, res, warned(res, text), OK if any(r["flagged"] for r in res["pairs"]) else INSUFFICIENT)
 
@@ -680,6 +699,9 @@ def improve(
     drafts: Annotated[
         bool, typer.Option(help="draft descriptions for weak tools outside any group", rich_help_panel=ADVANCED)
     ] = True,
+    strict_roles: Annotated[
+        bool, typer.Option("--strict-roles", help="refuse to run when a role shares a family with a tested model")
+    ] = False,
 ) -> None:
     """Write, race and confirm new descriptions for confused tools, then export them for review"""
     from misroute.config import ServerConfig
@@ -711,6 +733,11 @@ def improve(
         return
     if fastmcp and not cfg.server.openapi:
         fail(opts, "--fastmcp needs an OpenAPI or Swagger source")
+    # improve's candidates are written and judged by the roles, so same-family
+    # roles let a model pass its own descriptions
+    if strict_roles and cfg.role_warnings():
+        fail(opts, "; ".join(cfg.role_warnings()))
+        return
     if max_cost is not None:
         cfg.budget_usd = min(cfg.budget_usd, max_cost)
     proj = Project(cfg, root=config.parent / cfg.workdir)

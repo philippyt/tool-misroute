@@ -29,13 +29,14 @@ async def test_discover_probe_fix_report(project, tmp_path):
     fix = await project.fix(pairs=[("get_case_comments", "get_case_events"), ("update_case", "update_case_meta")])
     verdicts = {(r["pair"], r["mode"]): r for r in fix["pairs"]}
     good = verdicts[("get_case_comments|get_case_events", "json")]
-    assert good["flagged"] and good["verdict"] == "clause helps" and good["baseline_kind"] == "neutral"
+    assert good["flagged"] and good["verdict"].startswith("deploy") and good["baseline_kind"] == "neutral"
     assert good["errors"]["clause"] < good["errors"]["baseline"]
+    assert good["vs_original"]["p"] < 0.05 and good["errors"]["clause"] < good["errors"]["original"]
     assert verdicts[("update_case|update_case_meta", "json")]["verdict"].startswith("no difference")
     assert all(a["underpowered"] for a in fix["across"])
 
     html = render(project.store, tmp_path / "report.html").read_text(encoding="utf-8")
-    assert "clause helps" in html and "get_case_events" in html
+    assert "deploy" in html and "get_case_events" in html
 
 
 async def test_ci_limits(project):
@@ -56,6 +57,31 @@ def test_stale_results_are_skipped(project, tmp_path):
     (project.store.root / "fix.json").write_text('{"pairs": [{"errors": {"sham": 1}}]}')
     assert project.store.read("fix") is None and project.store.stale() == ["fix"]
     assert "older version" in render(project.store, tmp_path / "r.html").read_text(encoding="utf-8")
+
+
+def test_verdict_answers_the_deploy_question():
+    """The Atlas regression case: original 37, neutral baseline 58, clause 40 over 96 trials. Beating the
+    baseline proves the content matters; losing to the original means do not deploy."""
+    from misroute.project import Project
+
+    def errors(n_bad: int, n: int = 96) -> dict:
+        return {("m", "json", f"t{i % 24}", i // 24, 0, 0): i < n_bad for i in range(n)}
+
+    def row(original: int, clause: int) -> dict:
+        from misroute.fix.stats import template_test
+
+        base, cl, orig = errors(58), errors(clause), errors(original)
+        return {
+            "errors": {"original": original, "baseline": 58, "clause": clause},
+            "flagged": True,
+            **template_test(base, cl),
+            "vs_original": template_test(orig, cl),
+        }
+
+    atlas, winner = row(37, 40), row(58, 37)
+    Project.adjust([atlas, winner])
+    assert atlas["verdict"].startswith("do not deploy")
+    assert winner["verdict"].startswith("deploy")
 
 
 async def test_untested_tool_is_marked(project):

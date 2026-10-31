@@ -22,7 +22,8 @@
      "errors",
      "verdict",
      "flagged",
-     "n"
+     "n",
+     "vs_original"
     ],
     "properties": {
      "pair": {
@@ -80,6 +81,13 @@
      },
      "hedge_p": {
       "type": "number"
+     },
+     "vs_original": {
+      "type": "object",
+      "description": "template test of the clause against the original description, the deploy comparison"
+     },
+     "edits": {
+      "type": "object"
      }
     }
    }
