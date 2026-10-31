@@ -291,6 +291,7 @@ class Project:
         result = self.summarize(trials, tools, models_, modes)
         result.update(
             spots=[s.to_json() for s in spots],
+            unrouted=codemode.unrouted(trials),
             noise=noise,
             near_misses=[{"where": w, **asdict(n)} for w, n in near],
             gate_failed=[list(g) for g in gated],
