@@ -488,6 +488,10 @@ class Project:
         err = {c: {t.key: t.error for t in cell if t.condition == c} for c in CONDS}
         hedges = {c: {t.key: t.hedge for t in cell if t.condition == c} for c in ("baseline", "clause")}
         test = stats.template_test(err["baseline"], err["clause"])
+        # The baseline test asks whether the clause's content matters beyond a
+        # same-length edit. The deploy decision is a different question: is the
+        # clause better than the description running now?
+        vs_original = stats.template_test(err["original"], err["clause"])
         return {
             "pair": f"{a}|{b}",
             "baseline_kind": edits["baseline_kind"],
@@ -499,6 +503,7 @@ class Project:
             "errors": {c: sum(v.values()) for c, v in err.items()},
             "flagged": sum(err["original"].values()) >= stats.FLAG_MIN_ERRORS,
             **test,
+            "vs_original": vs_original,
             "hedge_p": stats.template_test(hedges["baseline"], hedges["clause"])["p"],
             "directions": {c: confusion.directions([t for t in cell if t.condition == c], a, b) for c in CONDS},
             "leakage": {c: dict(confusion.leakage([t for t in cell if t.condition == c], a, b)) for c in CONDS},
@@ -507,17 +512,28 @@ class Project:
 
     @staticmethod
     def adjust(rows: list[dict]) -> None:
+        """Verdicts answer the deploy question. Beating the baseline proves the clause's content matters;
+        only beating the original too makes it worth shipping. A clause that beats the baseline while the
+        original beats them both means the content is load bearing but the clause adds nothing on top."""
         flagged = [r for r in rows if r["flagged"]]
         for r, ph in zip(flagged, stats.holm([r["p"] for r in flagged]), strict=True):
             r["p_holm"] = ph
         for r in rows:
             d = r["errors"]["clause"] - r["errors"]["baseline"]
+            d_orig = r["errors"]["clause"] - r["errors"]["original"]
+            beats_original = d_orig < 0 and r["vs_original"]["p"] < 0.05
             if not r["flagged"]:
                 r["verdict"] = "not flagged"
             elif 0 < r["discordant_templates"] < stats.MIN_DISCORDANT_TEMPLATES:
                 r["verdict"] = f"too few request templates differ ({r['discordant_templates']}), run more requests"
+            elif r.get("p_holm", 1) < 0.05 and d < 0:
+                r["verdict"] = (
+                    "deploy: clause beats the baseline and the original"
+                    if beats_original
+                    else "do not deploy: content matters but the clause does not beat the original description"
+                )
             elif r.get("p_holm", 1) < 0.05:
-                r["verdict"] = "clause helps" if d < 0 else "clause hurts"
+                r["verdict"] = "clause hurts"
             else:
                 r["verdict"] = "no difference, consider a guard rule or merging the tools"
 

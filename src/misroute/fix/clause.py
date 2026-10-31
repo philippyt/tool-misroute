@@ -36,8 +36,11 @@ async def write(writer, a: Tool, b: Tool, drafts: dict[str, str] | None = None) 
         await writer.complete(CLAUSE.format(a_name=a.name, a=base[a.name], b_name=b.name, b=base[b.name]), "clause")
     )
     clause = {a.name: joined(base[a.name], data["a"]), b.name: joined(base[b.name], data["b"])}
+    # One sentence appended to a description many times its size tends to drown:
+    # the ratio lets callers warn that a full rewrite (improve) is the better tool.
+    ratio = max(len(base[t.name]) / max(len(str(s).strip()), 1) for t, s in ((a, data["a"]), (b, data["b"])))
     if drafts:
-        return {"clause": clause, "baseline": base, "baseline_kind": "description"}
+        return {"clause": clause, "baseline": base, "baseline_kind": "description", "host_ratio": ratio}
     prompt = NEUTRAL.format(
         a_name=a.name,
         a_params=", ".join(a.params),
@@ -63,7 +66,7 @@ async def write(writer, a: Tool, b: Tool, drafts: dict[str, str] | None = None) 
     if not all(best.values()):
         raise ValueError("writer returned no usable neutral edit")
     baseline = {k: fit(v, len(clause[k])) for k, v in best.items()}
-    return {"clause": clause, "baseline": baseline, "baseline_kind": "neutral"}
+    return {"clause": clause, "baseline": baseline, "baseline_kind": "neutral", "host_ratio": ratio}
 
 
 NEUTRAL_ONE = """Rewrite this tool description so it reads more clearly, with the same meaning, in at least {n}
