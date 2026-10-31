@@ -20,6 +20,7 @@ class Spot:
     thin: bool = False
     directions: dict[str, int] = field(default_factory=dict)
     where: set[str] = field(default_factory=set)
+    counts: dict[str, tuple[int, int]] = field(default_factory=dict)
 
     @property
     def pair(self) -> str:
@@ -28,7 +29,23 @@ class Spot:
     def to_json(self) -> dict:
         d = asdict(self)
         d["where"] = sorted(self.where)
+        d.pop("counts")
+        # the interval belongs to the signal the score came from, which is the
+        # larger of wrong and hedge; removal has no trial count behind it
+        top = max(self.counts, key=lambda k: self.signals.get(k, 0), default=None)
+        k, n = self.counts.get(top, (0, 0))
+        d["ci95"] = list(wilson(k, n))
         return d
+
+
+def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
+    """Wilson 95% interval for k of n, so a score carries how little a thin sample pins it down."""
+    if n == 0:
+        return 0.0, 1.0
+    p, z2 = k / n, z * z
+    mid = (p + z2 / (2 * n)) / (1 + z2 / n)
+    half = z * ((p * (1 - p) / n + z2 / (4 * n * n)) ** 0.5) / (1 + z2 / n)
+    return max(0.0, mid - half), min(1.0, mid + half)
 
 
 def rank(
@@ -57,14 +74,19 @@ def rank(
         n = {k[2]: v for k, v in per_target.items() if k[:2] == (model, mode)}
         for (target, chosen), c in wrong_pairs(ts).items():
             s = spot(target, chosen)
-            s.signals["wrong"] = max(s.signals.get("wrong", 0), c / n[target])
+            if c / n[target] > s.signals.get("wrong", 0):
+                s.signals["wrong"] = c / n[target]
+                s.counts["wrong"] = (c, n[target])
             key = f"{target}>{chosen}"
             s.directions[key] = s.directions.get(key, 0) + c
             cell[(s.pair, where)] += c
             s.where.add(where)
         for (a, b), c in co_calls(ts).items():
             s = spot(a, b)
-            s.signals["hedge"] = max(s.signals.get("hedge", 0), c / max(n.get(a, 0) + n.get(b, 0), 1))
+            nn = max(n.get(a, 0) + n.get(b, 0), 1)
+            if c / nn > s.signals.get("hedge", 0):
+                s.signals["hedge"] = c / nn
+                s.counts["hedge"] = (c, nn)
             cell[(s.pair, where)] += c
             s.where.add(where)
     for tool, dest in removal.items():

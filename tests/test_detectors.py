@@ -81,3 +81,36 @@ def test_unknown_and_removed_tools_are_not_pairs():
     moved = neighbours([gone])
     assert moved == {"a": {REMOVED: 1}}
     assert rank([made_up], moved, set()) == []
+
+
+def test_unrouted_ranks_no_tool_call_per_tool():
+    from misroute.detectors.codemode import unrouted
+
+    quiet = [t("a", [], rid=f"q{i}") for i in range(3)]
+    for x in quiet:
+        x.failure = "no_tool_call"
+    fine = [t("a", ["a"], rid="f0"), t("b", ["b"], rid="f1")]
+    rows = unrouted(quiet + fine)
+    assert [r["tool"] for r in rows] == ["a"]
+    assert rows[0]["rate"] == 3 / 4 and rows[0]["count"] == 3 and rows[0]["trials"] == 4
+    assert rows[0]["where"] == ["m json"] and rows[0]["example"] == "x"
+
+
+def test_spot_ci_follows_the_scoring_signal():
+    from misroute.detectors.rank import rank, wilson
+
+    wrongs = [t("a", ["b"], rid=f"w{i}") for i in range(3)] + [t("a", ["a"], rid="w3")]
+    s = rank(wrongs, {}, set())[0]
+    assert s.score == 0.75 and s.counts["wrong"] == (3, 4)
+    assert s.to_json()["ci95"] == list(wilson(3, 4))
+    lo, hi = s.to_json()["ci95"]
+    assert lo < 0.75 < hi
+
+
+def test_wilson_widens_on_thin_samples():
+    from misroute.detectors.rank import wilson
+
+    lo_thin, hi_thin = wilson(1, 4)
+    lo_fat, hi_fat = wilson(24, 96)
+    assert hi_thin - lo_thin > hi_fat - lo_fat
+    assert wilson(0, 0) == (0.0, 1.0)
