@@ -1,6 +1,6 @@
 [project]
 name = "misroute"
-version = "0.3.0"
+version = "0.3.1"
 description = "Find the tools your agent confuses and test whether a fix helps, against a neutral edit"
 authors = [
     { name = "philippyt", email = "philipaha@proton.me" }
