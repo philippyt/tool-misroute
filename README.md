@@ -97,6 +97,8 @@ budget_usd: 5
 
 The generator writes test requests and the validator keeps only those it routes to the right tool. Use a model from another family than the one under test for both, misroute warns when a role shares a family with a tested model.
 
+Sampling defaults are `requests_per_tool: 6`, `rotations: 3` and `repeats: 2`, about 36 trials per tool per model and mode. Every score carries a Wilson 95% interval, so a rate from a thin sample shows how little it is pinned down. `misroute quick` caps rotations at 2 and repeats at 1 to stay cheap, treat its scores as leads for a full `discover` rather than measurements.
+
 When the descriptions are the thing under test, or barely exist as in most Swagger files, write requests from the interface instead. With `request_source: spec` the generator and validator see the route, parameters and returned fields, never the descriptions. `domain` adds a short glossary, as text or a file, and `request_languages` writes requests in each listed language with results per language.
 
 ```yaml

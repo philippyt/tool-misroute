@@ -272,6 +272,10 @@ def quick(
         note.print(f"wrote {config}", style="dim")
     proj = load(opts, config)
     proj.cfg.modes = [m for m in split(modes) or ["json"] if m in ("json", "code")]  # type: ignore[assignment]
+    # quick trades power for price: fewer rotations and single repeats keep the
+    # capped run cheap. Plain discover keeps the powered defaults.
+    proj.cfg.rotations = min(proj.cfg.rotations, 2)
+    proj.cfg.repeats = 1
     lint_res = asyncio.run(proj.lint(False))
     calls, cost = asyncio.run(proj.discover_cost(proj.cfg.tested(), list(proj.cfg.modes)))
     gate(opts, calls, cost)
@@ -428,7 +432,7 @@ def discover(
     res = run(opts, proj, proj.discover(ms, md), calls)
 
     def text() -> None:
-        t = table("tool", "sibling", "score", "signals", "direction", "seen in", "note")
+        t = table("tool", "sibling", "score", "95% ci", "signals", "direction", "seen in", "note")
         for s in res["spots"][:15]:
             sig = "  ".join(f"{k} {v:.2f}" for k, v in s["signals"].items())
             d = s["directions"]
@@ -436,8 +440,14 @@ def discover(
             gone = [x for x in (s["a"], s["b"]) if x in res["untested"]]
             flags = (("gate failed", s["gate_failed"]), ("few requests", s["thin"] and not gone))
             note = ", ".join([*(f"UNTESTED {x}" for x in gone), *(x for x, on in flags if on)])
-            row = (s["a"], s["b"], f"{s['score']:.2f}", sig, dirs, ", ".join(s["where"]), note)
+            lo, hi = s["ci95"]
+            row = (s["a"], s["b"], f"{s['score']:.2f}", f"{lo:.2f}-{hi:.2f}", sig, dirs, ", ".join(s["where"]), note)
             t.add_row(*row, style="red" if s["write"] else "")
+        for u in res["unrouted"]:
+            if not any(u["tool"] in (s["a"], s["b"]) for s in res["spots"]) or u["rate"] >= 0.2:
+                row = (u["tool"], "(no tool called)", f"{u['rate']:.2f}", f"{u['count']} of {u['trials']}", "unrouted",
+                       "", ", ".join(u["where"]), "")
+                t.add_row(*row, style="yellow")
         out.print(t)
         for tool in res["untested"]:
             out.print(
@@ -445,11 +455,18 @@ def discover(
                 "Its scores only count other tools' requests landing on it, a low score does not clear it",
                 style="bold red",
             )
-        for c in res["cells"]:
-            for tool, rate in c.get("unanswered", {}).items():
-                out.print(f"{c['model']} {c['mode']}: {tool} answered without a tool call in {rate:.0%} of trials")
+        for u in res["unrouted"]:
+            out.print(
+                f"{u['tool']}: {u['rate']:.0%} of its requests ended with no tool call ({u['count']} of "
+                f"{u['trials']}, {', '.join(u['where'])}), e.g. {u['example']!r}",
+                style="yellow",
+            )
         if res["gate_failed"]:
-            out.print(f"{len(res['gate_failed'])} tool pairs have request sets that surface words can tell apart")
+            out.print(
+                f"{len(res['gate_failed'])} tool pairs have request sets that surface words can tell apart. "
+                "Their spots stay in the ranking marked 'gate failed': the rate is real model behaviour, but "
+                "surface cues may have helped or hurt it, so confirm with probe or real_requests before acting"
+            )
         if res["near_misses"]:
             out.print("near misses, unvalidated, not in the ranking", style="dim")
             for n in res["near_misses"][:10]:

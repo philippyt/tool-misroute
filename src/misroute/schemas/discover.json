@@ -83,7 +83,8 @@
      "gate_failed",
      "thin",
      "directions",
-     "where"
+     "where",
+     "ci95"
     ],
     "properties": {
      "a": {
@@ -129,6 +130,15 @@
      "flagged": {
       "type": "boolean",
       "description": "errors at least 6, the thesis flag rule"
+     },
+     "ci95": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "Wilson 95% interval for the signal the score came from"
      }
     }
    }
@@ -201,6 +211,44 @@
      },
      "error_rate": {
       "type": "number"
+     }
+    }
+   }
+  },
+  "unrouted": {
+   "type": "array",
+   "description": "Tools whose requests ended with no tool call, ranked by rate",
+   "items": {
+    "type": "object",
+    "required": [
+     "tool",
+     "rate",
+     "count",
+     "trials",
+     "where",
+     "example"
+    ],
+    "properties": {
+     "tool": {
+      "type": "string"
+     },
+     "rate": {
+      "type": "number"
+     },
+     "count": {
+      "type": "integer"
+     },
+     "trials": {
+      "type": "integer"
+     },
+     "where": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "example": {
+      "type": "string"
      }
     }
    }

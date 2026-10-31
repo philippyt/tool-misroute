@@ -67,3 +67,28 @@ def unanswered(trials: list) -> dict[str, float]:
         by.setdefault(t.target, []).append(t.failure in ("no_tool_call", "no_code"))
     rates = {k: sum(v) / len(v) for k, v in by.items() if v and any(v)}
     return dict(sorted(rates.items(), key=lambda kv: -kv[1]))
+
+
+def unrouted(trials: list) -> list[dict]:
+    """Per tool rows for requests that ended with no tool call at all. A tool whose requests the model answers
+    from prose fails routing as surely as one whose requests land on a sibling, so these rank with the pair
+    spots instead of trailing them as a footnote."""
+    by: dict[str, list] = {}
+    for t in trials:
+        by.setdefault(t.target, []).append(t)
+    out = []
+    for tool, ts in by.items():
+        hits = [t for t in ts if t.failure in ("no_tool_call", "no_code")]
+        if not hits:
+            continue
+        out.append(
+            {
+                "tool": tool,
+                "rate": len(hits) / len(ts),
+                "count": len(hits),
+                "trials": len(ts),
+                "where": sorted({f"{t.model} {t.mode}" for t in hits}),
+                "example": min((t.text for t in hits), key=len),
+            }
+        )
+    return sorted(out, key=lambda r: -r["rate"])
