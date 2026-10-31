@@ -72,8 +72,8 @@ class Config(BaseModel):
     writer: str | None = None
     requests_per_tool: int = 6
     slots: int = 4
-    rotations: int = 2
-    repeats: int = 1
+    rotations: int = 3
+    repeats: int = 2
     max_turns: int = 1
     real_requests: str | None = None
     request_source: Literal["description", "spec"] = "description"
