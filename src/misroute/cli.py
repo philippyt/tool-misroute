@@ -445,8 +445,16 @@ def discover(
             t.add_row(*row, style="red" if s["write"] else "")
         for u in res["unrouted"]:
             if not any(u["tool"] in (s["a"], s["b"]) for s in res["spots"]) or u["rate"] >= 0.2:
-                row = (u["tool"], "(no tool called)", f"{u['rate']:.2f}", f"{u['count']} of {u['trials']}", "unrouted",
-                       "", ", ".join(u["where"]), "")
+                row = (
+                    u["tool"],
+                    "(no tool called)",
+                    f"{u['rate']:.2f}",
+                    f"{u['count']} of {u['trials']}",
+                    "unrouted",
+                    "",
+                    ", ".join(u["where"]),
+                    "",
+                )
                 t.add_row(*row, style="yellow")
         out.print(t)
         for tool in res["untested"]:
