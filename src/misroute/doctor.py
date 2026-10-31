@@ -8,12 +8,15 @@ from misroute.models import build
 from misroute.store.cache import fill_price
 
 
-def hint(err: str) -> str:
+def hint(err: str, base_url: str | None = None) -> str:
     e = err.lower()
     if "certificate" in e or "ssl" in e:
         return "TLS failed, likely a company proxy. Set system_certs: true in misroute.yaml or MISROUTE_SYSTEM_CERTS=1"
     if "401" in e or "403" in e or "unauthorized" in e or "authentication" in e or "api key" in e:
-        return "the key or token was refused, check the env var and that it belongs to this endpoint"
+        # provider shorthand with a token for a different endpoint is the common
+        # mistake, so name who actually refused
+        where = f"{host(base_url)} refused the key" if base_url else "the key or token was refused"
+        return f"{where}, check the env var and that it belongs to this endpoint, or set base_url to the one it does"
     if "404" in e or "not found" in e or "deployment" in e:
         return "the endpoint answered but does not know the model, check the model or deployment name and base_url"
     if "getaddrinfo" in e or "name or service" in e or "nodename" in e or "dns" in e:
@@ -23,6 +26,12 @@ def hint(err: str) -> str:
     if "402" in e or "credit" in e or "quota" in e:
         return "the provider refused for billing reasons, top up credits or raise the quota"
     return ""
+
+
+def host(base_url: str | None) -> str:
+    from urllib.parse import urlparse
+
+    return urlparse(base_url).hostname or str(base_url) if base_url else ""
 
 
 def row(check: str, ok: bool, detail: str = "", fix: str = "") -> dict[str, Any]:
@@ -68,7 +77,7 @@ async def run(config: Path, offline: bool = False) -> list[dict[str, Any]]:
             rows.append(row(f"{m.name} call", True, f"replied {turn.text.strip()[:20]!r}"))
         except Exception as e:
             err = f"{type(e).__name__}: {e}"
-            rows.append(row(f"{m.name} call", False, err[:300], hint(err)))
+            rows.append(row(f"{m.name} call", False, err[:300], hint(err, m.base_url)))
     return rows
 
 
