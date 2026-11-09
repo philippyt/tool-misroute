@@ -53,6 +53,10 @@ class BudgetExceeded(RuntimeError):
     pass
 
 
+class ProviderRefused(BudgetExceeded):
+    pass
+
+
 class Budget:
     def __init__(self, limit_usd: float):
         self.limit = limit_usd

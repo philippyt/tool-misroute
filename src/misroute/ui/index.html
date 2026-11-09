@@ -211,7 +211,7 @@ function phaseOpts() {
 
 $("estimate").onclick = async () => {
   const r = await post("/api/estimate", body());
-  $("estimateText").textContent = r.error ? r.error : `Up to ${r.calls} model calls, up to $${r.cost.toFixed(2)}`;
+  $("estimateText").textContent = r.error ? r.error : `About ${r.calls} model calls, about $${r.cost.toFixed(2)}`;
   $("start").disabled = !!r.error;
 };
 ["phase", "top", "trials", "helper", "languages", "groups", "fastmcp"].forEach((id) => $(id).onchange = () => { $("start").disabled = true; $("estimateText").textContent = ""; phaseOpts(); });

@@ -9,14 +9,14 @@ from misroute.config import Config, load
 from misroute.detectors import codemode, confusion, hedge, nearmiss, rank, removal
 from misroute.fix import clause, stats
 from misroute.lint import descriptions
-from misroute.models.base import Budget
+from misroute.models.base import Budget, BudgetExceeded, ProviderRefused
 from misroute.modes import code_mode, json_mode
 from misroute.requests import gate, generate, validate
 from misroute.sandbox.monty_runner import Sandbox
 from misroute.server import openapi, static
 from misroute.server.catalog import Tool, catalog_hash, replace_descriptions
 from misroute.server.connect import connect, keep, list_tools
-from misroute.store.cache import Metered
+from misroute.store.cache import Metered, fill_price
 from misroute.store.runs import Store
 from misroute.trial import Request, Trial
 
@@ -91,6 +91,12 @@ class Project:
 
     def role(self, role: str) -> Metered:
         return self.adapter(self.cfg.role(role).name)
+
+    def unpriced(self) -> list[str]:
+        return [m.name for m in self.cfg.models if not fill_price(m)]
+
+    def cap(self, max_cost: float) -> None:
+        self.budget.limit = min(self.cfg.budget_usd, self.budget.spent + self.budget.reserved + max_cost)
 
     async def tools(self) -> list[Tool]:
         if self._tools is None:
@@ -186,21 +192,41 @@ class Project:
         return f"{tool.name}|{self.cfg.request_source}|{','.join(langs)}"
 
     async def run_trials(self, trials: list[Trial], tools_for: Callable[[Trial], list[Tool]]) -> list[Trial]:
+        stopped: list[BudgetExceeded] = []
         async with Sandbox() as box:
 
-            async def one(t: Trial) -> Trial:
+            async def one(t: Trial) -> Trial | None:
                 adapter = self.adapter(t.model)
                 ts = tools_for(t)
-                if t.mode == "code":
-                    await code_mode.run(adapter, box, t, ts, self.cfg.max_turns)
-                else:
-                    await json_mode.run(adapter, t, ts, self.cfg.max_turns)
-                    if adapter.cfg.scoring:
-                        t.probs = await adapter.score_names(t.text, [x.spec() for x in ts])
+                try:
+                    if t.mode == "code":
+                        await code_mode.run(adapter, box, t, ts, self.cfg.max_turns)
+                    else:
+                        await json_mode.run(adapter, t, ts, self.cfg.max_turns)
+                        if adapter.cfg.scoring:
+                            t.probs = await adapter.score_names(t.text, [x.spec() for x in ts])
+                except ProviderRefused:
+                    raise
+                except BudgetExceeded as e:
+                    stopped.append(e)
+                    return None
                 self.progress(1)
                 return t
 
-            return list(await asyncio.gather(*(one(t) for t in trials)))
+            done = [t for t in await asyncio.gather(*(one(t) for t in trials)) if t is not None]
+        if stopped:
+            raise await self.stop_early(stopped[0], done, trials)
+        return done
+
+    async def stop_early(self, why: BudgetExceeded, done: list[Trial], trials: list[Trial]) -> BudgetExceeded:
+        cat = await self.catalog()
+        phase = f"{trials[0].phase} partial"
+        run = self.store.run_id(phase.replace(" ", "-"), cat)
+        self.store.save(run, phase, cat, done, {"stopped": str(why)})
+        return BudgetExceeded(
+            f"{why}. {len(done)} of {len(trials)} trials finished and were saved as {run}, a rerun with more budget "
+            "reuses them at no cost"
+        )
 
     def estimate(self, n_calls: int, model: str, tools: list[Tool]) -> float:
         a = self.adapter(model)

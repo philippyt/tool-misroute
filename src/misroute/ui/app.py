@@ -14,6 +14,7 @@ from misroute.improve import run as improver
 from misroute.models.base import BudgetExceeded
 from misroute.project import Project
 from misroute.report.html import html
+from misroute.store.cache import no_price
 from misroute.ui import setup
 
 PHASES = ("lint", "discover", "probe", "fix", "improve")
@@ -42,11 +43,15 @@ class Runner:
     async def estimate(self, body: dict) -> dict:
         if body["phase"] == "improve":
             proj, models = self.improver(body)
+            if missing := proj.unpriced():
+                return {"calls": 0, "cost": 0.0, "error": no_price(", ".join(missing))}
             calls, cost = await improver.estimate(proj, models, ["json"])
             return {"calls": calls, "cost": cost}
         proj = self.project()
         if body["phase"] == "lint":
             return {"calls": 0, "cost": 0.0}
+        if missing := proj.unpriced():
+            return {"calls": 0, "cost": 0.0, "error": no_price(", ".join(missing))}
         calls, cost = await proj.cost(body["phase"], body["models"], body["modes"], body["top"], None, body["trials"])
         return {"calls": calls, "cost": cost}
 

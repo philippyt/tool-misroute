@@ -69,7 +69,9 @@ async def run(config: Path, offline: bool = False) -> list[dict[str, Any]]:
         free = not (m.price_in or m.price_out)
         detail = "free" if priced and free else f"${m.price_in} in, ${m.price_out} out per million tokens"
         detail = detail if priced else "unknown"
-        rows.append(row(f"{m.name} price", priced, detail, "set price_in and price_out, or estimates show $0"))
+        rows.append(
+            row(f"{m.name} price", priced, detail, "set price_in and price_out, paid runs refuse without a price")
+        )
         if offline or not key_ok:
             continue
         try:

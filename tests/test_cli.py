@@ -1,9 +1,10 @@
 import json
 import sys
+from pathlib import Path
 import pytest
 import yaml
 from typer.testing import CliRunner
-from misroute.cli import app
+from misroute.cli import Opts, app, load
 
 runner = CliRunner()
 
@@ -93,3 +94,31 @@ def test_ci_changed_checks_only_edited_tools(config, tmp_path):
     rows = json.loads(out)["changed"]
     assert [r["tool"] for r in rows] == ["get_case_comments"]
     assert "get_case_comments" in md.read_text()
+
+
+def unpriced(tmp_path):
+    path = tmp_path / "misroute.yaml"
+    data = {
+        "server": {"command": [sys.executable, "-m", "misroute.testing.fake_server"]},
+        "models": [
+            {"name": "astra", "provider": "openai-compatible", "model": "no-such", "base_url": "https://x.invalid"}
+        ],
+        "workdir": str(tmp_path / ".misroute"),
+    }
+    path.write_text(yaml.safe_dump(data))
+    return str(path)
+
+
+def test_unknown_price_blocks_paid_runs_and_estimates(tmp_path):
+    for extra in (["--yes"], ["--max-cost", "1"], ["--estimate-only"]):
+        code, out = call("discover", "-c", unpriced(tmp_path), "--json", *extra)
+        assert code == 3, out
+        assert "no price known for astra" in json.loads(out)["error"]
+
+
+def test_max_cost_is_a_real_limit_on_every_command(config):
+    path = config(price=1000)
+    assert load(Opts("discover", max_cost=1.5), Path(path)).budget.limit == 1.5
+    assert load(Opts("discover"), Path(path)).budget.limit == 5.0
+    _, out = call("discover", "-c", path, "--json", "--estimate-only")
+    assert json.loads(out)["estimate"]["upper_bound"] is False

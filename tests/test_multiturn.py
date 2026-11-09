@@ -143,7 +143,7 @@ async def test_cut_off_reply_retries_with_twice_the_tokens_used_and_is_not_cache
         async def complete_turn(self, prompt):
             return Turn(text='{"requests": ["a", "b', truncated=True)
 
-    m = Metered(Cut(), cfg, Budget(1), tmp_path)
+    m = Metered(Cut(), cfg.model_copy(update={"price_in": 0.0}), Budget(1), tmp_path)
     await m.complete("p")
     assert not list((tmp_path / "cache" / "o").glob("*.json"))
 

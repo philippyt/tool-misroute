@@ -11,6 +11,7 @@ from misroute.models.base import (
     Budget,
     BudgetExceeded,
     Messages,
+    ProviderRefused,
     Turn,
     estimate_tokens,
 )
@@ -31,6 +32,13 @@ def fill_price(cfg: ModelConfig) -> bool:
     if found:
         cfg.price_in, cfg.price_out = found
     return found is not None
+
+
+def no_price(names: str) -> str:
+    return (
+        f"no price known for {names}, so the budget cannot be enforced. Set price_in and price_out per million "
+        "tokens in misroute.yaml, 0 for a free model"
+    )
 
 
 ESTIMATE_TOKENS_OUT = 256
@@ -72,6 +80,8 @@ class Metered:
         if path.exists():
             self.hits += 1
             return decode(json.loads(path.read_text(encoding="utf-8")))
+        if not self.price_known:
+            raise BudgetExceeded(no_price(self.cfg.name))
         async with self.sem:
             held = self.budget.reserve(self.estimate(*parts), self.cfg.concurrency)
             room = self.room(held, *parts)
@@ -81,7 +91,7 @@ class Metered:
             except Exception as e:
                 self.budget.settle(held)
                 if getattr(e, "status_code", None) in (401, 402, 403):
-                    raise BudgetExceeded(f"{self.name} provider refused the request: {e}") from e
+                    raise ProviderRefused(f"{self.name} provider refused the request: {e}") from e
                 raise
             finally:
                 OUTPUT_ROOM.reset(token)

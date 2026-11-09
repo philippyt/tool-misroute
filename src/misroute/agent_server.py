@@ -9,6 +9,7 @@ from misroute.improve import run as improver
 from misroute.lint import descriptions
 from misroute.models.base import BudgetExceeded
 from misroute.project import Project
+from misroute.store.cache import no_price
 from misroute.store.runs import SCHEMA_VERSION
 
 READ = ToolAnnotations(read_only_hint=True)
@@ -81,6 +82,7 @@ def create(proj: Project) -> MCPServer:
         )
         if cost > max_cost:
             return {"error": f"estimate ${cost:.2f} is above max_cost ${max_cost:.2f}", "cost_usd": round(cost, 4)}
+        proj.cap(max_cost)
         try:
             res = await checker.check(proj, tool, description, refresh=refresh)
         except (BudgetExceeded, KeyError) as e:
@@ -142,6 +144,7 @@ def create(proj: Project) -> MCPServer:
         _, cost = await proj.cost("fix", models, modes, pairs=[(tool_a, tool_b)], trials=trials)
         if cost > max_cost:
             return {"error": f"estimate ${cost:.2f} is above max_cost ${max_cost:.2f}", "cost_usd": round(cost, 4)}
+        proj.cap(max_cost)
         try:
             res = await proj.fix(pairs=[(tool_a, tool_b)], models_=models, modes=modes, trials=trials)
         except (BudgetExceeded, KeyError) as e:
@@ -194,15 +197,17 @@ def create(proj: Project) -> MCPServer:
                 cfg, server=proj.server if proj.server is not proj.cfg.server else None, root=proj.store.root
             )
             target._tools = proj._tools
-            target.budget.limit = min(target.budget.limit, max_cost)
             calls, cost = await improver.estimate(target, models, modes)
         else:
             models = args.get("models") or proj.cfg.tested()
             calls, cost = await proj.cost(kind, models, modes, top, pairs, trials)
+        if missing := target.unpriced():
+            return {"error": no_price(", ".join(missing))}
         if estimate_only:
             return {"schema_version": SCHEMA_VERSION, "estimate_calls": calls, "estimate_usd": round(cost, 4)}
         if cost > max_cost:
             return {"error": f"estimate ${cost:.2f} is above max_cost ${max_cost:.2f}", "cost_usd": round(cost, 4)}
+        target.cap(max_cost)
         job_id = uuid.uuid4().hex[:8]
         job: dict[str, Any] = {
             "kind": kind,

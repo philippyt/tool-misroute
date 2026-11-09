@@ -19,6 +19,7 @@ from misroute.doctor import system_certs
 from misroute.models.base import BudgetExceeded
 from misroute.models.presets import detect
 from misroute.project import Project
+from misroute.store.cache import no_price
 from misroute.store.runs import SCHEMA_VERSION
 
 OK, FAILED, INSUFFICIENT, PROBLEM = 0, 1, 2, 3
@@ -78,27 +79,32 @@ def emit(opts: Opts, data: dict[str, Any], text=None, code: int = OK) -> None:
         raise typer.Exit(code)
 
 
-def fail(opts: Opts, message: str, code: int = PROBLEM) -> None:
+def fail(opts: Opts, message: str, code: int = PROBLEM, **extra: Any) -> None:
     if not opts.json:
         err.print(f"[red]{message}[/red]")
-    emit(opts, {"error": message, "exit_code": code}, code=code)
+    emit(opts, {"error": message, "exit_code": code, **extra}, code=code)
 
 
 def load(opts: Opts, config: Path) -> Project:
     system_certs(config)
     try:
-        return Project.from_yaml(config)
+        proj = Project.from_yaml(config)
     except (OSError, ValidationError, yaml.YAMLError) as e:
         fail(opts, f"config problem: {e}")
         raise
+    if opts.max_cost is not None:
+        proj.cap(opts.max_cost)
+    return proj
 
 
-def gate(opts: Opts, calls: int, cost: float, note: str = "") -> None:
-    estimate = {"estimate": {"calls": calls, "cost_usd": round(cost, 4), "upper_bound": not note, "note": note}}
+def gate(opts: Opts, proj: Project, calls: int, cost: float, note: str = "") -> None:
+    if missing := proj.unpriced():
+        fail(opts, no_price(", ".join(missing)))
+    estimate = {"estimate": {"calls": calls, "cost_usd": round(cost, 4), "upper_bound": False, "note": note}}
     if opts.estimate_only:
 
         def show() -> None:
-            out.print(f"up to {calls} model calls, up to ${cost:.2f}")
+            out.print(f"about {calls} model calls, about ${cost:.2f}")
             if note:
                 out.print(note, style="dim")
 
@@ -107,7 +113,7 @@ def gate(opts: Opts, calls: int, cost: float, note: str = "") -> None:
     if opts.max_cost is not None and cost > opts.max_cost:
         fail(opts, f"estimate ${cost:.2f} is above max cost ${opts.max_cost:.2f}")
     if not opts.json:
-        out.print(f"up to {calls} model calls, up to ${cost:.2f}")
+        out.print(f"about {calls} model calls, about ${cost:.2f}, stops at ${proj.budget.limit:.2f}")
         if note:
             out.print(note, style="dim")
     if cost > 0 and not opts.yes and opts.max_cost is None:
@@ -135,7 +141,7 @@ def run(opts: Opts, proj: Project, coro, total: int):
         try:
             return asyncio.run(coro)
         except BudgetExceeded as e:
-            fail(opts, str(e))
+            fail(opts, str(e), spent=round(proj.budget.spent, 4))
     with Progress(console=err, transient=True, disable=opts.progress == "none") as bar:
         task = bar.add_task("running", total=total)
         proj.progress = lambda n: bar.advance(task, n)
@@ -143,7 +149,7 @@ def run(opts: Opts, proj: Project, coro, total: int):
         try:
             return asyncio.run(coro)
         except BudgetExceeded as e:
-            fail(opts, str(e))
+            fail(opts, str(e), spent=round(proj.budget.spent, 4))
 
 
 def warned(res: dict, text):
@@ -276,7 +282,7 @@ def quick(
     proj.cfg.repeats = 1
     lint_res = asyncio.run(proj.lint(False))
     calls, cost = asyncio.run(proj.discover_cost(proj.cfg.tested(), list(proj.cfg.modes)))
-    gate(opts, calls, cost)
+    gate(opts, proj, calls, cost)
     res = run(opts, proj, proj.discover(None, list(proj.cfg.modes)), calls)
     report = render(proj.store, proj.store.root / "report.html")
 
@@ -426,7 +432,7 @@ def discover(
     proj = load(opts, config)
     ms, md = split(models), split(modes)
     calls, cost = asyncio.run(proj.discover_cost(ms or proj.cfg.tested(), md or list(proj.cfg.modes)))
-    gate(opts, calls, cost)
+    gate(opts, proj, calls, cost)
     res = run(opts, proj, proj.discover(ms, md), calls)
 
     def text() -> None:
@@ -512,7 +518,7 @@ def probe(
     ms = split(models) or proj.cfg.tested()
     md = split(modes) or list(proj.cfg.modes)
     calls, cost = asyncio.run(proj.cost("probe", ms, md, top, pairs(pair)))
-    gate(opts, calls, cost)
+    gate(opts, proj, calls, cost)
     res = run(opts, proj, proj.probe(top, pairs(pair), ms, md), calls)
 
     def text() -> None:
@@ -558,7 +564,7 @@ def fix(
     ms = split(models) or proj.cfg.tested()
     md = split(modes) or list(proj.cfg.modes)
     calls, cost = asyncio.run(proj.cost("fix", ms, md, top, pairs(pair), trials))
-    gate(opts, calls, cost)
+    gate(opts, proj, calls, cost)
     res = run(opts, proj, proj.fix(top, pairs(pair), ms, md, trials), calls)
 
     def text() -> None:
@@ -623,7 +629,7 @@ def check(
     ms, md = split(models) or proj.cfg.tested(), split(modes) or ["json"]
     tools = asyncio.run(proj.tools())
     calls, cost = checker.estimate(proj, 1 + len(checker.neighbours(proj, tool)), ms, md, tools)
-    gate(opts, calls, cost)
+    gate(opts, proj, calls, cost)
     res = run(opts, proj, checker.check(proj, tool, description, refresh=refresh, models_=ms, modes=md), calls)
 
     def text() -> None:
@@ -738,12 +744,12 @@ def improve(
     if strict_roles and cfg.role_warnings():
         fail(opts, "; ".join(cfg.role_warnings()))
         return
-    if max_cost is not None:
-        cfg.budget_usd = min(cfg.budget_usd, max_cost)
     proj = Project(cfg, root=config.parent / cfg.workdir)
+    if max_cost is not None:
+        proj.cap(max_cost)
     md = split(modes) or ["json"]
     calls, cost = asyncio.run(improver.estimate(proj, ms, md))
-    gate(opts, calls, cost, improver.STAGES_NOTE)
+    gate(opts, proj, calls, cost, improver.STAGES_NOTE)
     res = run(
         opts,
         proj,
@@ -859,7 +865,7 @@ def ci(
         return
     ms, md = split(models), split(modes)
     calls, cost = asyncio.run(proj.discover_cost(ms or proj.cfg.tested(), md or list(proj.cfg.modes)))
-    gate(opts, calls, cost)
+    gate(opts, proj, calls, cost)
     run(opts, proj, proj.discover(ms, md), calls)
     bad = proj.breaches()
     if junit:
