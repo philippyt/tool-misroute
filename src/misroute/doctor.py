@@ -7,9 +7,20 @@ from misroute.config import Config, env_path, load
 from misroute.models import build
 from misroute.store.cache import fill_price
 
+PING = {
+    "name": "ping",
+    "description": "Checks the connection.",
+    "input_schema": {"type": "object", "properties": {}},
+}
+
 
 def hint(err: str, base_url: str | None = None) -> str:
     e = err.lower()
+    if "v1/responses" in e or "responses api" in e:
+        return (
+            "this model needs the Responses API, set options: {api: responses} on it in misroute.yaml. A shorthand "
+            "model has to be written out as a block with name, provider, model, base_url and api_key_env for this"
+        )
     if "certificate" in e or "ssl" in e:
         return "TLS failed, likely a company proxy. Set system_certs: true in misroute.yaml or MISROUTE_SYSTEM_CERTS=1"
     if "401" in e or "403" in e or "unauthorized" in e or "authentication" in e or "api key" in e:
@@ -80,6 +91,14 @@ async def run(config: Path, offline: bool = False) -> list[dict[str, Any]]:
         except Exception as e:
             err = f"{type(e).__name__}: {e}"
             rows.append(row(f"{m.name} call", False, err[:300], hint(err, m.base_url)))
+            continue
+        try:
+            turn = await build(m).chat("Call the ping tool.", [PING])
+            detail = f"called {turn.calls[0].name}" if turn.calls else "accepted the tool, called nothing"
+            rows.append(row(f"{m.name} tools", True, detail))
+        except Exception as e:
+            err = f"{type(e).__name__}: {e}"
+            rows.append(row(f"{m.name} tools", False, err[:300], hint(err, m.base_url)))
     return rows
 
 
