@@ -75,8 +75,7 @@ async def run(
     trial.calls = [n for names in programs for n in names]
     hard = [f for f in failures if f and f != "no_call"]
     trial.failure = hard[0] if hard else (None if trial.calls else "no_call")
-    if max_turns > 1:
-        trial.decisive = decisive(trial, programs, tools)
+    trial.decisive = decisive(trial, programs, tools)
     if trial.failure is None and read_first(trial, tools):
         trial.failure = "read_first"
     stripped = strip_stubs(first, set(by)) if failures and failures[0] == "faked" else None

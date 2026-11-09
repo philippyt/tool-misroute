@@ -59,8 +59,7 @@ async def run(adapter, trial: Trial, tools: list[Tool], max_turns: int = 1) -> T
             {"role": "tool", "results": results(fakes, turn.calls, by)},
         ]
     trial.calls = [n for names in turns for n in names]
-    if max_turns > 1:
-        trial.decisive = decisive(trial, turns, tools)
+    trial.decisive = decisive(trial, turns, tools)
     if not trial.calls:
         trial.failure = "no_tool_call"
     elif any(c not in by for c in trial.calls):
