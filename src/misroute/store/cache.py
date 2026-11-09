@@ -4,7 +4,16 @@ import json
 from pathlib import Path
 from typing import Any
 from misroute.config import ModelConfig
-from misroute.models.base import Adapter, Budget, BudgetExceeded, Messages, Turn, estimate_tokens
+from misroute.models.base import (
+    NO_LIMIT_ABOVE,
+    OUTPUT_ROOM,
+    Adapter,
+    Budget,
+    BudgetExceeded,
+    Messages,
+    Turn,
+    estimate_tokens,
+)
 
 LOCAL = ("http://localhost", "http://127.0.0.1", "http://[::1]")
 
@@ -53,24 +62,37 @@ class Metered:
         key = json.dumps([self.cfg.model_id, self.cfg.options, *parts], sort_keys=True, default=str)
         return self.dir / (hashlib.sha256(key.encode()).hexdigest()[:32] + ".json")
 
+    def room(self, held: float, *parts: Any) -> int | None:
+        if not self.cfg.price_out:
+            return None
+        return max(int((held - self.price(estimate_tokens(*parts), 0)) * 1e6 / self.cfg.price_out), 1)
+
     async def _cached(self, parts: tuple, run, encode, decode, keep=lambda out: True):
         path = self._path(*parts)
         if path.exists():
             self.hits += 1
             return decode(json.loads(path.read_text(encoding="utf-8")))
-        self.budget.check(self.estimate(*parts))
         async with self.sem:
+            held = self.budget.reserve(self.estimate(*parts), self.cfg.concurrency)
+            room = self.room(held, *parts)
+            token = OUTPUT_ROOM.set(room)
             try:
                 out, cost = await run()
             except Exception as e:
+                self.budget.settle(held)
                 if getattr(e, "status_code", None) in (401, 402, 403):
                     raise BudgetExceeded(f"{self.name} provider refused the request: {e}") from e
                 raise
-        self.budget.charge(cost)
+            finally:
+                OUTPUT_ROOM.reset(token)
+            self.budget.settle(held, cost)
         self.calls += 1
         data = encode(out)
         empty = data in ("", None) or (isinstance(data, dict) and not data["calls"] and not data["text"])
-        if not empty and keep(out):
+        whole = keep(out)
+        if not whole and room is not None and room < NO_LIMIT_ABOVE:
+            raise BudgetExceeded(f"budget {self.budget.limit:.2f} usd reached mid reply, {self.budget.spent:.2f} spent")
+        if not empty and whole:
             path.write_text(json.dumps(data), encoding="utf-8")
         return out
 
