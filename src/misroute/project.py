@@ -14,7 +14,7 @@ from misroute.modes import code_mode, json_mode
 from misroute.requests import gate, generate, validate
 from misroute.sandbox.monty_runner import Sandbox
 from misroute.server import openapi, static
-from misroute.server.catalog import Tool, catalog_hash, replace_descriptions
+from misroute.server.catalog import Tool, catalog_hash, effect_unknown, replace_descriptions
 from misroute.server.connect import connect, keep, list_tools
 from misroute.store.cache import Metered, fill_price
 from misroute.store.runs import Store
@@ -126,7 +126,12 @@ class Project:
                     strict=True,
                 )
             )
-        out = {"tools": len(tools), "findings": [asdict(f) for f in found], "drafts": drafts}
+        out = {
+            "tools": len(tools),
+            "findings": [asdict(f) for f in found],
+            "drafts": drafts,
+            "effect_unknown": effect_unknown(tools),
+        }
         self.store.write("lint", out)
         return out
 
@@ -159,7 +164,7 @@ class Project:
                 self.unreadable[tool.name] += 1
                 break
             attempt += 1
-            ok, picks = await validate.keep_valid(val, reqs, tools, src)
+            ok, picks = await validate.keep_valid(val, reqs, tools, src, self.domain())
             self.rejected.setdefault(tool.name, Counter()).update(p or "(no tool)" for p in picks)
             new = [r for r in ok if r.id not in {k.id for k in kept}]
             if not new:
@@ -333,6 +338,7 @@ class Project:
             by_language=rates_by(trials, "lang"),
             by_kind=rates_by(trials, "kind"),
             untested=sorted(k for k, v in reqs.items() if not v),
+            effect_unknown=effect_unknown(tools),
             catalog=catalog_hash(tools),
             spent=self.budget.spent,
         )

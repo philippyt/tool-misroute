@@ -252,6 +252,12 @@
      }
     }
    }
+  },
+  "effect_unknown": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
   }
  },
  "required": [

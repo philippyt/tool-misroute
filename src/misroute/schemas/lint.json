@@ -40,6 +40,12 @@
    "additionalProperties": {
     "type": "string"
    }
+  },
+  "effect_unknown": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
   }
  },
  "required": [

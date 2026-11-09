@@ -161,6 +161,16 @@ def warned(res: dict, text):
     return show
 
 
+def effect_note(names: list[str]) -> None:
+    if names:
+        out.print(
+            f"{', '.join(names)}: no read or write annotation and the name does not say, so these count as reads. "
+            "Set readOnlyHint or destructiveHint on the tools, a write scored as a read counts its own "
+            "preparatory reads as confusion",
+            style="yellow",
+        )
+
+
 def split(v: str | None) -> list[str] | None:
     return [x.strip() for x in v.split(",") if x.strip()] if v else None
 
@@ -403,6 +413,7 @@ def lint(
             out.print(f"  {f['tool']}  {f['issue']}{flag}")
             if f["tool"] in res["drafts"]:
                 out.print(f"    draft: {res['drafts'][f['tool']]}", style="dim")
+        effect_note(res["effect_unknown"])
 
     emit(opts, res, text, FAILED if strict and res["findings"] else OK)
 
@@ -494,6 +505,7 @@ def discover(
                 "a finding. When it picks nothing, try a different generator or add real requests with real_requests",
                 style="dim",
             )
+        effect_note(res["effect_unknown"])
         out.print(f"spent ${res['spent']:.2f}, results in {proj.store.root}")
 
     emit(opts, res, warned(res, text))

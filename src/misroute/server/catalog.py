@@ -40,6 +40,35 @@ WRITE_VERBS = set(
         "start",
         "stop",
         "run",
+        "change",
+        "modify",
+        "apply",
+        "execute",
+        "invoke",
+        "deploy",
+        "restart",
+        "suspend",
+        "activate",
+        "deactivate",
+        "configure",
+        "provision",
+    ]
+)
+READ_VERBS = set(
+    [
+        "get",
+        "list",
+        "read",
+        "search",
+        "find",
+        "fetch",
+        "query",
+        "show",
+        "describe",
+        "lookup",
+        "count",
+        "check",
+        "view",
     ]
 )
 
@@ -106,6 +135,16 @@ def from_mcp(t: Any) -> Tool:
 
 def catalog_hash(tools: list[Tool]) -> str:
     return hashlib.sha256("".join(sorted(t.hash for t in tools)).encode()).hexdigest()[:16]
+
+
+def effect_unknown(tools: list[Tool]) -> list[str]:
+    return [
+        t.name
+        for t in tools
+        if t.read_only is None
+        and t.destructive is None
+        and not (WRITE_VERBS | READ_VERBS).intersection(words(t.name)[:2])
+    ]
 
 
 def replace_descriptions(tools: list[Tool], new: dict[str, str]) -> list[Tool]:

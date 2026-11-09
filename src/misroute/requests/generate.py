@@ -14,7 +14,7 @@ and output. Do not ask for aggregates, statistics or data the tool does not hold
 Every request must contain the placeholder {{slot}} exactly once, standing for one concrete value such as a record id,
 customer, repository or place, so the request is complete when it is filled in.
 Also give {slots} realistic values for that placeholder.
-
+{domain}
 Tool: {name}
 Description: {description}
 Parameters: {params}
@@ -28,7 +28,7 @@ Each request must borrow one or two words from the second tool's description whi
 Write the requests in {language}.
 Every request must contain the placeholder {{slot}} exactly once, standing for one concrete value, and give {slots}
 realistic values for it.
-
+{domain}
 Tool: {name}
 Description: {description}
 Sibling: {sibling_name}: {sibling}
