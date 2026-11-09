@@ -55,7 +55,7 @@ async def run(adapter, trial: Trial, tools: list[Tool], max_turns: int = 1) -> T
             c.id = c.id or f"call{i}_{j}"
         calls = [{"id": c.id, "name": c.name, "args": c.args} for c in turn.calls]
         messages += [
-            {"role": "assistant", "text": turn.text, "calls": calls},
+            {"role": "assistant", "text": turn.text, "calls": calls, **({"raw": turn.raw} if turn.raw else {})},
             {"role": "tool", "results": results(fakes, turn.calls, by)},
         ]
     trial.calls = [n for names in turns for n in names]

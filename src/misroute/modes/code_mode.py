@@ -68,6 +68,7 @@ async def run(
                 "role": "assistant",
                 "text": turn.text,
                 "calls": [{"id": cid, "name": "run_code", "args": {"code": code}}],
+                **({"raw": turn.raw} if turn.raw else {}),
             },
             {"role": "tool", "results": [{"id": cid, "name": "run_code", "content": body[:8000]}]},
         ]

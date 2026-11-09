@@ -8,6 +8,10 @@ def build(cfg: ModelConfig) -> Adapter:
 
         return MockAdapter(cfg)
     if cfg.provider in ("openai-compatible", "azure-openai"):
+        if cfg.options.get("api") == "responses":
+            from misroute.models.responses import ResponsesAdapter
+
+            return ResponsesAdapter(cfg)
         from misroute.models.openai_compat import OpenAICompatAdapter
 
         return OpenAICompatAdapter(cfg)
