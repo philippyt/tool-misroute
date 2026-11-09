@@ -16,7 +16,13 @@ After `pip install misroute` or `uv tool install misroute`, `misroute guide` pri
 
 ## Setup
 
-misroute needs a target and a model. A target is an MCP URL, a local command, an OpenAPI or Swagger file, or a tool list in MCP, OpenAI or Anthropic format. Models use `provider:model` shorthand: `anthropic`, `foundry`, `bedrock`, `azure`, `openai`, `openrouter`, `ollama`, `vllm`, `lmstudio`. Keys come from the environment or a `.env` next to misroute.yaml. Prices are looked up automatically and local models are free.
+misroute needs a target and a model. A target is an MCP URL, a local command, an OpenAPI or Swagger file, or a tool list in MCP, OpenAI or Anthropic format. Models use `provider:model` shorthand: `anthropic`, `foundry`, `bedrock`, `azure`, `openai`, `openrouter`, `ollama`, `vllm`, `lmstudio`. Keys come from the environment or a `.env` next to misroute.yaml. Prices are looked up automatically and local models are free. A model with no known price refuses paid runs and estimates, exit code 3: set `price_in` and `price_out`, or 0 when it is free.
+
+A model that takes function tools only on the Responses API needs `options: {api: responses}` on a full model block. Set `reasoning_effort` in the same options, to the effort used in production. `misroute doctor` makes one tool call per model and names this fix.
+
+`--max-cost` and `budget_usd` are limits on actual spend, and the lower one applies. Money is reserved before each call. The estimate is a guide, not an upper bound, and `upper_bound` is always false. A budget stop exits with code 3, gives `spent` in the error, saves finished trials as a `partial` run and a rerun with more budget reuses them at no cost.
+
+For a write request only the writes count, so a read before the write is not confusion. Tools count as writes from `readOnlyHint` and `destructiveHint`, or else a verb in the name. `effect_unknown` in lint and discover lists tools where neither says, which count as reads: ask the user to annotate them before trusting scores on them. Only tool names are scored, never arguments, so say so when reporting on a generic tool that takes an operation name, and list its allowed operations in `domain`.
 
 Real requests are the strongest evidence. Their rates show in discover `by_kind.real` and in improve `confirm.rates[condition].real_error_rate`.
 

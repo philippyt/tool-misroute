@@ -82,7 +82,25 @@ Write models as `provider:model`:
 | `openrouter:anthropic/claude-opus-5.5` | `OPENROUTER_API_KEY` |
 | `ollama:qwen3.5:9b`, `vllm:Qwen/Qwen3-14B`, `lmstudio:model` | a local server |
 
-Prices come from the public OpenRouter catalog, cached for a week, and local models cost nothing. Set `price_in` and `price_out` to override. Every paid run shows an estimate first and stops at `budget_usd`. Behind a company TLS proxy, set `system_certs: true`.
+Prices come from the public OpenRouter catalog, cached for a week, and local models cost nothing. Set `price_in` and `price_out` to override. A model with no known price refuses paid runs, since the budget could not be enforced, so set a price for a private deployment, or 0 for a free one. Behind a company TLS proxy, set `system_certs: true`.
+
+Every paid run shows an estimate and stops at `budget_usd`, or at `--max-cost` when that is lower. The estimate is a guide, based on the reply sizes seen so far, not an upper bound. The limit is what holds: money is reserved before each call and output is capped near the limit, so a run can stop a little early but does not pass it. One gap remains: far from the limit no token cap is sent, so a single reply over 32768 tokens could overrun. On a stop, calls in flight finish, finished trials are saved as a `partial` run, and a rerun with more budget reuses them at no cost.
+
+Models that only take function tools on the Responses API, such as `gpt-6-astra`, need `options: {api: responses}`. `misroute doctor` makes one tool call per model and names this fix when it sees the error. Write the model as a block, since a shorthand cannot carry options:
+
+```yaml
+models:
+  - name: astra
+    provider: azure-openai
+    model: gpt-6-astra
+    base_url: https://your-resource.openai.azure.com
+    api_key_env: AZURE_OPENAI_API_KEY
+    price_in: 5
+    price_out: 15
+    options: {api: responses, reasoning_effort: low}
+```
+
+On Azure this uses the `/openai/v1/` path of the resource; give a full URL containing `/openai/` in `base_url` to use another. Reasoning effort is part of what you are testing, so set it explicitly, and use the same effort you run in production.
 
 On a corporate machine three more things commonly bite. A custom pip index hides misroute: install with `pip install misroute --index-url https://pypi.org/simple/`. A TLS-inspecting proxy breaks every HTTPS call until `system_certs: true` (or `MISROUTE_SYSTEM_CERTS=1`) is set. And an internal OpenAI-compatible relay is a plain `openai-compatible` model with `base_url` and `api_key_env` pointing at it - do not use the `openai:` shorthand for a non-OpenAI endpoint, the key will be sent to api.openai.com and refused there.
 
@@ -108,6 +126,10 @@ request_source: spec
 request_languages: [en, no]
 domain: Municipal operations. A work order is a planned job, an incident is a reported fault.
 ```
+
+The validator keeps a request only when it routes to the right tool, and rejects requests no tool can do. `domain` reaches both the generator and the validator, so a generic tool that takes an operation name should have its allowed operations listed there. Otherwise requests can ask for actions it does not support.
+
+On a write request, only the writes decide the choice. A read before the write, in one turn, across turns or in one program, is not confusion. Reads spread across turns are only seen with `max_turns` above 1, otherwise the turn ends as `read_first` and counts as an error, not as a wrong pick. Tools count as writes from `readOnlyHint` and `destructiveHint`, or else from a verb in the name. `lint` and `discover` list tools under `effect_unknown` when neither says, and those count as reads, so annotate them. Only the tool name is scored, never the arguments, so choosing the wrong operation inside a generic tool does not show up.
 
 ## Commands
 
