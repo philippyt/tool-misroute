@@ -1,6 +1,8 @@
 import asyncio
 import hashlib
+import itertools
 import json
+import math
 from pathlib import Path
 from typing import Any
 from misroute.config import ModelConfig
@@ -42,6 +44,8 @@ def no_price(names: str) -> str:
 
 
 ESTIMATE_TOKENS_OUT = 256
+REASONING_TOKENS_OUT = 1024
+OBSERVED_FILES = 200
 
 
 class Metered:
@@ -59,12 +63,37 @@ class Metered:
         self.price_known = fill_price(cfg)
         self.calls = 0
         self.hits = 0
+        self.out_tokens = 0
+        self.out_calls = 0
+        self.cached_out: int | None = None
 
     def price(self, tokens_in: int, tokens_out: int) -> float:
         return (tokens_in * (self.cfg.price_in or 0) + tokens_out * (self.cfg.price_out or 0)) / 1e6
 
+    def observed_out(self) -> int | None:
+        seen = []
+        for path in itertools.islice(self.dir.glob("*.json"), OBSERVED_FILES):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if isinstance(data, dict) and data.get("tokens_out"):
+                seen.append(data["tokens_out"])
+        return math.ceil(sum(seen) / len(seen)) if seen else None
+
+    def expected_out(self) -> int:
+        if self.cfg.max_tokens:
+            return self.cfg.max_tokens
+        if self.out_calls:
+            return math.ceil(self.out_tokens / self.out_calls)
+        if self.cached_out is None:
+            self.cached_out = self.observed_out() or (
+                REASONING_TOKENS_OUT if self.cfg.options.get("reasoning_effort") else ESTIMATE_TOKENS_OUT
+            )
+        return self.cached_out
+
     def estimate(self, *parts: Any) -> float:
-        return self.price(estimate_tokens(*parts), self.cfg.max_tokens or ESTIMATE_TOKENS_OUT)
+        return self.price(estimate_tokens(*parts), self.expected_out())
 
     def _path(self, *parts: Any) -> Path:
         key = json.dumps([self.cfg.model_id, self.cfg.options, *parts], sort_keys=True, default=str)
@@ -109,6 +138,8 @@ class Metered:
     async def chat(self, user: Messages, tools: list[dict[str, Any]], system: str | None = None, rep: int = 0) -> Turn:
         async def run():
             t = await self.inner.chat(user, tools, system)
+            self.out_tokens += t.tokens_out
+            self.out_calls += 1
             return t, t.cost if t.cost is not None else self.price(t.tokens_in, t.tokens_out)
 
         return await self._cached(

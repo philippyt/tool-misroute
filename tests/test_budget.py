@@ -53,14 +53,14 @@ async def batch(root, limit, n=1000, tokens=1000):
 async def test_a_batch_cannot_spend_past_the_limit(tmp_path):
     m, budget, stopped = await batch(tmp_path, 1.0)
     assert stopped and m.calls < 1000
-    assert 0.9 < budget.spent <= 1.0
+    assert 0.9 < budget.spent < 1.0 + 1e-9
     assert budget.reserved == pytest.approx(0)
 
 
 async def test_a_reply_cut_by_the_budget_stops_the_run_and_is_not_cached(tmp_path):
     _, budget, stopped = await batch(tmp_path, 0.02, n=1, tokens=100000)
     assert stopped and "mid reply" in str(stopped[0])
-    assert budget.spent <= 0.02
+    assert budget.spent < 0.02 + 1e-9
     assert not list((tmp_path / "cache" / "m").glob("*.json"))
 
 
@@ -145,7 +145,7 @@ async def test_budget_stop_keeps_finished_trials_and_finishes_calls_in_flight(tm
     with pytest.raises(BudgetExceeded, match="saved as discover-partial") as stop:
         await proj.run_trials(trials, lambda t: proj._tools)
     assert " of 2000 trials finished" in str(stop.value)
-    assert proj.budget.spent <= 0.5 and proj.budget.reserved == pytest.approx(0)
+    assert proj.budget.spent < 0.5 + 1e-9 and proj.budget.reserved == pytest.approx(0)
     with duckdb.connect(str(proj.store.db_path), read_only=True) as con:
         saved = con.execute("select count(*) from trials where phase = 'discover partial'").fetchone()[0]
     assert 0 < saved < 2000
@@ -186,3 +186,34 @@ def test_cap_counts_only_new_spend_and_never_raises_the_budget(tmp_path):
     assert proj.budget.limit == 3.0
     proj.cap(100.0)
     assert proj.budget.limit == 5.0
+
+
+def test_estimate_uses_reply_sizes_seen_in_the_cache(tmp_path):
+    cfg = ModelConfig(name="m", provider="mock", price_in=0, price_out=1000000)
+    m, _ = Metered(Fake(1), cfg, Budget(1), tmp_path), None
+    assert m.expected_out() == 256
+    (m.dir / "a.json").write_text('{"calls": [], "text": "x", "tokens_in": 1, "tokens_out": 3000}')
+    assert Metered(Fake(1), cfg, Budget(1), tmp_path).expected_out() == 3000
+
+
+def test_estimate_assumes_longer_replies_for_reasoning_models(tmp_path):
+    cfg = ModelConfig(name="m", provider="mock", price_in=0, price_out=1, options={"reasoning_effort": "low"})
+    assert Metered(Fake(1), cfg, Budget(1), tmp_path).expected_out() == 1024
+
+
+async def test_estimate_learns_from_the_replies_of_this_run(tmp_path):
+    m, _ = metered(Fake(4000), 100, tmp_path)
+    await m.chat("hi", [])
+    assert m.expected_out() == 4000
+
+
+async def test_discover_estimate_covers_validation_and_removal(tmp_path):
+    proj = project(tmp_path, 5)
+    calls, _ = await proj.discover_cost(["m"], ["json"])
+    requests = proj.cfg.requests_per_tool
+    assert calls == 1 + requests + requests + requests * proj.cfg.rotations * proj.cfg.repeats
+    proj.cfg.max_turns = 3
+    _, three = await proj.discover_cost(["m"], ["json"])
+    proj.cfg.max_turns = 1
+    _, one = await proj.discover_cost(["m"], ["json"])
+    assert three == pytest.approx(3 * one)

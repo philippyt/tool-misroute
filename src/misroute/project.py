@@ -230,7 +230,7 @@ class Project:
 
     def estimate(self, n_calls: int, model: str, tools: list[Tool]) -> float:
         a = self.adapter(model)
-        return n_calls * a.estimate("x" * 200, [t.spec() for t in tools])
+        return n_calls * self.cfg.max_turns * a.estimate("x" * 200, [t.spec() for t in tools])
 
     async def cost(
         self,
@@ -278,12 +278,17 @@ class Project:
     async def discover_cost(self, models_: list[str], modes: list[str]) -> tuple[int, float]:
         tools = await self.tools()
         langs = len(self.cfg.request_languages or ["en"])
-        per = len(tools) * self.cfg.requests_per_tool * self.cfg.rotations * langs
-        gen = len(tools) * (1 + self.cfg.requests_per_tool) * langs
-        calls, cost = gen, self.estimate(gen, self.cfg.role("generator").name, [])
+        requests = len(tools) * self.cfg.requests_per_tool * langs
+        written, judged = len(tools) * langs, requests
+        calls = written + judged
+        cost = self.estimate(written, self.cfg.role("generator").name, [])
+        cost += self.estimate(judged, self.cfg.role("validator").name, tools)
         for m in models_:
+            removal_trials = requests if "json" in modes else 0
+            calls += removal_trials
+            cost += self.estimate(removal_trials, m, tools)
             for mode in modes:
-                n = per * self.repeats(m, mode)
+                n = requests * self.cfg.rotations * self.repeats(m, mode)
                 calls += n
                 cost += self.estimate(n, m, tools)
         return calls, cost
