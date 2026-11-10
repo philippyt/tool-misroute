@@ -51,7 +51,8 @@ def test_estimate_only_and_max_cost(config):
     code, out = call("discover", "-c", path, "--json", "--estimate-only")
     assert code == 0 and json.loads(out)["estimate"]["cost_usd"] > 0
     code, out = call("discover", "-c", path, "--json", "--max-cost", "0.01")
-    assert code == 3 and "max cost" in json.loads(out)["error"]
+    stopped = json.loads(out)
+    assert code == 3 and "budget" in stopped["error"] and stopped["estimate"]["above_max_cost"]
     code, out = call("discover", "-c", path, "--json")
     assert code == 3 and "--yes" in json.loads(out)["error"]
 

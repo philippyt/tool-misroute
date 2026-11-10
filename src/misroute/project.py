@@ -92,6 +92,15 @@ class Project:
     def role(self, role: str) -> Metered:
         return self.adapter(self.cfg.role(role).name)
 
+    def usage(self) -> dict[str, dict[str, Any]]:
+        """Measured calls, tokens and dollars per model, with its roles, to hold against the estimate."""
+        out = {}
+        for name, a in self._adapters.items():
+            roles = [r for r in ("generator", "validator", "writer") if self.cfg.role(r).name == name]
+            tested = ["tested"] if name in self.cfg.tested() else []
+            out[name] = {"roles": tested + roles, **a.usage()}
+        return out
+
     def unpriced(self) -> list[str]:
         return [m.name for m in self.cfg.models if not fill_price(m)]
 
@@ -338,6 +347,7 @@ class Project:
             effect_unknown=effect_unknown(tools),
             catalog=catalog_hash(tools),
             spent=self.budget.spent,
+            usage=self.usage(),
         )
         run = self.store.run_id("discover", result["catalog"])
         self.store.save(run, "discover", result["catalog"], trials + removed, {"models": models_, "modes": modes})

@@ -18,7 +18,7 @@ async def test_agent_server(project):
         res = await client.call_tool("lint_descriptions", {})
         assert not res.is_error and res.structured_content["schema_version"] == 2
         res = await client.call_tool("check_description", {"tool": "get_customer", "description": "x", "max_cost": -1})
-        assert "above max_cost" in str(res.structured_content)
+        assert "max_cost must be above 0" in str(res.structured_content)
         res = await client.call_tool("get_report", {})
         assert not res.is_error
 

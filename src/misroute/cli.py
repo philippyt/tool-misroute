@@ -4,7 +4,7 @@ import shlex
 import sys
 import time
 import webbrowser
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Annotated, Any
 import typer
@@ -68,11 +68,13 @@ class Opts:
     max_cost: float | None = None
     estimate_only: bool = False
     progress: str = "bar"
+    extra: dict[str, Any] = field(default_factory=dict)
 
 
 def emit(opts: Opts, data: dict[str, Any], text=None, code: int = OK) -> None:
     if opts.json:
-        print(json.dumps({"schema_version": SCHEMA_VERSION, "command": opts.command, **data}, default=str))
+        body = {"schema_version": SCHEMA_VERSION, "command": opts.command, **opts.extra, **data}
+        print(json.dumps(body, default=str))
     elif text:
         text()
     if code != OK:
@@ -110,8 +112,14 @@ def gate(opts: Opts, proj: Project, calls: int, cost: float, note: str = "") -> 
 
         emit(opts, estimate, show, OK)
         raise typer.Exit(OK)
+    opts.extra.update(estimate)
     if opts.max_cost is not None and cost > opts.max_cost:
-        fail(opts, f"estimate ${cost:.2f} is above max cost ${opts.max_cost:.2f}")
+        estimate["estimate"]["above_max_cost"] = True
+        err.print(
+            f"estimate ${cost:.2f} is above max cost ${opts.max_cost:.2f}. The estimate is a guide, the run starts "
+            f"and stops at ${proj.budget.limit:.2f} if spending gets there, keeping finished trials",
+            style="yellow",
+        )
     if not opts.json:
         out.print(f"about {calls} model calls, about ${cost:.2f}, stops at ${proj.budget.limit:.2f}")
         if note:
@@ -159,6 +167,18 @@ def warned(res: dict, text):
             out.print(w, style="yellow")
 
     return show
+
+
+def usage_note(opts: Opts, res: dict) -> None:
+    """Measured calls, tokens and dollars per model, and the estimate they are held against."""
+    for name, u in (res.get("usage") or {}).items():
+        out.print(
+            f"  {name} ({', '.join(u['roles']) or 'unused'}): {u['calls']} calls, {u['cached']} from cache, "
+            f"{u['tokens_in']} tokens in, {u['tokens_out']} out, ${u['cost_usd']:.2f}",
+            style="dim",
+        )
+    if est := opts.extra.get("estimate"):
+        out.print(f"  the estimate was ${est['cost_usd']:.2f} for {est['calls']} calls", style="dim")
 
 
 def effect_note(names: list[str]) -> None:
@@ -511,6 +531,7 @@ def discover(
             )
         effect_note(res["effect_unknown"])
         out.print(f"spent ${res['spent']:.2f}, results in {proj.store.root}")
+        usage_note(opts, res)
 
     emit(opts, res, warned(res, text))
 
@@ -803,6 +824,7 @@ def improve(
         for w in res.get("warnings", []):
             out.print(w, style="yellow")
         out.print(f"spent ${res['cost_usd']:.2f}. Review the files, nothing was applied", style="dim")
+        usage_note(opts, res)
 
     emit(opts, res, warned(res, text))
 

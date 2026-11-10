@@ -63,8 +63,10 @@ class Metered:
         self.price_known = fill_price(cfg)
         self.calls = 0
         self.hits = 0
+        self.in_tokens = 0
         self.out_tokens = 0
         self.out_calls = 0
+        self.spent = 0.0
         self.cached_out: int | None = None
 
     def price(self, tokens_in: int, tokens_out: int) -> float:
@@ -91,6 +93,16 @@ class Metered:
                 REASONING_TOKENS_OUT if self.cfg.options.get("reasoning_effort") else ESTIMATE_TOKENS_OUT
             )
         return self.cached_out
+
+    def usage(self) -> dict[str, Any]:
+        """What this model was actually sent and billed in this run, next to the calls the cache answered."""
+        return {
+            "calls": self.calls,
+            "cached": self.hits,
+            "tokens_in": self.in_tokens,
+            "tokens_out": self.out_tokens,
+            "cost_usd": round(self.spent, 4),
+        }
 
     def estimate(self, *parts: Any) -> float:
         return self.price(estimate_tokens(*parts), self.expected_out())
@@ -126,6 +138,7 @@ class Metered:
                 OUTPUT_ROOM.reset(token)
             self.budget.settle(held, cost)
         self.calls += 1
+        self.spent += cost
         data = encode(out)
         empty = data in ("", None) or (isinstance(data, dict) and not data["calls"] and not data["text"])
         whole = keep(out)
@@ -138,6 +151,7 @@ class Metered:
     async def chat(self, user: Messages, tools: list[dict[str, Any]], system: str | None = None, rep: int = 0) -> Turn:
         async def run():
             t = await self.inner.chat(user, tools, system)
+            self.in_tokens += t.tokens_in
             self.out_tokens += t.tokens_out
             self.out_calls += 1
             return t, t.cost if t.cost is not None else self.price(t.tokens_in, t.tokens_out)
@@ -153,6 +167,9 @@ class Metered:
             if (turn := getattr(self.inner, "complete_turn", None)) is not None:
                 t: Turn = await turn(prompt)
                 cut[0] = t.truncated
+                self.in_tokens += t.tokens_in
+                self.out_tokens += t.tokens_out
+                self.out_calls += 1
                 return t.text, t.cost if t.cost is not None else self.price(t.tokens_in, t.tokens_out)
             text = await self.inner.complete(prompt, kind)
             return text, self.price(estimate_tokens(prompt), estimate_tokens(text))

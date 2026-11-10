@@ -14,14 +14,16 @@ from misroute.store.runs import SCHEMA_VERSION
 
 READ = ToolAnnotations(read_only_hint=True)
 PAID = ToolAnnotations(read_only_hint=True, open_world_hint=True)
+NO_ROOM = "max_cost must be above 0, it is the most this call may spend"
 
 
 INSTRUCTIONS = """misroute finds the tools agents confuse on an MCP server or OpenAPI spec and tests description
 changes on held out requests. It never edits tools: propose results to a person.
 Start with lint_descriptions, free. To test one description, call estimate_check, then check_description. To find
 confused tools or improve many descriptions, use start_job with kind discover or improve, then job_status. Paid tools
-refuse above max_cost. Report verdict, trials, held_out and cost_usd with any claim. insufficient_data means no
-answer. improve entries with status draft are untested. The guide resource has the full reference."""
+stop when spending reaches max_cost and keep the trials that finished, the estimate is a guide. Report verdict,
+trials, held_out and cost_usd with any claim. insufficient_data means no answer. improve entries with status
+draft are untested. The guide resource has the full reference."""
 
 
 def create(proj: Project) -> MCPServer:
@@ -72,7 +74,7 @@ def create(proj: Project) -> MCPServer:
     @app.tool(
         description="Tests whether a proposed description for one tool routes requests better than the current "
         "one, on held out requests. Returns better, worse, no_difference or insufficient_data with trial counts. "
-        "Refuses to run when the estimate is above max_cost. Never changes the server.",
+        "Stops when spending reaches max_cost. Never changes the server.",
         annotations=PAID,
         structured_output=True,
     )
@@ -80,13 +82,13 @@ def create(proj: Project) -> MCPServer:
         _, cost = checker.estimate(
             proj, 1 + len(checker.neighbours(proj, tool)), proj.cfg.tested(), ["json"], await proj.tools()
         )
-        if cost > max_cost:
-            return {"error": f"estimate ${cost:.2f} is above max_cost ${max_cost:.2f}", "cost_usd": round(cost, 4)}
+        if max_cost <= 0:
+            return {"error": NO_ROOM, "estimate_usd": round(cost, 4)}
         proj.cap(max_cost)
         try:
             res = await checker.check(proj, tool, description, refresh=refresh)
         except (BudgetExceeded, KeyError) as e:
-            return {"error": str(e)}
+            return {"error": str(e), "estimate_usd": round(cost, 4)}
         return {"schema_version": SCHEMA_VERSION, "estimate_usd": round(cost, 4), **res}
 
     @app.tool(
@@ -134,16 +136,16 @@ def create(proj: Project) -> MCPServer:
 
     @app.tool(
         description="Drafts a boundary clause for two confused tools and tests it against a neutral edit, or against "
-        "drafted descriptions when a tool has none. Returns the edits and a verdict. Refuses above max_cost. "
-        "Never changes the server.",
+        "drafted descriptions when a tool has none. Returns the edits and a verdict. Stops when spending "
+        "reaches max_cost. Never changes the server.",
         annotations=PAID,
         structured_output=True,
     )
     async def suggest_fix(tool_a: str, tool_b: str, max_cost: float, trials: int = 96) -> dict[str, Any]:
         models, modes = proj.cfg.tested(), ["json"]
         _, cost = await proj.cost("fix", models, modes, pairs=[(tool_a, tool_b)], trials=trials)
-        if cost > max_cost:
-            return {"error": f"estimate ${cost:.2f} is above max_cost ${max_cost:.2f}", "cost_usd": round(cost, 4)}
+        if max_cost <= 0:
+            return {"error": NO_ROOM, "estimate_usd": round(cost, 4)}
         proj.cap(max_cost)
         try:
             res = await proj.fix(pairs=[(tool_a, tool_b)], models_=models, modes=modes, trials=trials)
@@ -163,8 +165,8 @@ def create(proj: Project) -> MCPServer:
         "modes. discover, probe and fix: top, pairs as [[a, b]] and trials. improve: helper (a model from another "
         'family that writes and judges requests), languages such as ["no", "en"], requests_from (interface or '
         "descriptions), domain, real_requests, max_groups, styles, max_chars, out, fastmcp and drafts. improve "
-        "writes files for review and applies nothing. Refuses above max_cost, set estimate_only to get the cost "
-        "without running. Poll job_status with the id.",
+        "writes files for review and applies nothing. Stops when spending reaches max_cost, set estimate_only to "
+        "get the cost without running. Poll job_status with the id.",
         annotations=PAID,
         structured_output=True,
     )
@@ -205,8 +207,8 @@ def create(proj: Project) -> MCPServer:
             return {"error": no_price(", ".join(missing))}
         if estimate_only:
             return {"schema_version": SCHEMA_VERSION, "estimate_calls": calls, "estimate_usd": round(cost, 4)}
-        if cost > max_cost:
-            return {"error": f"estimate ${cost:.2f} is above max_cost ${max_cost:.2f}", "cost_usd": round(cost, 4)}
+        if max_cost <= 0:
+            return {"error": NO_ROOM, "estimate_usd": round(cost, 4)}
         target.cap(max_cost)
         job_id = uuid.uuid4().hex[:8]
         job: dict[str, Any] = {

@@ -441,6 +441,7 @@ async def improve(
         if fastmcp and "server" in result["files"]:
             result["fastmcp"] = await served(proj, Path(result["files"]["server"]), entries, results, held_by, imp)
     result["cost_usd"] = round(proj.budget.spent - start, 4)
+    result["usage"] = proj.usage()
     proj.store.write("improve", result)
     return result
 

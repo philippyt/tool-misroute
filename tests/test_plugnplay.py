@@ -203,7 +203,7 @@ async def test_agent_jobs_and_suggest_fix(project):
         )
         assert fix.structured_content["results"][0]["edits"]["clause"]
         refused = await client.call_tool("start_job", {"kind": "fix", "max_cost": -1})
-        assert "above max_cost" in str(refused.structured_content)
+        assert "max_cost must be above 0" in str(refused.structured_content)
 
 
 async def test_guard_decorator_and_middleware(tmp_path):
