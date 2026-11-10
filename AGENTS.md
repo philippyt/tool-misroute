@@ -12,6 +12,8 @@ After `pip install misroute` or `uv tool install misroute`, `misroute guide` pri
 - Check the cost first with `--estimate-only` when you are unsure.
 - Report `trials`, `held_out` and `cost_usd` with every verdict, and the template counts from `confirm.tests` with every improve proposal.
 - `insufficient_data` is not an answer. Do not read anything into its rates.
+- Discover rates come from written requests. Present them as a routing diagnostic, not as a production success rate, and name `flagged` pairs apart from `one_wording` pairs, which rest on a single request wording.
+- Report `bad_args_rate` next to the routing score, since a right tool name can hide a call the real tool would reject.
 - Do not tune a description against the same held out set. Each verdict on a set multiplies its p value by the number of verdicts the set has given (`looks`), so repeated checks lose power. Ask the user before passing `--refresh` for a fresh set.
 
 ## Setup
@@ -20,9 +22,11 @@ misroute needs a target and a model. A target is an MCP URL, a local command, an
 
 A model that takes function tools only on the Responses API needs `options: {api: responses}` on a full model block. Set `reasoning_effort` in the same options, to the effort used in production. `misroute doctor` makes one tool call per model and names this fix.
 
-`--max-cost` and `budget_usd` are limits on actual spend, and the lower one applies. Money is reserved before each call. The estimate is a guide, not an upper bound, and `upper_bound` is always false. A budget stop exits with code 3, gives `spent` in the error, saves finished trials as a `partial` run and a rerun with more budget reuses them at no cost.
+`--max-cost` and `budget_usd` are limits on actual spend, and the lower one applies. Money is reserved before each call. The estimate is a guide, not an upper bound, and `upper_bound` is always false. An estimate above `--max-cost` does not refuse the run: the output carries `estimate.above_max_cost` and the run stops at the limit if spending gets there. Results carry `estimate` and `usage`, the measured calls, tokens and dollars per model. A budget stop exits with code 3, gives `spent` in the error, saves finished trials as a `partial` run and a rerun with more budget reuses them at no cost.
 
-For a write request only the writes count, so a read before the write is not confusion. Tools count as writes from `readOnlyHint` and `destructiveHint`, or else a verb in the name. `effect_unknown` in lint and discover lists tools where neither says, which count as reads: ask the user to annotate them before trusting scores on them. Only tool names are scored, never arguments, so say so when reporting on a generic tool that takes an operation name, and list its allowed operations in `domain`.
+For a write request only the writes count, so a read before the write is not confusion. Tools count as writes from `readOnlyHint` and `destructiveHint`, or else a verb in the name. `effect_unknown` in lint and discover lists tools where neither says, which count as reads: ask the user to annotate them before trusting scores on them. The score is about tool names. Arguments are checked against the input schema and reported apart as `bad_args_rate` and `bad_args`, so say both when reporting on a generic tool that takes an operation name, and list its allowed operations in `domain`.
+
+When a server is built so the agent reads a catalog or schema first, those calls are not confusion. `discover` lists likely entry points under `lookup_candidates`. Ask the user before adding them to `lookup_tools`, then calls to them are not scored as choices and a trial that only called lookups ends as `lookup_only`. Use `max_turns` of 2 or more with them, and `fixtures`, a file of recorded results per tool, so later turns see a realistic reply. `accuracy` is the first choice and `reached_rate` is whether the target was called at all.
 
 Real requests are the strongest evidence. Their rates show in discover `by_kind.real` and in improve `confirm.rates[condition].real_error_rate`.
 
@@ -40,6 +44,8 @@ writer: openai:gpt-5.6
 request_source: spec           # write requests from the interface, not the descriptions
 request_languages: [no, en]
 domain: Work orders are planned jobs, incidents are reported faults.
+lookup_tools: [api_catalog]   # optional, entry points an agent is meant to call first
+fixtures: fixtures.yaml       # optional, recorded results per tool for later turns
 real_requests: real.jsonl      # optional, lines of {"text": ..., "tool": name, operationId or "METHOD /path", "lang": ...}
 ```
 
@@ -92,7 +98,7 @@ Files in `--out`: `descriptions.yaml` (tool name to description), and for OpenAP
 
 ## Numbers behind the results
 
-Every threshold comes from a source or is derived. 0.05 and Holm are convention. The gate's 0.10, the flag rule of 6 errors and the 96 trial design (6 requests, 4 slots, both orders) come from the thesis. The minimum number of differing templates, and of pairs for the across pairs test, is the smallest count at which an exact sign flip test can reach 0.05. Monte Carlo draws are sized so the standard error at alpha is a tenth of alpha, and integer sign flip tests are exact for any size. FastMCP's 56 character name limit is read from its source. The rest are settings you choose: budgets, `max_tokens` (none by default, cut replies are retried with twice the tokens they used), guard windows and the pytest `min_accuracy`.
+Every threshold comes from a source or is derived. 0.05 and Holm are convention. The gate's 0.10, the flag rule of 6 errors and the 96 trial design (6 requests, 4 slots, both orders) come from the thesis. A flag also needs two request templates, the smallest count that is not one wording repeated, and a spot's interval counts templates. The minimum number of differing templates, and of pairs for the across pairs test, is the smallest count at which an exact sign flip test can reach 0.05. Monte Carlo draws are sized so the standard error at alpha is a tenth of alpha, and integer sign flip tests are exact for any size. FastMCP's 56 character name limit is read from its source. The rest are settings you choose: budgets, `max_tokens` (none by default, cut replies are retried with twice the tokens they used), guard windows and the pytest `min_accuracy`.
 
 ## Check verdicts
 

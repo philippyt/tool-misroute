@@ -20,4 +20,4 @@ description: Check MCP tool descriptions against model behaviour with the misrou
 6. Do not run `check` repeatedly on the same tool to tune wording. Each verdict on the same held out set multiplies its p value by the number of verdicts given (`looks`). Only pass `--refresh` when the user agrees to a fresh set.
 
 Exit codes: 0 passed, 1 worse or limits failed, 2 insufficient data, 3 budget or config problem.
-If a run exits with 3 because of cost, report the estimate and ask before raising `--max-cost`.
+`--max-cost` limits spend. An estimate above it is a warning, the run starts and stops at the limit. If a run exits with 3 because of cost, report `spent` and the estimate and ask before raising `--max-cost`.

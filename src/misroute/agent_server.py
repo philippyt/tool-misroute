@@ -14,6 +14,7 @@ from misroute.store.runs import SCHEMA_VERSION
 
 READ = ToolAnnotations(read_only_hint=True)
 PAID = ToolAnnotations(read_only_hint=True, open_world_hint=True)
+CELL_KEYS = ("model", "mode", "trials", "accuracy", "reached_rate", "wrong_rate", "hedge_rate", "bad_args_rate")
 NO_ROOM = "max_cost must be above 0, it is the most this call may spend"
 
 
@@ -102,10 +103,7 @@ def create(proj: Project) -> MCPServer:
         found: dict[str, Any] = proj.store.read("discover") or {}
         fixed: dict[str, Any] = proj.store.read("fix") or {}
         improved: dict[str, Any] = proj.store.read("improve") or {}
-        cells = [
-            {k: c[k] for k in ("model", "mode", "trials", "wrong_rate", "hedge_rate", "failures")}
-            for c in found.get("cells", [])
-        ]
+        cells = [{k: c.get(k) for k in (*CELL_KEYS, "failures")} for c in found.get("cells", [])]
         return {
             "schema_version": SCHEMA_VERSION,
             "cells": cells,

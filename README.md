@@ -84,7 +84,7 @@ Write models as `provider:model`:
 
 Prices come from the public OpenRouter catalog, cached for a week, and local models cost nothing. Set `price_in` and `price_out` to override. A model with no known price refuses paid runs, since the budget could not be enforced, so set a price for a private deployment, or 0 for a free one. Behind a company TLS proxy, set `system_certs: true`.
 
-Every paid run shows an estimate and stops at `budget_usd`, or at `--max-cost` when that is lower. The estimate is a guide, based on the reply sizes seen so far, not an upper bound. The limit is what holds: money is reserved before each call and output is capped near the limit, so a run can stop a little early but does not pass it. One gap remains: far from the limit no token cap is sent, so a single reply over 32768 tokens could overrun. On a stop, calls in flight finish, finished trials are saved as a `partial` run, and a rerun with more budget reuses them at no cost.
+Every paid run shows an estimate and stops at `budget_usd`, or at `--max-cost` when that is lower. The estimate is a guide, based on the reply sizes seen so far, not an upper bound, so an estimate above `--max-cost` is a warning and the run still starts. Each result carries the estimate next to the measured calls, tokens and dollars per model under `usage`. The limit is what holds: money is reserved before each call and output is capped near the limit, so a run can stop a little early but does not pass it. One gap remains: far from the limit no token cap is sent, so a single reply over 32768 tokens could overrun. On a stop, calls in flight finish, finished trials are saved as a `partial` run, and a rerun with more budget reuses them at no cost.
 
 Models that only take function tools on the Responses API, such as `gpt-6-astra`, need `options: {api: responses}`. `misroute doctor` makes one tool call per model and names this fix when it sees the error. Write the model as a block, since a shorthand cannot carry options:
 
@@ -127,9 +127,32 @@ request_languages: [en, no]
 domain: Municipal operations. A work order is a planned job, an incident is a reported fault.
 ```
 
-The validator keeps a request only when it routes to the right tool, and rejects requests no tool can do. `domain` reaches both the generator and the validator, so a generic tool that takes an operation name should have its allowed operations listed there. Otherwise requests can ask for actions it does not support.
+The validator keeps a request only when it routes to the right tool. It sees each tool's parameters and rejects a request no tool can do, one that asks for a filter or field the tool cannot express, and one that leans on an earlier reply, such as a next page with no cursor. Every rejected request is kept with the tool the validator picked and its reason under `rejected_requests`. A request carries a `{slot}` placeholder only when a parameter takes a value such as an id, so a tool with no such parameter gets complete requests instead of an invented filter. `domain` reaches both the generator and the validator, so a generic tool that takes an operation name should have its allowed operations listed there. Otherwise requests can ask for actions it does not support.
 
-On a write request, only the writes decide the choice. A read before the write, in one turn, across turns or in one program, is not confusion. Reads spread across turns are only seen with `max_turns` above 1, otherwise the turn ends as `read_first` and counts as an error, not as a wrong pick. Tools count as writes from `readOnlyHint` and `destructiveHint`, or else from a verb in the name. `lint` and `discover` list tools under `effect_unknown` when neither says, and those count as reads, so annotate them. Only the tool name is scored, never the arguments, so choosing the wrong operation inside a generic tool does not show up.
+On a write request, only the writes decide the choice. A read before the write, in one turn, across turns or in one program, is not confusion. Reads spread across turns are only seen with `max_turns` above 1, otherwise the turn ends as `read_first` and counts as an error, not as a wrong pick. Tools count as writes from `readOnlyHint` and `destructiveHint`, or else from a verb in the name. `lint` and `discover` list tools under `effect_unknown` when neither says, and those count as reads, so annotate them. The score is about the tool name. Arguments are checked against each tool's input schema and reported apart, as `bad_args_rate` and the most common problems per model and mode, so a right tool called with an operation outside its enum or a limit above its maximum shows up without changing the routing score.
+
+Some servers are built so the agent reads a catalog or a schema first and then calls the tool that does the work. List those entry points and their calls stop counting as choices:
+
+```yaml
+max_turns: 3
+lookup_tools: [admin_api_catalog, "*_catalog"]
+fixtures: fixtures.yaml
+```
+
+With `lookup_tools` the first call to any other tool decides, and a trial that only ever called lookups ends as `lookup_only`, not as a wrong pick. `discover` suggests candidates under `lookup_candidates`: tools called on the way to several different targets. Each cell reports three things apart: `accuracy`, the first choice, `reached_rate`, whether the target was called at all within `max_turns`, and `bad_args_rate`. A trial stops as soon as the target or a write is called, so later turns are only paid for when the first one missed.
+
+Later turns see fake results, never your server. By default those come from the output schema, which is thin for a catalog. `fixtures` points at a JSON or YAML file of recorded, sanitized results per tool, so the next step has something real to work from:
+
+```yaml
+admin_api_catalog:
+  routes: [{method: POST, path: /api/repositories}]
+azure_read:
+  - args: {operation: app_logs}
+    result: {lines: ["2026-11-10 started"]}
+  - result: {items: []}
+```
+
+A value is the result itself, or a list of cases where the first one whose `args` all match the call answers it. Fake pagination follows the parameter: a numeric `page` or `offset` is the caller's to choose, a `limit` is honoured, and only an opaque cursor has to come from an earlier reply.
 
 ## Commands
 
@@ -157,11 +180,11 @@ On a write request, only the writes decide the choice. A read before the write, 
 
 ## How discover ranks pairs
 
-Each tool gets requests written from the user's goal, without the tool's own words. Requests run against the full tool list in rotated orders. Each pair shows three signals: the share of one tool's requests that went to the other, the share where the model called both, and the share that moved to it when the other tool was removed. The score is the larger of the first two, a measured rate with no weights, and write tools come first on ties. A pair is flagged when one model and mode got at least 6 of its requests wrong or hedged, the flag rule from the thesis, and flagged pairs are what probe, fix and improve work on unless you name pairs.
+Each tool gets requests written from the user's goal, without the tool's own words. Requests run against the full tool list in rotated orders. Each pair shows three signals: the share of one tool's requests that went to the other, the share where the model called both, and the share that moved to it when the other tool was removed. The score is the larger of the first two, a measured rate with no weights, and write tools come first on ties. A pair is flagged when one model and mode got at least 6 of its requests wrong or hedged, the flag rule from the thesis, over at least two request wordings. Six errors from one wording repeated across slots and orders are one observation, so that pair is marked `one wording` and not flagged. Flagged pairs are what probe, fix and improve work on unless you name pairs. The 95% interval on a score counts request wordings, not trials, for the same reason. A request where the model called the right tool and another one is a hedge, not a wrong pick, whichever came first.
 
-The ranking marks what it cannot vouch for: pairs whose request sets differ in surface words, tools with few validated requests, and tools the validator left without any, marked UNTESTED. Tools that models answer without calling anything are listed separately.
+The ranking marks what it cannot vouch for: pairs resting on one wording, tools with few validated requests, and tools the validator left without any, marked UNTESTED. Synthetic rates are a routing diagnostic for finding transcripts worth reading, not a production success rate. `real_requests` is what turns them into evidence. Tools that models answer without calling anything are listed separately.
 
-Code mode runs each program in Monty against recorded fakes and reports faked tools, pasted stubs, programs that never call anything, invented or reused cursors and unread pages.
+Code mode runs each program in Monty against recorded fakes and reports faked tools, pasted stubs, programs that never call anything, invented or reused cursors and unread pages. A call that names a page or an offset asked for that slice and is not held to the rest.
 
 ## Fix and check
 
@@ -214,7 +237,7 @@ $ claude mcp add misroute -- uvx misroute serve-mcp
 
 The second form goes in `.cursor/mcp.json`. VS Code takes the same block under `"servers"` in `.vscode/mcp.json`.
 
-The server exposes `lint_descriptions`, `draft_description`, `check_description`, `explain_pair`, `suggest_fix`, `get_report` and background jobs with `start_job`, `job_status` and `cancel_job` for runs longer than a tool call. Paid tools take a required `max_cost` and refuse to run above it. misroute never edits your tools.
+The server exposes `lint_descriptions`, `draft_description`, `check_description`, `explain_pair`, `suggest_fix`, `get_report` and background jobs with `start_job`, `job_status` and `cancel_job` for runs longer than a tool call. Paid tools take a required `max_cost` and stop when spending reaches it. misroute never edits your tools.
 
 Claude Code users can install the plugin, which adds the server and a skill:
 

@@ -66,6 +66,32 @@
         "type": "integer"
        }
       }
+     },
+     "accuracy": {
+      "type": "number",
+      "description": "share of trials whose first choice was the target alone"
+     },
+     "reached_rate": {
+      "type": "number",
+      "description": "share of trials that called the target at some point within max_turns"
+     },
+     "bad_args_rate": {
+      "type": "number",
+      "description": "share of trials with a call whose arguments break the tool's input schema, apart from the tool choice"
+     },
+     "bad_args": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "problem": {
+         "type": "string"
+        },
+        "trials": {
+         "type": "integer"
+        }
+       }
+      }
      }
     }
    }
@@ -262,6 +288,95 @@
    "items": {
     "type": "string"
    }
+  },
+  "rejected_requests": {
+   "type": "object",
+   "description": "per tool, each written request the validator dropped, the tool it picked and its reason",
+   "additionalProperties": {
+    "type": "array",
+    "items": {
+     "type": "object",
+     "properties": {
+      "request": {
+       "type": "string"
+      },
+      "picked": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "reason": {
+       "type": "string"
+      }
+     }
+    }
+   }
+  },
+  "lookup_tools": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   },
+   "description": "configured entry point tools whose calls are not scored as choices"
+  },
+  "lookup_candidates": {
+   "type": "array",
+   "description": "tools called on the way to several targets, likely entry points to list under lookup_tools",
+   "items": {
+    "type": "object",
+    "properties": {
+     "tool": {
+      "type": "string"
+     },
+     "trials": {
+      "type": "integer"
+     },
+     "targets": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     }
+    }
+   }
+  },
+  "max_turns": {
+   "type": "integer"
+  },
+  "usage": {
+   "type": "object",
+   "description": "measured calls, tokens and dollars per model",
+   "additionalProperties": {
+    "type": "object",
+    "properties": {
+     "roles": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "calls": {
+      "type": "integer"
+     },
+     "cached": {
+      "type": "integer"
+     },
+     "tokens_in": {
+      "type": "integer"
+     },
+     "tokens_out": {
+      "type": "integer"
+     },
+     "cost_usd": {
+      "type": "number"
+     }
+    }
+   }
+  },
+  "estimate": {
+   "type": "object",
+   "description": "the estimate shown before the run, a guide and not a limit"
   }
  },
  "required": [
