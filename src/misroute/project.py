@@ -66,6 +66,7 @@ class Project:
         self.progress: Progress = lambda n: None
         self.add_total: Progress = lambda n: None
         self.rejected: dict[str, Counter] = {}
+        self.dropped: dict[str, list[dict]] = {}
         self.unreadable: Counter = Counter()
         self._fixtures: dict[str, Any] | None = None
 
@@ -185,8 +186,9 @@ class Project:
                 self.unreadable[tool.name] += 1
                 break
             attempt += 1
-            ok, picks = await validate.keep_valid(val, reqs, tools, src, self.domain())
-            self.rejected.setdefault(tool.name, Counter()).update(p or "(no tool)" for p in picks)
+            ok, bad = await validate.keep_valid(val, reqs, tools, src, self.domain())
+            self.rejected.setdefault(tool.name, Counter()).update(b["picked"] or "(no tool)" for b in bad)
+            self.dropped.setdefault(tool.name, []).extend(bad)
             new = [r for r in ok if r.id not in {k.id for k in kept}]
             if not new:
                 break
@@ -353,6 +355,7 @@ class Project:
             near_misses=[{"where": w, **asdict(n)} for w, n in near],
             removal={k: dict(v) for k, v in moved.items()},
             short=self.shortfall(reqs),
+            rejected_requests={k: v for k, v in self.dropped.items() if v},
             roles_warning=self.cfg.role_warnings(),
             request_source=self.cfg.request_source,
             by_language=rates_by(trials, "lang"),

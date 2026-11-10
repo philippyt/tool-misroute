@@ -99,9 +99,25 @@ def request():
 
 async def test_validator_can_reject_a_request_no_tool_can_do():
     judge = Judge("none")
-    kept, picks = await validate.keep_valid(judge, [request()], TOOLS)
-    assert not kept and picks == [None]
-    assert "reply none" in judge.prompts[0] and "Domain:" not in judge.prompts[0]
+    kept, bad = await validate.keep_valid(judge, [request()], TOOLS)
+    assert not kept and bad == [{"request": "suspend user 7", "picked": None, "reason": ""}]
+    assert "Reply none" in judge.prompts[0] and "Domain:" not in judge.prompts[0]
+
+
+async def test_validator_gives_the_reason_a_request_is_unfair():
+    judge = Judge("none: azure_change has no project filter")
+    kept, bad = await validate.keep_valid(judge, [request()], TOOLS)
+    assert not kept and bad[0]["picked"] is None and bad[0]["reason"] == "azure_change has no project filter"
+    for unfair in ("parameters and returned fields do not support", "a cursor or a next page"):
+        assert unfair in judge.prompts[0]
+
+
+async def test_generator_does_not_force_a_placeholder_on_a_tool_without_one():
+    judge = Judge('{"slots": [], "requests": ["how much storage is in use", "usage for {slot}"]}')
+    reqs = await generate.generate(judge, Tool("admin_get_usage_statistics", "Usage totals."), 2, 4)
+    assert [r.template for r in reqs] == ["how much storage is in use"]
+    assert reqs[0].texts() == [("", "how much storage is in use")]
+    assert "without a placeholder" in judge.prompts[0] and "a next page or a cursor" in judge.prompts[0]
 
 
 async def test_validator_sees_the_domain_and_keeps_a_good_request():
@@ -121,7 +137,7 @@ async def test_generator_sees_the_domain_from_descriptions_too():
 async def test_generator_prompt_is_unchanged_without_a_domain():
     judge = Judge('{"slots": ["7"], "requests": ["restart vm {slot}"]}')
     await generate.generate(judge, CHANGE, 1, 1)
-    assert "placeholder.\n\nTool: azure_change" in judge.prompts[0]
+    assert "a cursor.\n\nTool: azure_change" in judge.prompts[0]
 
 
 def test_lint_reports_tools_with_an_unknown_effect(tmp_path, monkeypatch):

@@ -557,6 +557,16 @@ def discover(
             out.print("near misses, unvalidated, not in the ranking", style="dim")
             for n in res["near_misses"][:10]:
                 out.print(f"  {n['tool']}  {n['rival']}  {n['score']:.2f}  {n['where']} {n['source']}", style="dim")
+        dropped = [r for rs in res["rejected_requests"].values() for r in rs]
+        if dropped:
+            unfair = [r for r in dropped if not r["picked"]]
+            out.print(
+                f"the validator dropped {len(dropped)} written requests before any trial ran, {len(unfair)} because "
+                "no tool could do them as asked. Each one and its reason is under rejected_requests in discover.json",
+                style="dim",
+            )
+            for r in unfair[:3]:
+                out.print(f"  {r['request']!r}: {r['reason'] or 'no reason given'}", style="dim")
         for tool, s in res["short"].items():
             picked = ", ".join(f"{k} {v}" for k, v in sorted(s["validator_picked"].items(), key=lambda kv: -kv[1]))
             out.print(f"{tool}: validator kept {s['kept']} of {proj.cfg.requests_per_tool} requests", style="yellow")

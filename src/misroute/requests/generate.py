@@ -6,15 +6,20 @@ from misroute.models.base import parse_json
 from misroute.server.catalog import Tool
 from misroute.trial import Request
 
+SLOT = """When a parameter takes one concrete value such as a record id, a name or a place, every request contains the
+placeholder {{slot}} exactly once, standing for a value of that parameter, and you give {slots} realistic values for it.
+When no parameter takes such a value, write complete requests without a placeholder and give an empty slots list.
+Never ask to filter, narrow or sort by something the parameters cannot express.
+Each request is the first message of a conversation and must stand on its own: do not refer to an earlier reply,
+a previous call, a next page or a cursor.
+"""
+
 GOAL = """Write requests that a user of an AI agent would send, where the right tool to answer is the one below.
 Write each request from the user's goal. Do not reuse the tool's name or the distinctive words of its description.
 Vary the wording and length. Write the requests in {language}.
 Only ask for what this tool can actually return, judging by its description, parameters
 and output. Do not ask for aggregates, statistics or data the tool does not hold.
-Every request must contain the placeholder {{slot}} exactly once, standing for one concrete value such as a record id,
-customer, repository or place, so the request is complete when it is filled in.
-Also give {slots} realistic values for that placeholder.
-{domain}
+{slot_rule}{domain}
 Tool: {name}
 Description: {description}
 Parameters: {params}
@@ -26,11 +31,10 @@ Reply with JSON only: {{"slot_kind": "...", "slots": ["..."], "requests": ["..."
 BORROWED = """Write requests that a user of an AI agent would send, where the right tool is the first tool below.
 Each request must borrow one or two words from the second tool's description while still clearly needing the first tool.
 Write the requests in {language}.
-Every request must contain the placeholder {{slot}} exactly once, standing for one concrete value, and give {slots}
-realistic values for it.
-{domain}
+{slot_rule}{domain}
 Tool: {name}
 Description: {description}
+Parameters: {params}
 Sibling: {sibling_name}: {sibling}
 Count: {count}
 
@@ -42,10 +46,7 @@ You see the operation's interface, not its documentation. Work out from its name
 fields what a person would use it for, and write each request from that person's goal, in everyday words. Do not
 reuse the operation name or the path. Vary the wording and length. Write the requests in {language}.
 Only ask for what the returned fields can answer. Do not ask for aggregates or data the operation does not hold.
-Every request must contain the placeholder {{slot}} exactly once, standing for one concrete value such as a record id,
-person, address or place, so the request is complete when it is filled in.
-Also give {slots} realistic values for that placeholder.
-{domain}
+{slot_rule}{domain}
 Tool: {name}
 {view}
 Count: {count}
@@ -55,9 +56,7 @@ Reply with JSON only: {{"slot_kind": "...", "slots": ["..."], "requests": ["..."
 SPEC_BORROWED = """Write requests that a user of an AI agent would send, where the right tool is the first operation
 below. You see interfaces, not documentation. Each request must borrow one or two words that fit the second
 operation's interface while still clearly needing the first. Write the requests in {language}.
-Every request must contain the placeholder {{slot}} exactly once, standing for one concrete value, and give {slots}
-realistic values for it.
-{domain}
+{slot_rule}{domain}
 Tool: {name}
 {view}
 Sibling: {sibling_name}: {sibling}
@@ -168,6 +167,7 @@ async def generate(
     spec = source == "spec"
     tpl = (SPEC_BORROWED if sibling else SPEC) if spec else (BORROWED if sibling else GOAL)
     prompt = tpl.format(
+        slot_rule=SLOT.format(slots=slots),
         name=tool.name,
         description=tool.description or "none",
         params=list(tool.params),
@@ -185,8 +185,8 @@ async def generate(
     out = []
     for text in data.get("requests", [])[:count]:
         text = str(text)
-        if "{slot}" not in text:
-            text = text + " ({slot})" if values else text
+        if "{slot}" in text and not values:
+            continue
         sib = sibling.name if sibling else None
         out.append(Request(rid(tool.name, kind, text, lang), tool.name, text, values, kind, sib, lang))
     return out
