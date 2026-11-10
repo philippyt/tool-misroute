@@ -84,7 +84,7 @@ def test_check_json(config):
 
 def test_ci_changed_checks_only_edited_tools(config, tmp_path):
     path = config()
-    base = json.loads(call("catalog", "-c", path)[1])
+    base = json.loads(call("ci", "--snapshot", "-c", path)[1])
     for t in base["tools"]:
         if t["name"] == "get_case_comments":
             t["description"], t["hash"] = "Comments.", "old"
@@ -123,3 +123,41 @@ def test_max_cost_is_a_real_limit_on_every_command(config):
     assert load(Opts("discover"), Path(path)).budget.limit == 5.0
     _, out = call("discover", "-c", path, "--json", "--estimate-only")
     assert json.loads(out)["estimate"]["upper_bound"] is False
+
+
+def test_merged_commands_do_the_work_of_the_old_ones(config, tmp_path, monkeypatch):
+    path = config()
+    code, out = call("discover", "-c", path, "--json", "--yes", "--pair", "get_case_comments,get_case_events")
+    found = json.loads(out)
+    assert code == 0 and found["spots"] and found["probe"]["rows"][0]["pair"] == "get_case_comments|get_case_events"
+    code, out = call("check", "-c", path, "--json", "--yes", "--pair", "get_case_comments,get_case_events")
+    tested = json.loads(out)
+    assert tested["command"] == "check" and tested["pairs"][0]["edits"]["clause"]
+    assert tested["verdict"] in ("better", "no_difference", "insufficient_data", "worse")
+    assert code == {"worse": 1, "insufficient_data": 2}.get(tested["verdict"], 0)
+    code, out = call("check", "-c", path, "--json")
+    assert code == 3 and "--pair" in json.loads(out)["error"]
+    code, out = call("report", "-c", path, "--json", "--output", str(tmp_path / "r.html"))
+    assert code == 0 and (tmp_path / "r.html").exists() and json.loads(out)["report"]
+    site = tmp_path / "site"
+    code, _ = call("report", "--site", f"demo={tmp_path / '.misroute'}", "--output", str(site))
+    assert code == 0 and (site / "index.html").exists()
+    assert call("serve", "nothing", "-c", path)[0] == 3
+
+
+def test_old_command_names_say_where_they_went(config):
+    path = config()
+    for old, new in (("fix", "check --pair"), ("explain", "report --pair"), ("init", "quick --config-only")):
+        code, out = call(old, "--json", "--pair", "a,b")
+        assert code == 3 and new in json.loads(out)["error"], old
+    assert call("probe")[0] == 3 and call("guard", "serve")[0] == 3
+    code, out = call("catalog", "-c", path)
+    assert code == 0 and json.loads(out)["tools"]
+
+
+def test_quick_writes_the_demo_config_and_stops(tmp_path):
+    path = tmp_path / "misroute.yaml"
+    code, out = call("quick", "--demo", "--config-only", "-c", str(path), "--json")
+    assert code == 0 and json.loads(out)["config"] == str(path)
+    assert yaml.safe_load(path.read_text())["models"][0]["provider"] == "mock"
+    assert call("quick", "--config-only", "-c", str(path), "--json")[0] == 3

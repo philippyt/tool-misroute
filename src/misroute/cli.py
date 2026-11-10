@@ -27,10 +27,9 @@ OK, FAILED, INSUFFICIENT, PROBLEM = 0, 1, 2, 3
 app = typer.Typer(
     no_args_is_help=True,
     add_completion=False,
-    epilog="Using misroute from an agent: run misroute guide for commands, exit codes and JSON fields.",
+    epilog="Start with misroute quick. Using misroute from an agent: run misroute guide for commands, exit "
+    "codes and JSON fields.",
 )
-guard_app = typer.Typer(no_args_is_help=True, help="Protect production calls")
-app.add_typer(guard_app, name="guard")
 requests_app = typer.Typer(no_args_is_help=True, help="Build a set of real user requests")
 app.add_typer(requests_app, name="requests")
 out = Console()
@@ -279,39 +278,47 @@ def pick_model(model: str | None, quiet: bool = False) -> str:
     return found
 
 
-@app.command()
-def init(
-    path: Path = Path("misroute.yaml"),
-    from_: Annotated[
-        str | None, typer.Option("--from", help="claude, cursor, vscode or a path to an MCP config")
-    ] = None,
-    server: Annotated[str | None, typer.Option(help="server name in that config")] = None,
-    model: ModelSpec = None,
-    demo: Annotated[bool, typer.Option(help="write a demo config with the bundled test server")] = False,
+def setup(
+    opts: Opts,
+    config: Path,
+    target: str | None,
+    from_: str | None,
+    server: str | None,
+    demo: bool,
+    model: str | None,
+    settings: dict,
 ) -> None:
-    """Write misroute.yaml, from your MCP client config and the model keys in your environment"""
-    if path.exists():
-        raise typer.BadParameter(f"{path} exists")
-    servers = [] if demo else mcpconfig.found(from_)
-    if not servers:
-        if from_:
-            raise typer.BadParameter(f"no MCP servers found in {from_}", param_hint="--from")
-        path.write_text(EXAMPLE.replace("{python}", Path(sys.executable).as_posix()), encoding="utf-8")
-        out.print(f"wrote {path} with the bundled test server and a mock model")
+    """Write misroute.yaml for the bundled demo, a given target, or a server from an MCP client config."""
+    note = err if opts.json else out
+    if demo:
+        config.write_text(EXAMPLE.replace("{python}", Path(sys.executable).as_posix()), encoding="utf-8")
+        note.print(f"wrote {config} with the bundled test server and a mock model", style="dim")
         return
-    chosen = next((x for x in servers if x[1] == server), None) if server else servers[0]
-    if not chosen:
-        raise typer.BadParameter(f"{server} not found, choose from {', '.join(x[1] for x in servers)}")
-    _, name, source, spec = chosen
-    block, secrets = mcpconfig.to_server(spec)
-    write_config(path, block, pick_model(model), secrets)
-    out.print(f"wrote {path} for {name} from {source}")
-    if len(servers) > 1:
-        out.print(
-            f"other servers: {', '.join(x[1] for x in servers if x is not chosen)}, pick one with --server", style="dim"
-        )
+    if target:
+        block, secrets = target_server(target)
+        note.print(f"wrote {config}", style="dim")
+    else:
+        servers = mcpconfig.found(from_)
+        chosen = next((x for x in servers if x[1] == server), None) if server else (servers or [None])[0]
+        if not chosen:
+            if server and servers:
+                fail(opts, f"{server} not found, choose from {', '.join(x[1] for x in servers)}")
+            fail(
+                opts,
+                f"no MCP servers found in {from_}"
+                if from_
+                else "give a server: a URL, an OpenAPI file, a tool list or a command, or --demo for the bundled one",
+            )
+            return
+        _, name, source, spec = chosen
+        block, secrets = mcpconfig.to_server(spec)
+        note.print(f"wrote {config} for {name} from {source}", style="dim")
+        others = [x[1] for x in servers if x is not chosen]
+        if others:
+            note.print(f"other servers: {', '.join(others)}, pick one with --server", style="dim")
+    write_config(config, block, pick_model(model, opts.json), secrets, settings)
     if secrets:
-        out.print(f"secrets saved to {env_path(path)}: {', '.join(secrets)}", style="dim")
+        note.print(f"secrets saved to {env_path(config)}: {', '.join(secrets)}", style="dim")
 
 
 def target_server(target: str) -> tuple[dict, dict[str, str]]:
@@ -339,27 +346,27 @@ def quick(
     open_: Annotated[bool, typer.Option("--open/--no-open")] = True,
     json_: Json = False,
     progress: ProgressMode = "bar",
+    config: Cfg = Path("misroute.yaml"),
+    from_: Annotated[
+        str | None,
+        typer.Option("--from", help="take the server from claude, cursor, vscode or a path to an MCP config"),
+    ] = None,
+    server: Annotated[str | None, typer.Option(help="server name in that config")] = None,
+    demo: Annotated[bool, typer.Option(help="use the bundled test server and a mock model, free")] = False,
+    config_only: Annotated[bool, typer.Option("--config-only", help="write misroute.yaml and stop")] = False,
 ) -> None:
-    """Lint and a small capped discover in one go, then open the report"""
+    """Set up misroute.yaml when there is none, then lint and a small capped discover, and open the report"""
     from misroute.report.html import render
 
     opts = Opts("quick", json_, True, max_cost, progress=progress)
-    note = err if json_ else out
-    config = Path("misroute.yaml")
     system_certs(config)
+    if config_only and config.exists():
+        fail(opts, f"{config} exists")
     if not config.exists():
-        if target:
-            block, secrets = target_server(target)
-        else:
-            servers = mcpconfig.found()
-            if not servers:
-                fail(opts, "give a server: a URL, an OpenAPI file, a tool list or a command")
-                return
-            block, secrets = mcpconfig.to_server(servers[0][3])
-            note.print(f"using {servers[0][1]} from {servers[0][2]}", style="dim")
-        settings = {"budget_usd": max_cost}
-        write_config(config, block, pick_model(model, json_), secrets, settings)
-        note.print(f"wrote {config}", style="dim")
+        setup(opts, config, target, from_, server, demo, model, {} if config_only else {"budget_usd": max_cost})
+    if config_only:
+        emit(opts, {"config": str(config)})
+        return
     proj = load(opts, config)
     proj.cfg.modes = [m for m in split(modes) or ["json"] if m in ("json", "code")]  # type: ignore[assignment]
     # quick trades power for price: fewer rotations and single repeats keep the
@@ -377,6 +384,7 @@ def quick(
         for s_ in res["spots"][:5]:
             out.print(f"  {s_['a']}  {s_['b']}  {s_['score']:.2f}")
         out.print(f"spent ${res['spent']:.2f}, report {report}")
+        out.print("next: misroute discover for the full sample, misroute report --pair a,b to read a pair", style="dim")
 
     if open_ and not json_:
         webbrowser.open(report.resolve().as_uri())
@@ -403,18 +411,12 @@ def doctor(config: Cfg = Path("misroute.yaml"), offline: bool = False, json_: Js
     emit(opts, {"checks": rows, "ok": ok}, text, OK if ok else PROBLEM)
 
 
-@app.command()
-def explain(
-    pair: Annotated[str, typer.Option("--pair", help="tool_a,tool_b")],
-    config: Cfg = Path("misroute.yaml"),
-    limit: int = 5,
-    json_: Json = False,
-) -> None:
-    """Show misrouted requests between two tools in both directions, with what the model did"""
+def pair_report(opts: Opts, proj: Project, pair: str, limit: int) -> None:
+    """The misrouted requests between two tools in both directions, with what the model did."""
     from misroute.explain import explain as explain_pair
 
-    opts = Opts("explain", json_)
-    proj = load(opts, config)
+    if "," not in pair:
+        fail(opts, "--pair takes two tool names, tool_a,tool_b")
     a, b = pair.split(",", 1)
     res = explain_pair(proj.store, a.strip(), b.strip(), limit)
 
@@ -439,22 +441,23 @@ def guide_text() -> str:
     return "\n\n".join(docs.joinpath(f).read_text(encoding="utf-8") for f in ("AGENTS.md", "llms.txt"))
 
 
-@app.command()
-def guide() -> None:
-    """Print the agent guide and reference: commands, rules, exit codes and JSON fields"""
-    print(guide_text())
+SCHEMAS = "lint, discover, check, check_pair, compare, improve, report_pair, doctor, estimate or error"
 
 
 @app.command()
-def schema(
-    name: Annotated[
-        str, typer.Argument(help="lint, discover, fix, check, improve, explain, doctor, estimate or error")
-    ],
+def guide(
+    schema: Annotated[str | None, typer.Option(help=f"print the JSON Schema of one output instead: {SCHEMAS}")] = None,
 ) -> None:
-    """Print the JSON Schema for a command's --json output"""
+    """Print the agent guide and reference, or with --schema the JSON Schema of a command's output"""
     from importlib import resources
 
-    print(resources.files("misroute.schemas").joinpath(f"{name}.json").read_text(encoding="utf-8"))
+    if not schema:
+        print(guide_text())
+        return
+    found = resources.files("misroute.schemas").joinpath(f"{schema}.json")
+    if not found.is_file():
+        fail(Opts("guide", True), f"no schema named {schema}, schemas are {SCHEMAS}")
+    print(found.read_text(encoding="utf-8"))
 
 
 @app.command()
@@ -494,9 +497,8 @@ def lint(
     emit(opts, res, text, FAILED if strict and res["findings"] else OK)
 
 
-@app.command()
-def catalog(config: Cfg = Path("misroute.yaml")) -> None:
-    """Print tool names, hashes and descriptions as JSON, for change aware CI"""
+def snapshot(config: Path) -> None:
+    """Tool names, hashes and descriptions as JSON, the baseline a later ci --changed compares against."""
     proj = Project.from_yaml(config)
     tools = asyncio.run(proj.tools())
     rows = [{"name": t.name, "hash": t.hash, "description": t.description, "write": t.is_write} for t in tools]
@@ -514,15 +516,29 @@ def discover(
     estimate_only: EstimateOnly = False,
     progress: ProgressMode = "bar",
     pilot: Pilot = False,
+    probe: Annotated[
+        bool, typer.Option(help="then test the flagged pairs with harder requests that borrow the sibling's words")
+    ] = False,
+    pair: Annotated[
+        list[str] | None, typer.Option("--pair", help="tool_a,tool_b to probe instead of the flagged pairs")
+    ] = None,
 ) -> None:
-    """Find risky tools from model behaviour"""
+    """Find the tools a model confuses, and with --probe press the risky pairs with harder requests"""
     opts = Opts("discover", json_, yes, max_cost, estimate_only, progress)
     proj = load(opts, config)
     ms, md = split(models), split(modes)
-    piloted(opts, proj, pilot, ms or proj.cfg.tested(), md or list(proj.cfg.modes))
-    calls, cost = asyncio.run(proj.discover_cost(ms or proj.cfg.tested(), md or list(proj.cfg.modes)))
-    gate(opts, proj, calls, cost)
+    tested, used = ms or proj.cfg.tested(), md or [str(m) for m in proj.cfg.modes]
+    piloted(opts, proj, pilot, tested, used)
+    calls, cost = asyncio.run(proj.discover_cost(tested, used))
+    probing, note, extra = probe or bool(pair), "", 0
+    if probing:
+        extra, more = asyncio.run(proj.cost("probe", tested, used, None, pairs(pair)))
+        cost += more
+        note = "" if pair else "The probe part counts the pairs the last discover flagged, a new ranking can change it"
+    gate(opts, proj, calls + extra, cost, note)
     res = run(opts, proj, proj.discover(ms, md), calls)
+    if probing:
+        res["probe"] = run(opts, proj, proj.probe(None, pairs(pair), tested, used), extra)
 
     def text() -> None:
         t = table("tool", "sibling", "score", "95% ci", "signals", "direction", "seen in", "note")
@@ -620,79 +636,54 @@ def discover(
                 style="dim",
             )
         effect_note(res["effect_unknown"])
-        out.print(f"spent ${res['spent']:.2f}, results in {proj.store.root}")
+        if probing:
+            probe_table(res["probe"])
+        out.print(f"spent ${proj.budget.spent:.2f}, results in {proj.store.root}")
         usage_note(opts, res)
+        if flagged:
+            first = next(s for s in res["spots"] if s["flagged"])
+            out.print(
+                f"next: misroute report --pair {first['a']},{first['b']} to read the requests, misroute improve "
+                "to write and test better descriptions",
+                style="dim",
+            )
 
     emit(opts, res, warned(res, text))
 
 
-@app.command()
-def probe(
-    config: Cfg = Path("misroute.yaml"),
-    top: Annotated[int | None, typer.Option(help="top pairs from discover, default every flagged pair")] = None,
-    pair: Pairs = None,
-    models: Names = None,
-    modes: Names = None,
-    json_: Json = False,
-    yes: Yes = False,
-    max_cost: MaxCost = None,
-    estimate_only: EstimateOnly = False,
-    progress: ProgressMode = "bar",
-) -> None:
-    """Harder requests on the risky pairs"""
-    opts = Opts("probe", json_, yes, max_cost, estimate_only, progress)
-    proj = load(opts, config)
-    ms = split(models) or proj.cfg.tested()
-    md = split(modes) or list(proj.cfg.modes)
-    calls, cost = asyncio.run(proj.cost("probe", ms, md, top, pairs(pair)))
-    gate(opts, proj, calls, cost)
-    res = run(opts, proj, proj.probe(top, pairs(pair), ms, md), calls)
-
-    def text() -> None:
-        t = table("requests for", "sibling", "model", "mode", "wrong", "hedge", "leak", "gate p")
-        for r in res["rows"]:
-            for d, v in r["directions"].items():
-                src, dst = d.split(">")
-                h = f"[red]{v['hedge']:.2f}[/red]" if r["write"] and v["hedge"] else f"{v['hedge']:.2f}"
-                t.add_row(
-                    src, dst, r["model"], r["mode"], f"{v['wrong']:.2f}", h, f"{v['leak']:.2f}", f"{r['gate_p']:.2f}"
-                )
+def probe_table(res: dict) -> None:
+    t = table("requests for", "sibling", "model", "mode", "wrong", "hedge", "leak", "gate p")
+    for r in res["rows"]:
+        for d, v in r["directions"].items():
+            src, dst = d.split(">")
+            h = f"[red]{v['hedge']:.2f}[/red]" if r["write"] and v["hedge"] else f"{v['hedge']:.2f}"
+            t.add_row(src, dst, r["model"], r["mode"], f"{v['wrong']:.2f}", h, f"{v['leak']:.2f}", f"{r['gate_p']:.2f}")
+    if res["rows"]:
+        out.print("harder requests that borrow the sibling's words", style="dim")
         out.print(t)
 
-    emit(opts, res, text)
+
+def pairs_verdict(rows: list[dict]) -> str:
+    """One verdict in check's words over the clause tests: worse when a clause hurts, better when one is worth
+    deploying, insufficient_data when no pair could be decided, else no_difference."""
+    said = [r["verdict"] for r in rows]
+    if any(v == "clause hurts" for v in said):
+        return "worse"
+    if any(v.startswith("deploy") for v in said):
+        return "better"
+    if all(v == "not flagged" or v.startswith("too few") for v in said):
+        return "insufficient_data"
+    return "no_difference"
 
 
-@app.command()
-def fix(
-    config: Cfg = Path("misroute.yaml"),
-    top: Annotated[int | None, typer.Option(help="top pairs from discover, default every flagged pair")] = None,
-    pair: Pairs = None,
-    trials: Annotated[int, typer.Option(help="trials per condition, 96 as in the thesis design")] = 96,
-    models: Names = None,
-    modes: Names = None,
-    json_: Json = False,
-    yes: Yes = False,
-    max_cost: MaxCost = None,
-    estimate_only: EstimateOnly = False,
-    progress: ProgressMode = "bar",
-    strict_roles: Annotated[
-        bool, typer.Option("--strict-roles", help="refuse to run when a role shares a family with a tested model")
-    ] = False,
+def check_pairs(
+    opts: Opts, proj: Project, top: int | None, pair: list[str] | None, trials: int, ms: list[str], md: list[str]
 ) -> None:
-    """Test a boundary clause against a neutral edit or a drafted description"""
-    opts = Opts("fix", json_, yes, max_cost, estimate_only, progress)
-    proj = load(opts, config)
-    # In fix the writer authors the clause under test and the validator keeps
-    # the requests it is tested on, so same-family roles make the result
-    # circular rather than merely biased.
-    if strict_roles and proj.cfg.role_warnings():
-        fail(opts, "; ".join(proj.cfg.role_warnings()))
-        return
-    ms = split(models) or proj.cfg.tested()
-    md = split(modes) or list(proj.cfg.modes)
+    """Draft a boundary clause for each pair and test it against the original and a neutral edit."""
     calls, cost = asyncio.run(proj.cost("fix", ms, md, top, pairs(pair), trials))
     gate(opts, proj, calls, cost)
     res = run(opts, proj, proj.fix(top, pairs(pair), ms, md, trials), calls)
+    res["verdict"] = pairs_verdict(res["pairs"])
 
     def text() -> None:
         t = table(
@@ -727,7 +718,7 @@ def fix(
                 continue
             out.print(f"{a['model']} {a['mode']}  {a['pairs']} flagged  mean {a['mean_diff']:+.2f}  p {a['p']:.3f}")
 
-    emit(opts, res, warned(res, text), OK if any(r["flagged"] for r in res["pairs"]) else INSUFFICIENT)
+    emit(opts, res, warned(res, text), check_code(res["verdict"]))
 
 
 def check_code(verdict: str) -> int:
@@ -736,24 +727,59 @@ def check_code(verdict: str) -> int:
 
 @app.command()
 def check(
-    tool: Annotated[str, typer.Option(help="tool to check")],
-    description: Annotated[str, typer.Option(help="proposed description")],
+    tool: Annotated[str | None, typer.Option(help="tool whose description you changed")] = None,
+    description: Annotated[str | None, typer.Option(help="your proposed description for it")] = None,
+    pair: Annotated[
+        list[str] | None,
+        typer.Option("--pair", help="tool_a,tool_b: draft a boundary clause for the two and test it instead"),
+    ] = None,
+    flagged: Annotated[bool, typer.Option(help="draft and test a clause for every pair discover flagged")] = False,
     config: Cfg = Path("misroute.yaml"),
     refresh: Annotated[bool, typer.Option(help="draw a fresh held out set")] = False,
     models: Names = None,
-    modes: Annotated[str, typer.Option(help="comma separated")] = "json",
+    modes: Names = None,
     json_: Json = False,
     yes: Yes = False,
     max_cost: MaxCost = None,
     estimate_only: EstimateOnly = False,
     progress: ProgressMode = "bar",
+    top: Annotated[
+        int | None, typer.Option(help="with --flagged, only the top pairs from discover", rich_help_panel=ADVANCED)
+    ] = None,
+    trials: Annotated[
+        int, typer.Option(help="with --pair, trials per condition, 96 as in the thesis", rich_help_panel=ADVANCED)
+    ] = 96,
+    strict_roles: Annotated[
+        bool,
+        typer.Option(
+            "--strict-roles",
+            help="with --pair, refuse to run when a role shares a family with a tested model",
+            rich_help_panel=ADVANCED,
+        ),
+    ] = False,
 ) -> None:
-    """Check whether a proposed description beats the current one on held out requests"""
+    """Test a description change: your own text for one tool, or a drafted boundary clause for a confused pair"""
     from misroute import check as checker
 
     opts = Opts("check", json_, yes, max_cost, estimate_only, progress)
     proj = load(opts, config)
-    ms, md = split(models) or proj.cfg.tested(), split(modes) or ["json"]
+    ms = split(models) or proj.cfg.tested()
+    if pair or flagged or top:
+        # the writer authors the clause under test and the validator keeps the
+        # requests it is tested on, so same-family roles make the result
+        # circular rather than merely biased
+        if strict_roles and proj.cfg.role_warnings():
+            fail(opts, "; ".join(proj.cfg.role_warnings()))
+        check_pairs(opts, proj, top, pair, trials, ms, split(modes) or list(proj.cfg.modes))
+        return
+    if not tool or description is None:
+        fail(
+            opts,
+            "give --tool with --description to test your own text, --pair tool_a,tool_b to draft and test a "
+            "boundary clause, or --flagged for every pair discover flagged",
+        )
+        return
+    md = split(modes) or ["json"]
     tools = asyncio.run(proj.tools())
     calls, cost = checker.estimate(proj, 1 + len(checker.neighbours(proj, tool)), ms, md, tools)
     gate(opts, proj, calls, cost)
@@ -981,12 +1007,41 @@ def improve(
 
 
 @app.command()
-def report(config: Cfg = Path("misroute.yaml"), output: Path = Path("report.html")) -> None:
-    """Write a self contained HTML report"""
+def report(
+    config: Cfg = Path("misroute.yaml"),
+    output: Annotated[
+        Path | None, typer.Option(help="where to write, default report.html, or site with --site")
+    ] = None,
+    pair: Annotated[
+        str | None, typer.Option("--pair", help="tool_a,tool_b: show the misrouted requests between the two instead")
+    ] = None,
+    limit: Annotated[int, typer.Option(help="with --pair, examples per direction")] = 5,
+    site: Annotated[
+        list[str] | None,
+        typer.Option("--site", help="name=workdir, repeatable: build a static site from several results instead"),
+    ] = None,
+    title: Annotated[str, typer.Option(help="with --site, the page title")] = "misroute results",
+    json_: Json = False,
+) -> None:
+    """Read results, free: an HTML report, one pair's misrouted requests, or a static site of several runs"""
+    opts = Opts("report", json_)
+    if site:
+        from misroute.site.build import build
+
+        if bad := [r for r in site if "=" not in r]:
+            fail(opts, f"--site takes name=workdir, got {', '.join(bad)}")
+        entries = [(r.split("=", 1)[0], Path(r.split("=", 1)[1])) for r in site]
+        made = build(entries, output or Path("site"), title)
+        emit(opts, {"site": str(made)}, lambda: out.print(f"wrote {made}"))
+        return
+    proj = load(opts, config)
+    if pair:
+        pair_report(opts, proj, pair, limit)
+        return
     from misroute.report.html import render
 
-    proj = Project.from_yaml(config)
-    out.print(f"wrote {render(proj.store, output, proj.cfg.guard.log)}")
+    made = render(proj.store, output or Path("report.html"), proj.cfg.guard.log)
+    emit(opts, {"report": str(made)}, lambda: out.print(f"wrote {made}"))
 
 
 def changed_markdown(rows: list[dict]) -> str:
@@ -1012,7 +1067,11 @@ def ci(
     models: Names = None,
     modes: Names = None,
     changed: Annotated[bool, typer.Option(help="check only tools whose definition changed")] = False,
-    baseline: Annotated[Path | None, typer.Option(help="catalog JSON from the base branch")] = None,
+    baseline: Annotated[Path | None, typer.Option(help="snapshot JSON from the base branch")] = None,
+    snapshot_: Annotated[
+        bool,
+        typer.Option("--snapshot", help="print tool names, hashes and descriptions as JSON for --baseline, free"),
+    ] = False,
     markdown: Annotated[Path | None, typer.Option(help="write a markdown summary for a PR comment")] = None,
     junit: Annotated[Path | None, typer.Option(help="write results as JUnit XML")] = None,
     sarif: Annotated[Path | None, typer.Option(help="write problems as SARIF for code scanning")] = None,
@@ -1020,6 +1079,9 @@ def ci(
     max_cost: MaxCost = None,
 ) -> None:
     """Exit non zero when limits are exceeded, or when a changed description got worse"""
+    if snapshot_:
+        snapshot(config)
+        return
     opts = Opts("ci", json_, True, max_cost)
     proj = load(opts, config)
     if changed:
@@ -1096,42 +1158,81 @@ async def ci_changed(proj: Project, base: dict, models_: list[str] | None, opts:
 
 
 @app.command()
-def ui(config: Cfg = Path("misroute.yaml"), port: int = 8765) -> None:
-    """Open the local web interface"""
-    from misroute.ui.app import serve
+def serve(
+    what: Annotated[
+        str,
+        typer.Argument(
+            help="mcp: misroute as an MCP server for agents. ui: the local web interface. "
+            "guard: an MCP proxy that logs and guards real calls to your server"
+        ),
+    ],
+    config: Cfg = Path("misroute.yaml"),
+    port: Annotated[int, typer.Option(help="with ui")] = 8765,
+    approve: Annotated[str | None, typer.Option(help="with guard, approve a held call by its id and exit")] = None,
+) -> None:
+    """Run misroute as a server: for agents over MCP, as a web interface, or as a guard in front of your server"""
+    opts = Opts("serve")
+    if what == "ui":
+        from misroute.ui.app import serve as serve_ui
 
-    out.print(f"http://127.0.0.1:{port}")
-    serve(config, port)
+        out.print(f"http://127.0.0.1:{port}")
+        serve_ui(config, port)
+    elif what == "mcp":
+        from misroute.agent_server import create
+
+        create(Project.from_yaml(config)).run()
+    elif what == "guard" and approve:
+        from misroute.config import load as load_config
+        from misroute.guard.wrapper import approve as approve_call
+
+        approve_call(load_config(config).guard.log, approve)
+        out.print(f"approved {approve}")
+    elif what == "guard":
+        from misroute.guard.proxy import serve as serve_guard
+
+        proj = Project.from_yaml(config)
+        asyncio.run(serve_guard(proj.cfg, proj.store.read("discover")))
+    else:
+        fail(opts, f"serve takes mcp, ui or guard, not {what}")
 
 
-@app.command("serve-mcp")
+MOVED = {
+    "init": "quick --config-only",
+    "explain": "report --pair tool_a,tool_b",
+    "schema": "guide --schema NAME",
+    "probe": "discover --probe",
+    "fix": "check --pair tool_a,tool_b",
+    "ui": "serve ui",
+    "site": "report --site name=workdir",
+    "guard": "serve guard",
+}
+PASS_ON = {"allow_extra_args": True, "ignore_unknown_options": True}
+
+
+def moved(old: str, new: str) -> None:
+    @app.command(old, hidden=True, context_settings=PASS_ON)
+    def gone(ctx: typer.Context) -> None:
+        fail(Opts(old, "--json" in ctx.args), f"misroute {old} is now misroute {new}")
+
+
+for _old, _new in MOVED.items():
+    moved(_old, _new)
+
+
+@app.command("serve-mcp", hidden=True)
 def serve_mcp(config: Cfg = Path("misroute.yaml")) -> None:
-    """Run misroute itself as an MCP server over stdio, for agents"""
+    """Old name of serve mcp, kept working because MCP client configs call it"""
     from misroute.agent_server import create
 
+    err.print("misroute serve-mcp is now misroute serve mcp", style="dim")
     create(Project.from_yaml(config)).run()
 
 
-@app.command()
-def site(
-    results: Annotated[list[str], typer.Argument(help="name=workdir")],
-    output: Path = Path("site"),
-    title: str = "misroute results",
-) -> None:
-    """Build a static results site from one or more workdirs"""
-    from misroute.site.build import build
-
-    entries = [(r.split("=", 1)[0], Path(r.split("=", 1)[1])) for r in results]
-    out.print(f"wrote {build(entries, output, title)}")
-
-
-@guard_app.command("serve")
-def guard_serve(config: Cfg = Path("misroute.yaml")) -> None:
-    """Run as an MCP proxy over stdio in front of the configured server"""
-    from misroute.guard.proxy import serve
-
-    proj = Project.from_yaml(config)
-    asyncio.run(serve(proj.cfg, proj.store.read("discover")))
+@app.command("catalog", hidden=True)
+def catalog(config: Cfg = Path("misroute.yaml")) -> None:
+    """Old name of ci --snapshot, kept working because CI workflows call it"""
+    err.print("misroute catalog is now misroute ci --snapshot", style="dim")
+    snapshot(config)
 
 
 def real_file(proj: Project, path: Path | None) -> Path:
@@ -1231,13 +1332,3 @@ def requests_status(
             out.print(f"no real requests yet for: {', '.join(res['tools_without'])}", style="yellow")
 
     emit(opts, res, text)
-
-
-@guard_app.command("confirm")
-def guard_confirm(call_id: str, config: Cfg = Path("misroute.yaml")) -> None:
-    """Approve a held call"""
-    from misroute.config import load as load_config
-    from misroute.guard.wrapper import approve
-
-    approve(load_config(config).guard.log, call_id)
-    out.print(f"approved {call_id}")

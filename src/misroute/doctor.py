@@ -55,7 +55,14 @@ async def run(config: Path, offline: bool = False) -> list[dict[str, Any]]:
         row("misroute", True, version("misroute")),
     ]
     if not config.exists():
-        rows.append(row("config", False, f"{config} not found", "run misroute init, or misroute quick <server>"))
+        rows.append(
+            row(
+                "config",
+                False,
+                f"{config} not found",
+                "run misroute quick <server>, or quick --demo to try it",
+            )
+        )
         return rows
     try:
         cfg: Config = load(config)

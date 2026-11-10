@@ -60,7 +60,9 @@ real_requests: real.jsonl      # optional, lines of {"text": ..., "tool": name, 
 | Nothing is set up | `misroute quick <target> --json --max-cost 1 --no-open` | capped |
 | Something does not connect | `misroute doctor --json` | one call per model |
 | Before anything else | `misroute lint --json` | free |
-| You want to know why a pair is confused | `misroute explain --pair a,b --json` | free |
+| You want to know why a pair is confused | `misroute report --pair a,b --json` | free |
+| You want to press a risky pair harder | `misroute discover --pair a,b --json --max-cost 2` | a discover, free when cached, plus borrowed requests on the pair |
+| You want a drafted boundary clause tested on a pair | `misroute check --pair a,b --json --max-cost 2` | three conditions on the pair |
 | You changed one description | `misroute check --tool NAME --description "..." --json --max-cost 1` | a few hundred model calls |
 | You want to find confused tools | `misroute discover --json --max-cost 5` | grows with the number of tools |
 | The estimate looks off, or the model reasons | add `--pilot` to `discover` or `compare` | three trials per model and mode |
@@ -101,11 +103,15 @@ Each entry in `entries` has a `status`:
 | `draft` | a weak tool outside any confused group, untested draft |
 | `unchanged` | no confusion and no weak description found |
 
-Files in `--out`: `descriptions.yaml` (tool name to description), and for OpenAPI `overlay.yaml` (per operationId, with hints, suggested exclusions and evidence), `overlay.openapi.yaml` (OpenAPI Overlay 1.0) and with `--fastmcp` `server.py`. A person reviews them, by hand or in the Improve tab of `misroute ui`, which shows each group's numbers, what the model picked on held out requests and every candidate, and saves Accept, Reject, Edit and Exclude decisions. Saving rewrites the files: rejected entries go back to the original, edits are marked untested, and each operation in overlay.yaml gets `review`. `exclude: true` hides an operation in server.py. Suggest `misroute ui` to the user when they should look over the results.
+Files in `--out`: `descriptions.yaml` (tool name to description), and for OpenAPI `overlay.yaml` (per operationId, with hints, suggested exclusions and evidence), `overlay.openapi.yaml` (OpenAPI Overlay 1.0) and with `--fastmcp` `server.py`. A person reviews them, by hand or in the Improve tab of `misroute serve ui`, which shows each group's numbers, what the model picked on held out requests and every candidate, and saves Accept, Reject, Edit and Exclude decisions. Saving rewrites the files: rejected entries go back to the original, edits are marked untested, and each operation in overlay.yaml gets `review`. `exclude: true` hides an operation in server.py. Suggest `misroute serve ui` to the user when they should look over the results.
 
 ## Numbers behind the results
 
 Every threshold comes from a source or is derived. 0.05 and Holm are convention. The gate's 0.10, the flag rule of 6 errors and the 96 trial design (6 requests, 4 slots, both orders) come from the thesis. A flag also needs two request templates, the smallest count that is not one wording repeated, and a spot's interval counts templates. The minimum number of differing templates, and of pairs for the across pairs test, is the smallest count at which an exact sign flip test can reach 0.05. Monte Carlo draws are sized so the standard error at alpha is a tenth of alpha, and integer sign flip tests are exact for any size. FastMCP's 56 character name limit is read from its source. The rest are settings you choose: budgets, `max_tokens` (none by default, cut replies are retried with twice the tokens they used), guard windows and the pytest `min_accuracy`.
+
+## Commands
+
+There are twelve: `quick`, `doctor`, `lint`, `discover`, `check`, `improve`, `compare`, `ci`, `report`, `requests`, `serve` and `guide`. Older names were folded in and answer with the new form, exit code 3: `init` is `quick --config-only`, `probe` is `discover --probe`, `fix` is `check --pair`, `explain` is `report --pair`, `site` is `report --site`, `schema` is `guide --schema`, `ui` and `guard` are `serve ui` and `serve guard`. `serve-mcp` and `catalog` (now `serve mcp` and `ci --snapshot`) still run.
 
 ## Check verdicts
 
@@ -115,6 +121,8 @@ Every threshold comes from a source or is derived. 0.05 and Holm are convention.
 | `no_difference` | no significant difference, keep whichever reads clearer | 0 |
 | `worse` | the proposed description makes routing worse | 1 |
 | `insufficient_data` | too few request templates differ for an exact sign flip test to reach p below 0.05 (six), no answer | 2 |
+
+`check --pair` and `check --flagged` draft the clause themselves and give each pair a verdict in `pairs`, with `deploy` only when the clause beats both the baseline and the original. The top level `verdict` sums them up in the same four words: `worse` when a clause hurts, `better` when one is worth deploying, `insufficient_data` when no pair could be decided.
 
 The baseline is a neutral rewrite of the current description of the same length, or lint's drafted description when the current one is missing or only a path. Trials from one request template fail together, so the test counts templates: an exact sign flip test on per template error differences, Holm corrected across pairs or groups. `diff` is the error rate change with a 95% interval in `ci`.
 
@@ -129,11 +137,11 @@ The baseline is a neutral rewrite of the current description of the same length,
 
 ## Output
 
-Every `--json` output is one object with `schema_version` and `command`. Errors have `error` and `exit_code`. `misroute schema <command>` prints the JSON Schema. `--progress ndjson` streams progress events on stderr while stdout stays one JSON object. Results are also stored in `.misroute/`.
+Every `--json` output is one object with `schema_version` and `command`. Errors have `error` and `exit_code`. `misroute guide --schema NAME` prints the JSON Schema. `--progress ndjson` streams progress events on stderr while stdout stays one JSON object. Results are also stored in `.misroute/`.
 
 ## MCP server
 
-`misroute serve-mcp -c misroute.yaml` exposes:
+`misroute serve mcp -c misroute.yaml` exposes:
 
 | Tool | Cost |
 |---|---|

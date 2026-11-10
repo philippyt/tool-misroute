@@ -1,7 +1,7 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
- "$id": "misroute/fix.json",
- "title": "misroute fix output",
+ "$id": "misroute/check_pair.json",
+ "title": "misroute check --pair output",
  "type": "object",
  "properties": {
   "schema_version": {
@@ -103,6 +103,15 @@
    "items": {
     "type": "string"
    }
+  },
+  "verdict": {
+   "enum": [
+    "better",
+    "worse",
+    "no_difference",
+    "insufficient_data"
+   ],
+   "description": "over all pairs: worse when a clause hurts, better when one is worth deploying, insufficient_data when no pair could be decided"
   }
  },
  "required": [

@@ -69,7 +69,7 @@ class Guard:
             self._log("event", id=cid, **asdict(ev))
         hold = next((e for e in events if e.kind == "hold"), None)
         if hold and cid not in self.approved():
-            msg = f"held for confirmation: {name} after {hold.other}, approve with misroute guard confirm {cid}"
+            msg = f"held for confirmation: {name} after {hold.other}, approve with misroute serve guard --approve {cid}"
             self._log("held", id=cid, tool=name, args=args, other=hold.other)
             return Held(cid, name, hold.other, msg)
         self.history.append((name, now))

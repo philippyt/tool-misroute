@@ -36,7 +36,7 @@ Something not connecting? Run `misroute doctor`. It checks the server, each key,
 The full loop on the bundled test server, with Claude Opus 5.5:
 
 ```console
-$ misroute init --demo
+$ misroute quick --demo --config-only
 $ misroute lint --draft
 9 tools, 2 with weak descriptions
   get_attachment  missing
@@ -50,8 +50,8 @@ get_attachment     get_document       0.42   wrong 0.33  hedge 0.42  removal 1.0
 get_case_events    update_case_meta   0.25   wrong 0.25                            opus code
 get_case_comments  get_case_events    0.25   hedge 0.25  removal 1.00              opus code, opus json
 
-$ misroute explain --pair get_attachment,get_document
-$ misroute fix --pair get_case_comments,get_case_events --modes json
+$ misroute report --pair get_attachment,get_document
+$ misroute check --pair get_case_comments,get_case_events --modes json
 $ misroute report
 ```
 
@@ -63,7 +63,7 @@ $ misroute report
 | Local MCP server | `server: {command: [npx, your-mcp-server]}` |
 | OpenAPI file | `server: {openapi: api.json}` |
 | Tool list in MCP, OpenAI or Anthropic format | `server: {tools: tools.json}` |
-| Your Claude, Cursor or VS Code config | `misroute init --from claude` |
+| Your Claude, Cursor or VS Code config | `misroute quick --from claude` |
 | Tools in Python | `Project.from_tools([...], "anthropic:claude-sonnet-5-5")` |
 
 Add `include_tools: ["*issue*"]` to test a slice of a large server.
@@ -156,36 +156,24 @@ A value is the result itself, or a list of cases where the first one whose `args
 
 ## Commands
 
-Most work needs three of them: `discover` finds the confused tools, `check` tests a change to one description, and `ci` guards a pull request. Two more answer questions every team gets: `compare` when the model changes, and `requests` to test on your own traffic.
+There are twelve. Most work needs three of them: `discover` finds the confused tools, `check` tests a change, and `ci` guards a pull request.
 
 | Command | Does |
 |---|---|
-| `misroute discover` | ranks confused tool pairs from model behaviour |
-| `misroute check` | tests one proposed description on held out requests |
-| `misroute ci` | fails on exceeded limits, or with `--changed` on descriptions that got worse |
-| `misroute compare` | tests whether routing changes when you move from one model to another |
-| `misroute requests` | collects real user requests from logs for a person to confirm |
-
-The rest set up, explain, fix in bulk and integrate:
-
-| Command | Does |
-|---|---|
-| `misroute quick` | lint and a capped discover in one go, then opens the report |
-| `misroute init` | writes misroute.yaml from your MCP client config and environment |
+| `misroute quick` | writes misroute.yaml when there is none, then lint and a capped discover, and opens the report. `--demo` uses the bundled test server, `--from claude` takes a server from your MCP client config, `--config-only` stops after writing the config |
 | `misroute doctor` | checks the setup and prints a fix for each problem |
-| `misroute lint` | flags missing, name only and path only descriptions and drafts replacements |
-| `misroute probe` | tests risky pairs with requests that borrow words from the sibling |
-| `misroute explain` | shows the misrouted requests for a pair and what the model called |
-| `misroute fix` | tests a boundary clause against a neutral edit, or against a drafted description for undescribed tools |
+| `misroute lint` | flags missing, name only and path only descriptions and drafts replacements, free |
+| `misroute discover` | ranks confused tool pairs from model behaviour. `--probe` then presses the flagged pairs with requests that borrow words from the sibling, `--pair a,b` presses the pairs you name |
+| `misroute check` | tests a description change on held out requests: `--tool` and `--description` for your own text, `--pair a,b` to draft and test a boundary clause for two confused tools, `--flagged` for every flagged pair |
 | `misroute improve` | writes, races and confirms new descriptions for confused tools, and exports them for review |
-| `misroute report` | writes a self-contained HTML report |
-| `misroute ui` | local web interface to set up, run, read results and approve held writes |
-| `misroute catalog` | prints tool hashes and descriptions for change-aware CI |
-| `misroute serve-mcp` | runs misroute as an MCP server for agents |
-| `misroute guard serve` | runs an MCP proxy that logs and guards real tool calls |
-| `misroute site` | builds a static results site |
-| `misroute schema` | prints the JSON Schema of a command's output |
-| `misroute guide` | prints the agent guide and JSON reference |
+| `misroute compare` | tests whether routing changes when you move from one model to another |
+| `misroute ci` | fails on exceeded limits, or with `--changed` on descriptions that got worse. `--snapshot` prints the tool hashes a later `--baseline` compares against |
+| `misroute report` | reads results, free: a self-contained HTML report, `--pair a,b` for the misrouted requests between two tools and what the model called, `--site name=workdir` for a static site of several runs |
+| `misroute requests` | `collect`, `review` and `status`: real user requests from logs, confirmed by a person |
+| `misroute serve` | `serve mcp` runs misroute as an MCP server for agents, `serve ui` the local web interface, `serve guard` an MCP proxy that logs and guards real tool calls |
+| `misroute guide` | prints the agent guide and JSON reference, `--schema NAME` the JSON Schema of an output |
+
+Older names say where they went: `misroute fix` answers that it is now `misroute check --pair`. `serve-mcp` and `catalog` still run, since MCP client configs and CI workflows call them.
 
 ## Test what production sees
 
@@ -231,19 +219,19 @@ claude-fable-5-2, change in error rate +7.0% (95% +2.1% to +12.4%) over 90 reque
 
 ## How discover ranks pairs
 
-Each tool gets requests written from the user's goal, without the tool's own words. Requests run against the full tool list in rotated orders. Each pair shows three signals: the share of one tool's requests that went to the other, the share where the model called both, and the share that moved to it when the other tool was removed. The score is the larger of the first two, a measured rate with no weights, and write tools come first on ties. A pair is flagged when one model and mode got at least 6 of its requests wrong or hedged, the flag rule from the thesis, over at least two request wordings. Six errors from one wording repeated across slots and orders are one observation, so that pair is marked `one wording` and not flagged. Flagged pairs are what probe, fix and improve work on unless you name pairs. The 95% interval on a score counts request wordings, not trials, for the same reason. A request where the model called the right tool and another one is a hedge, not a wrong pick, whichever came first.
+Each tool gets requests written from the user's goal, without the tool's own words. Requests run against the full tool list in rotated orders. Each pair shows three signals: the share of one tool's requests that went to the other, the share where the model called both, and the share that moved to it when the other tool was removed. The score is the larger of the first two, a measured rate with no weights, and write tools come first on ties. A pair is flagged when one model and mode got at least 6 of its requests wrong or hedged, the flag rule from the thesis, over at least two request wordings. Six errors from one wording repeated across slots and orders are one observation, so that pair is marked `one wording` and not flagged. Flagged pairs are what `discover --probe`, `check --flagged` and `improve` work on unless you name pairs. The 95% interval on a score counts request wordings, not trials, for the same reason. A request where the model called the right tool and another one is a hedge, not a wrong pick, whichever came first.
 
 The ranking marks what it cannot vouch for: pairs resting on one wording, tools with few validated requests, and tools the validator left without any, marked UNTESTED. Synthetic rates are a routing diagnostic for finding transcripts worth reading, not a production success rate. `real_requests` is what turns them into evidence. Tools that models answer without calling anything are listed separately.
 
 Code mode runs each program in Monty against recorded fakes and reports faked tools, pasted stubs, programs that never call anything, invented or reused cursors and unread pages. A call that names a page or an offset asked for that slice and is not held to the rest.
 
-## Fix and check
+## Check a change
 
-`fix` writes one boundary sentence per tool and runs the original, a baseline and the clause on identical requests. The baseline is a neutral rewrite of the same length, or lint's drafted description when a tool has none. Trials from one request template fail together, so verdicts count templates, not trials: an exact sign flip test on per template error differences, with Holm correction across pairs. Below the number of differing templates an exact sign flip test needs to reach p below 0.05, which is six, there is no verdict. Every result also shows the error rate change with a 95% interval, a trial level mid p McNemar, errors in both directions and leakage to other tools.
+`check --pair` writes one boundary sentence per tool and runs the original, a baseline and the clause on identical requests. The baseline is a neutral rewrite of the same length, or lint's drafted description when a tool has none. Trials from one request template fail together, so verdicts count templates, not trials: an exact sign flip test on per template error differences, with Holm correction across pairs. Below the number of differing templates an exact sign flip test needs to reach p below 0.05, which is six, there is no verdict. Every result also shows the error rate change with a 95% interval, a trial level mid p McNemar, errors in both directions and leakage to other tools.
 
-The verdict answers the deploy question, not only the methodology question. Beating the baseline proves the clause's content matters beyond a same-length edit; `deploy` additionally requires the clause to beat the original description (`vs_original` in the JSON). A clause that beats the baseline while losing to the original reads `do not deploy`: the current text is load bearing and the clause adds nothing on top. That happens on long descriptions, where one appended sentence drowns - fix warns when a description is more than five times the clause and suggests `improve` for a full rewrite.
+The verdict answers the deploy question, not only the methodology question. Beating the baseline proves the clause's content matters beyond a same-length edit; `deploy` additionally requires the clause to beat the original description (`vs_original` in the JSON). A clause that beats the baseline while losing to the original reads `do not deploy`: the current text is load bearing and the clause adds nothing on top. That happens on long descriptions, where one appended sentence drowns - check warns when a description is more than five times the clause and suggests `improve` for a full rewrite.
 
-`check` tests one proposed description. It splits requests into a tuning set and a held out set, gives its verdict on the held out set only, and multiplies each verdict's p value by the number of verdicts that held out set has already given, so tuning a description against the same requests costs power. `--refresh` draws a fresh set.
+`check --tool NAME --description TEXT` tests your own proposed description. It splits requests into a tuning set and a held out set, gives its verdict on the held out set only, and multiplies each verdict's p value by the number of verdicts that held out set has already given, so tuning a description against the same requests costs power. `--refresh` draws a fresh set.
 
 ## Improve descriptions
 
@@ -274,16 +262,16 @@ With `--fastmcp` misroute also starts the generated server, checks that names, d
 
 ## For agents
 
-Every command takes `--json` and prints one object with a `schema_version`. Exit codes are `0` passed, `1` limits failed or worse, `2` not enough data, `3` budget or config problem. Paid commands take `--max-cost` and `--estimate-only`, and never prompt without a terminal. `--progress ndjson` streams progress to stderr. `misroute schema check` prints the output schema, and `misroute guide` prints the full agent guide, which also ships in the package and as the `misroute://guide` resource of `misroute serve-mcp`.
+Every command takes `--json` and prints one object with a `schema_version`. Exit codes are `0` passed, `1` limits failed or worse, `2` not enough data, `3` budget or config problem. Paid commands take `--max-cost` and `--estimate-only`, and never prompt without a terminal. `--progress ndjson` streams progress to stderr. `misroute guide --schema check` prints the output schema, and `misroute guide` prints the full agent guide, which also ships in the package and as the `misroute://guide` resource of `misroute serve mcp`.
 
 Add misroute as an MCP server:
 
 ```console
-$ claude mcp add misroute -- uvx misroute serve-mcp
+$ claude mcp add misroute -- uvx misroute serve mcp
 ```
 
 ```json
-{"mcpServers": {"misroute": {"command": "uvx", "args": ["misroute", "serve-mcp"]}}}
+{"mcpServers": {"misroute": {"command": "uvx", "args": ["misroute", "serve", "mcp"]}}}
 ```
 
 The second form goes in `.cursor/mcp.json`. VS Code takes the same block under `"servers"` in `.vscode/mcp.json`.
@@ -312,7 +300,7 @@ Check the descriptions a pull request changed, and comment the result:
     max-cost: "2"
 ```
 
-Or wire it yourself with `misroute catalog` on the base branch and `misroute ci --changed --baseline tools.json --markdown comment.md --junit results.xml`. `misroute lint --sarif lint.sarif` feeds GitHub code scanning, and `--strict` fails on weak descriptions.
+Or wire it yourself with `misroute ci --snapshot` on the base branch and `misroute ci --changed --baseline tools.json --markdown comment.md --junit results.xml`. `misroute lint --sarif lint.sarif` feeds GitHub code scanning, and `--strict` fails on weak descriptions.
 
 As a pre-commit hook:
 
@@ -337,8 +325,8 @@ The `misroute_routes` fixture comes with the package. It runs a discover, fails 
 As a proxy in front of any MCP server:
 
 ```console
-$ misroute guard serve -c misroute.yaml
-$ misroute guard confirm 8ba64a3fc925
+$ misroute serve guard -c misroute.yaml
+$ misroute serve guard --approve 8ba64a3fc925
 ```
 
 Inside an MCP server built with the Python SDK:
@@ -354,7 +342,7 @@ Around tool functions in any agent framework, keeping their signatures:
 def update_case(case_id: str, status: str) -> dict: ...
 ```
 
-The guard logs every call, flags hedges and quick switches between siblings, and holds a second write to a sibling tool until it is approved in `misroute ui` or with `misroute guard confirm`. `misroute report` adds a Production section from the guard log.
+The guard logs every call, flags hedges and quick switches between siblings, and holds a second write to a sibling tool until it is approved in `misroute serve ui` or with `misroute serve guard --approve`. `misroute report` adds a Production section from the guard log.
 
 ## Results
 

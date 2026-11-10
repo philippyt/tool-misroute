@@ -133,18 +133,20 @@ def test_init_quick_doctor_explain_schema(tmp_path, monkeypatch):
     doc = json.loads(res.stdout)
     jsonschema.validate(doc, schema_of("doctor"))
     assert res.exit_code == 0 and doc["ok"], doc
-    res = runner.invoke(app, ["explain", "--pair", "get_case_comments,get_case_events", "--json"])
+    res = runner.invoke(app, ["report", "--pair", "get_case_comments,get_case_events", "--json"])
     ex = json.loads(res.stdout)
-    jsonschema.validate(ex, schema_of("explain"))
+    jsonschema.validate(ex, schema_of("report_pair"))
     assert ex["directions"]["get_case_comments>get_case_events"]["wrong"] > 0
     lint = json.loads(runner.invoke(app, ["lint", "--json"]).stdout)
     jsonschema.validate(lint, schema_of("lint"))
-    assert json.loads(runner.invoke(app, ["schema", "check"]).stdout)["title"] == "misroute check output"
+    assert json.loads(runner.invoke(app, ["guide", "--schema", "check"]).stdout)["title"] == "misroute check output"
+    assert runner.invoke(app, ["guide", "--schema", "nope"]).exit_code == 3
     servers = tmp_path / "servers.json"
     write(
         servers, {"mcpServers": {"fake": {"command": sys.executable, "args": ["-m", "misroute.testing.fake_server"]}}}
     )
-    res = runner.invoke(app, ["init", "--path", "other.yaml", "--from", str(servers), "--model", "mock:m"])
+    args = ["quick", "--config-only", "-c", "other.yaml", "--from", str(servers), "--model", "mock:m"]
+    res = runner.invoke(app, args)
     assert res.exit_code == 0 and yaml.safe_load((tmp_path / "other.yaml").read_text())["server"]["command"][0]
 
 
