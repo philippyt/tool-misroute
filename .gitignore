@@ -12,3 +12,5 @@ wheels/
 .misroute/
 .env
 report.html
+
+*.local.md

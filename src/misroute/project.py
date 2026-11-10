@@ -68,6 +68,7 @@ class Project:
         self.add_total: Progress = lambda n: None
         self.rejected: dict[str, Counter] = {}
         self.dropped: dict[str, list[dict]] = {}
+        self.request_use = {"written": 0, "reused": 0}
         self.unreadable: Counter = Counter()
         self._fixtures: dict[str, Any] | None = None
 
@@ -217,11 +218,14 @@ class Project:
 
     async def request_set(self, tools: list[Tool], only: list[Tool] | None = None) -> dict[str, list[Request]]:
         cached = self.store.read("requests") or {}
+        cached.pop("schema_version", None)
         out: dict[str, list[Request]] = {}
         wanted = only or tools
         key = self.request_key
         full = self.cfg.requests_per_tool * len(self.cfg.request_languages or ["en"])
         missing = [t for t in wanted if len(cached.get(key(t)) or []) < full]
+        self.request_use["written"] += len(missing)
+        self.request_use["reused"] += len(wanted) - len(missing)
         fresh = await asyncio.gather(*(self.requests_for(t, tools) for t in missing))
         for t, reqs in zip(missing, fresh, strict=True):
             cached[key(t)] = [asdict(r) for r in reqs]
@@ -234,10 +238,11 @@ class Project:
         return out
 
     def request_key(self, tool: Tool) -> str:
+        """Where a tool's written requests are stored: under the source, the languages and the recipe that wrote
+        them, so requests from other instructions or another domain are never reused."""
         langs = self.cfg.request_languages or ["en"]
-        if self.cfg.request_source == "description" and langs == ["en"]:
-            return tool.name
-        return f"{tool.name}|{self.cfg.request_source}|{','.join(langs)}"
+        made = validate.recipe(self.domain(), self.cfg.slots)
+        return f"{tool.name}|{self.cfg.request_source}|{','.join(langs)}|{made}"
 
     async def run_trials(self, trials: list[Trial], tools_for: Callable[[Trial], list[Tool]]) -> list[Trial]:
         stopped: list[BudgetExceeded] = []
@@ -405,6 +410,7 @@ class Project:
             removal={k: dict(v) for k, v in moved.items()},
             short=self.shortfall(reqs),
             rejected_requests={k: v for k, v in self.dropped.items() if v},
+            request_use=dict(self.request_use),
             roles_warning=self.cfg.role_warnings(),
             request_source=self.cfg.request_source,
             by_language=rates_by(trials, "lang"),

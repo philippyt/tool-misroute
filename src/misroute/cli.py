@@ -591,6 +591,12 @@ def discover(
             out.print("near misses, unvalidated, not in the ranking", style="dim")
             for n in res["near_misses"][:10]:
                 out.print(f"  {n['tool']}  {n['rival']}  {n['score']:.2f}  {n['where']} {n['source']}", style="dim")
+        use = res["request_use"]
+        out.print(
+            f"requests: written now for {use['written']} tools, reused from an earlier run for {use['reused']}. "
+            "Stored requests are reused only when the instructions, domain, source and languages are the same",
+            style="dim",
+        )
         dropped = [r for rs in res["rejected_requests"].values() for r in rs]
         if dropped:
             unfair = [r for r in dropped if not r["picked"]]

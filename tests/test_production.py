@@ -156,3 +156,28 @@ async def test_a_pilot_replaces_the_guessed_reply_size(tmp_path):
     assert proj.adapter("m").expected_out() == ESTIMATE_TOKENS_OUT
     assert await proj.pilot(["m"], ["json"]) == 3
     assert proj.adapter("m").expected_out() == 20
+
+
+async def test_requests_written_under_other_instructions_are_not_reused(tmp_path):
+    from misroute.testing.fake_server import app
+
+    def project(**more):
+        cfg = Config.model_validate({"server": {"command": ["unused"]}, "models": ["mock:m"], **more})
+        return Project(cfg, server=app, root=tmp_path)
+
+    proj = project()
+    tools = await proj.tools()
+    old = {"schema_version": 1}
+    for t in tools:
+        stale = {"id": "old", "tool": t.name, "template": "stale {slot}", "slots": ["a"]}
+        old[t.name] = old[f"{t.name}|description|en"] = [stale] * 6
+    (tmp_path / "requests.json").write_text(json.dumps(old), encoding="utf-8")
+    reqs = await proj.request_set(tools, tools[:1])
+    assert reqs[tools[0].name] and all(r.template != "stale {slot}" for r in reqs[tools[0].name])
+    assert json.loads((tmp_path / "requests.json").read_text(encoding="utf-8"))["schema_version"] == 2
+    made = proj.adapter("m").calls
+    await project().request_set(tools, tools[:1])
+    again = project()
+    await again.request_set(tools, tools[:1])
+    assert again.adapter("m").calls == 0 and proj.adapter("m").calls == made
+    assert project(domain="Cases are support tickets.").request_key(tools[0]) != proj.request_key(tools[0])

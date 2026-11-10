@@ -75,7 +75,7 @@ class Store:
     def write(self, name: str, data: Any) -> Path:
         path = self.root / f"{name}.json"
         if isinstance(data, dict):
-            data = {"schema_version": SCHEMA_VERSION, **data}
+            data = {**data, "schema_version": SCHEMA_VERSION}
         path.write_text(json.dumps(data, indent=1, default=str), encoding="utf-8")
         return path
 
