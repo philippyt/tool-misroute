@@ -84,7 +84,7 @@ Write models as `provider:model`:
 
 Prices come from the public OpenRouter catalog, cached for a week, and local models cost nothing. Set `price_in` and `price_out` to override. A model with no known price refuses paid runs, since the budget could not be enforced, so set a price for a private deployment, or 0 for a free one. Behind a company TLS proxy, set `system_certs: true`.
 
-Every paid run shows an estimate and stops at `budget_usd`, or at `--max-cost` when that is lower. The estimate is a guide, based on the reply sizes seen so far, not an upper bound, so an estimate above `--max-cost` is a warning and the run still starts. Each result carries the estimate next to the measured calls, tokens and dollars per model under `usage`. The limit is what holds: money is reserved before each call and output is capped near the limit, so a run can stop a little early but does not pass it. One gap remains: far from the limit no token cap is sent, so a single reply over 32768 tokens could overrun. On a stop, calls in flight finish, finished trials are saved as a `partial` run, and a rerun with more budget reuses them at no cost.
+`--pilot` on `discover` and `compare` runs three real trials per model and mode first, so the estimate uses reply sizes the model gives on your catalog instead of a guess, which matters most for reasoning models. Every paid run shows an estimate and stops at `budget_usd`, or at `--max-cost` when that is lower. The estimate is a guide, based on the reply sizes seen so far, not an upper bound, so an estimate above `--max-cost` is a warning and the run still starts. Each result carries the estimate next to the measured calls, tokens and dollars per model under `usage`. The limit is what holds: money is reserved before each call and output is capped near the limit, so a run can stop a little early but does not pass it. One gap remains: far from the limit no token cap is sent, so a single reply over 32768 tokens could overrun. On a stop, calls in flight finish, finished trials are saved as a `partial` run, and a rerun with more budget reuses them at no cost.
 
 Models that only take function tools on the Responses API, such as `gpt-6-astra`, need `options: {api: responses}`. `misroute doctor` makes one tool call per model and names this fix when it sees the error. Write the model as a block, since a shorthand cannot carry options:
 
@@ -156,27 +156,78 @@ A value is the result itself, or a list of cases where the first one whose `args
 
 ## Commands
 
+Most work needs three of them: `discover` finds the confused tools, `check` tests a change to one description, and `ci` guards a pull request. Two more answer questions every team gets: `compare` when the model changes, and `requests` to test on your own traffic.
+
+| Command | Does |
+|---|---|
+| `misroute discover` | ranks confused tool pairs from model behaviour |
+| `misroute check` | tests one proposed description on held out requests |
+| `misroute ci` | fails on exceeded limits, or with `--changed` on descriptions that got worse |
+| `misroute compare` | tests whether routing changes when you move from one model to another |
+| `misroute requests` | collects real user requests from logs for a person to confirm |
+
+The rest set up, explain, fix in bulk and integrate:
+
 | Command | Does |
 |---|---|
 | `misroute quick` | lint and a capped discover in one go, then opens the report |
 | `misroute init` | writes misroute.yaml from your MCP client config and environment |
 | `misroute doctor` | checks the setup and prints a fix for each problem |
 | `misroute lint` | flags missing, name only and path only descriptions and drafts replacements |
-| `misroute discover` | ranks confused tool pairs from model behaviour |
 | `misroute probe` | tests risky pairs with requests that borrow words from the sibling |
 | `misroute explain` | shows the misrouted requests for a pair and what the model called |
 | `misroute fix` | tests a boundary clause against a neutral edit, or against a drafted description for undescribed tools |
-| `misroute check` | tests one proposed description on held out requests |
 | `misroute improve` | writes, races and confirms new descriptions for confused tools, and exports them for review |
 | `misroute report` | writes a self-contained HTML report |
 | `misroute ui` | local web interface to set up, run, read results and approve held writes |
-| `misroute ci` | fails on exceeded limits, or with `--changed` on descriptions that got worse |
 | `misroute catalog` | prints tool hashes and descriptions for change-aware CI |
 | `misroute serve-mcp` | runs misroute as an MCP server for agents |
 | `misroute guard serve` | runs an MCP proxy that logs and guards real tool calls |
 | `misroute site` | builds a static results site |
 | `misroute schema` | prints the JSON Schema of a command's output |
 | `misroute guide` | prints the agent guide and JSON reference |
+
+## Test what production sees
+
+Routing depends on everything the model is given, not only on one server's descriptions. Three settings bring a run closer to the agent you ship:
+
+```yaml
+servers:
+  - {name: github, url: https://api.githubcopilot.com/mcp, auth: bearer_env:GITHUB_TOKEN}
+  - {name: tracker, command: [npx, your-tracker-mcp]}
+system_prompt: agent_prompt.md
+real_requests: real.jsonl
+```
+
+`servers` loads several servers into one catalog, the way an agent with all of them connected sees it. Pairs that join tools from different servers are marked `cross server`: neither server's owner would find them alone. A name two servers share gets the later server's name in front. `improve`, `guard` and `--fastmcp` work on the first server.
+
+`system_prompt` is your agent's own system prompt, as text or a file. Without it trials run under a one line instruction, and a real prompt can move routing either way.
+
+`real_requests` is the strongest evidence a run can have, and you do not have to write the file by hand:
+
+```console
+$ misroute requests collect --from traces.jsonl
+added 212 candidates to real.jsonl, 212 waiting for review
+$ misroute requests review
+[1/212] set the status of case 4 to closed
+  called: get_document, update_case
+  right tool [update_case]:
+$ misroute requests status
+```
+
+`collect` reads the guard log, or any JSON lines file where a line has the request as `text` and what was called as `calls` or `tool`. It proposes the first write, else the first call, as the right tool. That is a suggestion: what an agent called is not proof of what was right, so `review` asks a person to confirm each one, and unconfirmed lines are left out of every run. The guard records user turns when your agent passes them with `guard.user_turn(text)`. A proxy in front of an MCP server sees calls but not what the user asked, so use a trace export there. The file holds what your users wrote, keep it out of version control.
+
+## Changing models
+
+```console
+$ misroute compare --from foundry:claude-opus-5-5 --to foundry:claude-fable-5-2 --max-cost 10
+json: worse, p 0.012 over 9 differing templates. First choice right 91% with claude-opus-5-5, 84% with
+claude-fable-5-2, change in error rate +7.0% (95% +2.1% to +12.4%) over 90 request wordings
+  search_cases: 2 to 11 errors of 36
+  newly confused: list_cases and search_cases
+```
+
+`compare` runs both models on the same requests, tools and orders and tests the difference with the request wording as the unit. `better` means the model you move to makes fewer errors, `worse` exits 1, and too few differing wordings gives no verdict and exits 2. It lists the tools whose errors moved and the pairs that became or stopped being confused. Calls already made by `discover` come from the cache.
 
 ## How discover ranks pairs
 

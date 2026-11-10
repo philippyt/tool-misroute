@@ -28,7 +28,11 @@ For a write request only the writes count, so a read before the write is not con
 
 When a server is built so the agent reads a catalog or schema first, those calls are not confusion. `discover` lists likely entry points under `lookup_candidates`. Ask the user before adding them to `lookup_tools`, then calls to them are not scored as choices and a trial that only called lookups ends as `lookup_only`. Use `max_turns` of 2 or more with them, and `fixtures`, a file of recorded results per tool, so later turns see a realistic reply. `accuracy` is the first choice and `reached_rate` is whether the target was called at all.
 
-Real requests are the strongest evidence. Their rates show in discover `by_kind.real` and in improve `confirm.rates[condition].real_error_rate`.
+Real requests are the strongest evidence. Their rates show in discover `by_kind.real` and in improve `confirm.rates[condition].real_error_rate`. `misroute requests collect` turns a guard log or a JSON lines trace into candidates with `reviewed: false`, which no run uses. Only a person confirms them, with `misroute requests review`. Never set `reviewed` yourself: what an agent called is not proof of what was right. `misroute requests status --json` gives `reviewed`, `pending` and `tools_without`.
+
+To measure what production sees, set `system_prompt` to the agent's own prompt, as text or a file, and list every server the agent has connected under `servers`. Spots then carry `cross_server` for pairs that join two servers. Discover says `system_prompt: false` when it ran under the one line default.
+
+`compare` gives `verdict` for the move from `from` to `to`: `better` means the new model makes fewer errors. Report it with `templates`, `diff`, `ci` and `cost_usd` per mode, list `tools` and `pairs.new`, and say when no request was real (`by_kind`). Exit codes follow check: 1 for `worse`, 2 for `insufficient_data`.
 
 The model under test should not write or judge its own test requests. Set a helper model from another family: `--helper` on `improve`, or `generator`, `validator` and `writer` in misroute.yaml. Results carry `roles_warning` when a role shares a family with a tested model.
 
@@ -59,6 +63,9 @@ real_requests: real.jsonl      # optional, lines of {"text": ..., "tool": name, 
 | You want to know why a pair is confused | `misroute explain --pair a,b --json` | free |
 | You changed one description | `misroute check --tool NAME --description "..." --json --max-cost 1` | a few hundred model calls |
 | You want to find confused tools | `misroute discover --json --max-cost 5` | grows with the number of tools |
+| The estimate looks off, or the model reasons | add `--pilot` to `discover` or `compare` | three trials per model and mode |
+| The model is being changed | `misroute compare --from OLD --to NEW --json --max-cost 5` | a discover for each model, cached calls are free |
+| There are logs of real use | `misroute requests collect --from FILE --json`, then ask the user to run `misroute requests review` | free |
 | You want better descriptions for a server or a Swagger file | `misroute improve <target> --model M --helper H --json --max-cost 5` | discover plus a race per confused group |
 | A pull request changed descriptions | `misroute ci --changed --baseline tools.json --json --max-cost 2` | only changed tools and their neighbours |
 
