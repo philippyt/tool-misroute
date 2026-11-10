@@ -22,6 +22,7 @@ from misroute.store.runs import Store
 from misroute.trial import Request, Trial
 
 Progress = Callable[[int], None]
+PILOT_CALLS = 3
 CONDS = ("original", "baseline", "clause")
 
 
@@ -291,6 +292,20 @@ class Project:
         a = self.adapter(model)
         per_call = a.estimate("x" * 200, [t.spec() for t in tools])
         return n_calls * (self.cfg.max_turns if turns is None else turns) * per_call
+
+    async def pilot(self, models_: list[str], modes: list[str], per_mode: int = PILOT_CALLS) -> int:
+        """A few real trials per model and mode, so the estimate that follows uses reply sizes this model
+        actually gives on this catalog instead of a guess. Returns the number of trials run."""
+        tools = await self.tools()
+        step = max(len(tools) // per_mode, 1)
+        picked = tools[::step][:per_mode]
+        todo = [
+            Trial(m, mode, t.name, f"pilot{i}", f"I need this: {t.description or t.name}", phase="pilot")
+            for m in models_
+            for mode in modes
+            for i, t in enumerate(picked)
+        ]
+        return len(await self.run_trials(todo, lambda t: tools))
 
     async def cost(
         self,

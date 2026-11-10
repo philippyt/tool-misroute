@@ -18,7 +18,7 @@ from misroute.config import Config, env_path, write_env
 from misroute.doctor import system_certs
 from misroute.models.base import BudgetExceeded
 from misroute.models.presets import detect
-from misroute.project import Project
+from misroute.project import PILOT_CALLS, Project
 from misroute.store.cache import no_price
 from misroute.store.runs import SCHEMA_VERSION
 
@@ -41,7 +41,11 @@ Names = Annotated[str | None, typer.Option(help="comma separated")]
 Pairs = Annotated[list[str] | None, typer.Option("--pair", help="tool_a,tool_b")]
 Json = Annotated[bool, typer.Option("--json", help="print one JSON object")]
 Yes = Annotated[bool, typer.Option("--yes", "-y", help="do not ask before paid runs")]
-MaxCost = Annotated[float | None, typer.Option("--max-cost", help="refuse runs estimated above this many dollars")]
+MaxCost = Annotated[float | None, typer.Option("--max-cost", help="stop when spending reaches this many dollars")]
+Pilot = Annotated[
+    bool,
+    typer.Option(help="run 3 real trials per model and mode first, so the estimate uses measured reply sizes"),
+]
 EstimateOnly = Annotated[bool, typer.Option("--estimate-only", help="print the estimate and exit")]
 ProgressMode = Annotated[str, typer.Option("--progress", help="bar, ndjson on stderr, or none")]
 ADVANCED = "Advanced"
@@ -131,6 +135,19 @@ def gate(opts: Opts, proj: Project, calls: int, cost: float, note: str = "") -> 
             fail(opts, "paid run without a terminal, pass --yes or --max-cost")
         if not typer.confirm("continue"):
             raise typer.Exit(FAILED)
+
+
+def piloted(opts: Opts, proj: Project, wanted: bool, models_: list[str], modes: list[str]) -> None:
+    """With --pilot, run a few real trials before the estimate and say what they cost."""
+    if not wanted:
+        return
+    if missing := proj.unpriced():
+        fail(opts, no_price(", ".join(missing)))
+    n = len(models_) * len(modes) * PILOT_CALLS
+    done = run(opts, proj, proj.pilot(models_, modes), n)
+    opts.extra["pilot"] = {"trials": done, "cost_usd": round(proj.budget.spent, 4)}
+    if not opts.json:
+        out.print(f"pilot: {done} trials, ${proj.budget.spent:.2f}, the estimate below uses their reply sizes")
 
 
 def run(opts: Opts, proj: Project, coro, total: int):
@@ -496,11 +513,13 @@ def discover(
     max_cost: MaxCost = None,
     estimate_only: EstimateOnly = False,
     progress: ProgressMode = "bar",
+    pilot: Pilot = False,
 ) -> None:
     """Find risky tools from model behaviour"""
     opts = Opts("discover", json_, yes, max_cost, estimate_only, progress)
     proj = load(opts, config)
     ms, md = split(models), split(modes)
+    piloted(opts, proj, pilot, ms or proj.cfg.tested(), md or list(proj.cfg.modes))
     calls, cost = asyncio.run(proj.discover_cost(ms or proj.cfg.tested(), md or list(proj.cfg.modes)))
     gate(opts, proj, calls, cost)
     res = run(opts, proj, proj.discover(ms, md), calls)
@@ -759,6 +778,7 @@ def compare(
     max_cost: MaxCost = None,
     estimate_only: EstimateOnly = False,
     progress: ProgressMode = "bar",
+    pilot: Pilot = False,
 ) -> None:
     """Test whether routing changes when you move from one model to another, on the same requests"""
     from misroute import compare as comparer
@@ -777,6 +797,7 @@ def compare(
     if max_cost is not None:
         proj.cap(max_cost)
     md = split(modes) or ["json"]
+    piloted(opts, proj, pilot, [a, b], md)
     calls, cost = asyncio.run(proj.discover_cost([a, b], md))
     gate(opts, proj, calls, cost)
     res = run(opts, proj, comparer.compare(proj, a, b, md), calls)

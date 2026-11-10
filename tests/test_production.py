@@ -145,3 +145,14 @@ def test_guard_logs_the_user_turn(tmp_path):
     guard.user_turn("close case 7")
     assert guard.before("update_case", {"id": 7}) is None
     assert real.turns(real.read(tmp_path / "guard.jsonl")) == [("close case 7", ["update_case"])]
+
+
+async def test_a_pilot_replaces_the_guessed_reply_size(tmp_path):
+    from misroute.store.cache import ESTIMATE_TOKENS_OUT
+    from misroute.testing.fake_server import app
+
+    cfg = Config.model_validate({"server": {"command": ["unused"]}, "models": ["mock:m"], "modes": ["json"]})
+    proj = Project(cfg, server=app, root=tmp_path)
+    assert proj.adapter("m").expected_out() == ESTIMATE_TOKENS_OUT
+    assert await proj.pilot(["m"], ["json"]) == 3
+    assert proj.adapter("m").expected_out() == 20
