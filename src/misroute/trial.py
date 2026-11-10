@@ -39,6 +39,7 @@ class Trial:
     probs: dict[str, float] | None = None
     detail: str = ""
     lang: str = "en"
+    bad_args: list[str] = field(default_factory=list)
 
     @property
     def picks(self) -> list[str]:

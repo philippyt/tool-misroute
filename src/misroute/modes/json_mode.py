@@ -1,5 +1,6 @@
 import json
-from misroute.sandbox.fake_tools import FakeTools
+from typing import Any
+from misroute.sandbox.fake_tools import FakeTools, arg_errors
 from misroute.server.catalog import Tool
 from misroute.trial import Trial
 
@@ -30,15 +31,17 @@ def decisive(trial: Trial, turns: list[list[str]], tools: list[Tool]) -> list[st
 def results(fakes: FakeTools, calls: list, by: dict[str, Tool]) -> list[dict]:
     out = []
     for c in calls:
-        body = fakes.result(by[c.name], c.args)[0] if c.name in by else {"error": f"unknown tool {c.name}"}
+        body = fakes.call(by[c.name], c.args) if c.name in by else {"error": f"unknown tool {c.name}"}
         out.append({"id": c.id, "name": c.name, "content": json.dumps(body, default=str)})
     return out
 
 
-async def run(adapter, trial: Trial, tools: list[Tool], max_turns: int = 1) -> Trial:
+async def run(
+    adapter, trial: Trial, tools: list[Tool], max_turns: int = 1, fixtures: dict[str, Any] | None = None
+) -> Trial:
     specs = [t.spec() for t in tools]
     by = {t.name: t for t in tools}
-    fakes = FakeTools(tools)
+    fakes = FakeTools(tools, fixtures or {})
     messages: list[dict] = [{"role": "user", "content": trial.text}]
     turns: list[list[str]] = []
     text = ""
@@ -49,6 +52,7 @@ async def run(adapter, trial: Trial, tools: list[Tool], max_turns: int = 1) -> T
         if not names:
             break
         turns.append(names)
+        trial.bad_args += [e for c in turn.calls if c.name in by for e in arg_errors(by[c.name], c.args)]
         if i == max_turns - 1 or any(by[n].is_write for n in names if n in by):
             break
         for j, c in enumerate(turn.calls):

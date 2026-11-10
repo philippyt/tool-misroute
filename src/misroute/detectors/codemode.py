@@ -1,6 +1,6 @@
 import re
 from collections import Counter
-from misroute.sandbox.fake_tools import Record, cursor_param
+from misroute.sandbox.fake_tools import Record, paging
 from misroute.sandbox.monty_runner import RunResult
 from misroute.server.catalog import Tool
 
@@ -10,11 +10,16 @@ def defined(code: str) -> set[str]:
 
 
 def unused_pagination(log: list[Record], tools: dict[str, Tool]) -> bool:
+    """A reply said there was more and the program never asked for it. A call that names a page number or an
+    offset asked for that slice, so it is not held to the rest."""
     for i, rec in enumerate(log):
-        if not rec.paged:
+        found = paging(tools[rec.tool])
+        if not rec.paged or not found:
             continue
-        cp = cursor_param(tools[rec.tool])
-        if not any(r.tool == rec.tool and r.args.get(cp) for r in log[i + 1 :]):
+        name, kind = found
+        if kind != "cursor" and rec.args.get(name) not in (None, ""):
+            continue
+        if not any(r.tool == rec.tool and r.args.get(name) for r in log[i + 1 :]):
             return True
     return False
 

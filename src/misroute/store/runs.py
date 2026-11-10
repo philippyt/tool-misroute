@@ -17,6 +17,7 @@ create table if not exists trials (
 );
 alter table trials add column if not exists rerun json;
 alter table trials add column if not exists decisive json;
+alter table trials add column if not exists bad_args json;
 """
 
 
@@ -57,6 +58,7 @@ class Store:
                 t.detail,
                 json.dumps(t.rerun),
                 json.dumps(t.decisive),
+                json.dumps(t.bad_args),
             )
             for t in trials
         ]
@@ -65,7 +67,7 @@ class Store:
                 "insert into runs values (?, ?, ?, ?, ?)", [run_id, phase, time.time(), catalog, json.dumps(info)]
             )
             if rows:
-                con.executemany(f"insert into trials values ({', '.join('?' * 22)})", rows)
+                con.executemany(f"insert into trials values ({', '.join('?' * 23)})", rows)
         with (self.root / "runs" / f"{run_id}.jsonl").open("w", encoding="utf-8") as f:
             for t in trials:
                 f.write(json.dumps({"run_id": run_id, **t.to_json()}) + "\n")

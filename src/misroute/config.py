@@ -79,6 +79,7 @@ class Config(BaseModel):
     request_source: Literal["description", "spec"] = "description"
     request_languages: list[str] = Field(default_factory=lambda: ["en"])
     domain: str | None = None
+    fixtures: str | None = None
     workdir: str = ".misroute"
     system_certs: bool = False
     limits: Limits = Field(default_factory=Limits)

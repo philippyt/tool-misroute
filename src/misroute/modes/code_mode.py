@@ -1,9 +1,10 @@
 import ast
 import json
+from typing import Any
 from misroute.detectors.codemode import classify
 from misroute.modes.json_mode import decisive, read_first
 from misroute.modes.stubs import run_code_tool
-from misroute.sandbox.fake_tools import FakeTools
+from misroute.sandbox.fake_tools import FakeTools, arg_errors
 from misroute.sandbox.monty_runner import Sandbox
 from misroute.server.catalog import Tool
 from misroute.trial import Trial
@@ -31,11 +32,17 @@ def strip_stubs(code: str, names: set[str]) -> str | None:
 
 
 async def run(
-    adapter, sandbox: Sandbox, trial: Trial, tools: list[Tool], max_turns: int = 1, single_call: bool = False
+    adapter,
+    sandbox: Sandbox,
+    trial: Trial,
+    tools: list[Tool],
+    max_turns: int = 1,
+    single_call: bool = False,
+    fixtures: dict[str, Any] | None = None,
 ) -> Trial:
     spec = [run_code_tool(tools, single_call)]
     by = {t.name: t for t in tools}
-    fakes = FakeTools(tools)
+    fakes = FakeTools(tools, fixtures or {})
     messages: list[dict] = [{"role": "user", "content": trial.text}]
     programs: list[list[str]] = []
     failures: list[str | None] = []
@@ -55,6 +62,7 @@ async def run(
         res = await sandbox.run(code, fakes.functions())
         log = fakes.log[start:]
         programs.append([r.tool for r in log])
+        trial.bad_args += [e for r in log for e in arg_errors(by[r.tool], r.args)]
         failures.append(classify(code, res, log, tools))
         if i == 0:
             first = code
@@ -80,7 +88,7 @@ async def run(
         trial.failure = "read_first"
     stripped = strip_stubs(first, set(by)) if failures and failures[0] == "faked" else None
     if stripped:
-        again = FakeTools(tools)
+        again = FakeTools(tools, fixtures or {})
         await sandbox.run(stripped, again.functions())
         trial.failure = "stub_copied"
         trial.rerun = again.names()

@@ -12,6 +12,7 @@ from misroute.lint import descriptions
 from misroute.models.base import Budget, BudgetExceeded, ProviderRefused
 from misroute.modes import code_mode, json_mode
 from misroute.requests import gate, generate, validate
+from misroute.sandbox.fake_tools import load_fixtures
 from misroute.sandbox.monty_runner import Sandbox
 from misroute.server import openapi, static
 from misroute.server.catalog import Tool, catalog_hash, effect_unknown, replace_descriptions
@@ -66,6 +67,7 @@ class Project:
         self.add_total: Progress = lambda n: None
         self.rejected: dict[str, Counter] = {}
         self.unreadable: Counter = Counter()
+        self._fixtures: dict[str, Any] | None = None
 
     @classmethod
     def from_yaml(cls, path: str | Path, **kw: Any) -> "Project":
@@ -144,6 +146,11 @@ class Project:
         self.store.write("lint", out)
         return out
 
+    def fixtures(self) -> dict[str, Any]:
+        if self._fixtures is None:
+            self._fixtures = load_fixtures(self.cfg.fixtures)
+        return self._fixtures
+
     def domain(self) -> str:
         text = self.cfg.domain or ""
         if text and len(text) < 260 and "\n" not in text and Path(text).is_file():
@@ -207,6 +214,7 @@ class Project:
 
     async def run_trials(self, trials: list[Trial], tools_for: Callable[[Trial], list[Tool]]) -> list[Trial]:
         stopped: list[BudgetExceeded] = []
+        fixed = self.fixtures()
         async with Sandbox() as box:
 
             async def one(t: Trial) -> Trial | None:
@@ -214,9 +222,9 @@ class Project:
                 ts = tools_for(t)
                 try:
                     if t.mode == "code":
-                        await code_mode.run(adapter, box, t, ts, self.cfg.max_turns)
+                        await code_mode.run(adapter, box, t, ts, self.cfg.max_turns, fixtures=fixed)
                     else:
-                        await json_mode.run(adapter, t, ts, self.cfg.max_turns)
+                        await json_mode.run(adapter, t, ts, self.cfg.max_turns, fixed)
                         if adapter.cfg.scoring:
                             t.probs = await adapter.score_names(t.text, [x.spec() for x in ts])
                 except ProviderRefused:
@@ -399,6 +407,11 @@ class Project:
                         "hedge_rate": hedge.hedge_rate(ts),
                         "write_hedge_rate": hedge.hedge_rate(ts, writes),
                         "failures": codemode.rates(ts, mode),
+                        "bad_args_rate": sum(bool(t.bad_args) for t in ts) / len(ts),
+                        "bad_args": [
+                            {"problem": k, "trials": v}
+                            for k, v in Counter(e for t in ts for e in set(t.bad_args)).most_common(10)
+                        ],
                         "stub_rerun": codemode.rerun_choice(ts),
                         "unanswered": codemode.unanswered(ts),
                         "matrix": {k: dict(v) for k, v in confusion.matrix(ts).items()},
