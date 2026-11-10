@@ -67,3 +67,39 @@ async def test_one_server_is_unchanged(tmp_path):
     proj = Project(cfg, root=tmp_path / ".misroute")
     assert [(t.name, t.server) for t in await proj.tools()] == [("get_user", "")]
     assert proj.system() is None
+
+
+async def test_compare_two_models_on_the_same_requests(tmp_path):
+    from importlib import resources
+    import jsonschema
+    from misroute import compare
+    from misroute.testing.fake_server import app
+
+    confuse = {"get_case_comments": {"get_case_events": 0.9}, "search_cases": {"list_cases": 0.9}}
+    cfg = Config.model_validate(
+        {
+            "server": {"command": ["unused"]},
+            "models": [
+                {"name": "old", "provider": "mock"},
+                {"name": "new", "provider": "mock", "options": {"confuse": confuse}},
+            ],
+            "generator": "old",
+            "validator": "old",
+            "requests_per_tool": 12,
+            "rotations": 2,
+            "repeats": 1,
+        }
+    )
+    proj = Project(cfg, server=app, root=tmp_path)
+    res = await compare.compare(proj, "old", "new")
+    row = res["modes"][0]
+    assert res["verdict"] == row["verdict"] == "worse" and row["diff"] > 0
+    assert row["rates"]["new"]["accuracy"] < row["rates"]["old"]["accuracy"]
+    assert {t["tool"] for t in row["tools"]} >= {"get_case_comments", "search_cases"}
+    assert "get_case_comments|get_case_events" in row["pairs"]["new"] and not row["pairs"]["gone"]
+    back = await compare.compare(proj, "new", "old")
+    assert back["verdict"] == "better" and back["cost_usd"] == 0
+    schema = json.loads(resources.files("misroute.schemas").joinpath("compare.json").read_text(encoding="utf-8"))
+    jsonschema.validate(json.loads(json.dumps({"schema_version": 2, "command": "compare", **res})), schema)
+    added, names = compare.with_models(cfg, ["old", "ollama:qwen3.5:9b"])
+    assert names == ["old", "qwen3.5-9b"] and len(added.models) == 3

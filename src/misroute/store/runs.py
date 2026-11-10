@@ -6,7 +6,7 @@ import duckdb
 from misroute.trial import Trial
 
 SCHEMA_VERSION = 2
-RESULTS = ("lint", "discover", "probe", "fix")
+RESULTS = ("lint", "discover", "probe", "fix", "compare")
 
 SCHEMA = """
 create table if not exists runs (run_id varchar, phase varchar, started double, catalog varchar, info json);

@@ -1,0 +1,130 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "misroute/compare.json",
+ "title": "misroute compare output",
+ "type": "object",
+ "properties": {
+  "schema_version": {
+   "const": 2
+  },
+  "command": {
+   "type": "string"
+  },
+  "from": {
+   "type": "string"
+  },
+  "to": {
+   "type": "string"
+  },
+  "verdict": {
+   "enum": [
+    "better",
+    "worse",
+    "no_difference",
+    "insufficient_data"
+   ],
+   "description": "the least favourable verdict over the modes, better means the model moved to makes fewer errors"
+  },
+  "modes": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "mode": {
+      "enum": [
+       "json",
+       "code"
+      ]
+     },
+     "verdict": {
+      "enum": [
+       "better",
+       "worse",
+       "no_difference",
+       "insufficient_data"
+      ]
+     },
+     "reason": {
+      "type": "string"
+     },
+     "templates": {
+      "type": "integer"
+     },
+     "discordant_templates": {
+      "type": "integer"
+     },
+     "p": {
+      "type": "number",
+      "description": "exact sign flip over request templates, times the number of modes"
+     },
+     "diff": {
+      "type": "number",
+      "description": "error rate of the model moved to minus the model moved from"
+     },
+     "ci": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      }
+     },
+     "rates": {
+      "type": "object",
+      "description": "per model: trials, accuracy, reached_rate, wrong_rate, hedge_rate, bad_args_rate"
+     },
+     "tools": {
+      "type": "array",
+      "description": "tools whose error count moved: tool, errors_from, errors_to, trials"
+     },
+     "pairs": {
+      "type": "object",
+      "description": "flagged pairs that are new, gone or in both"
+     }
+    },
+    "required": [
+     "mode",
+     "verdict",
+     "templates",
+     "p",
+     "diff",
+     "rates",
+     "tools",
+     "pairs"
+    ]
+   }
+  },
+  "templates": {
+   "type": "integer"
+  },
+  "by_kind": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "roles_warning": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "run": {
+   "type": "string"
+  },
+  "cost_usd": {
+   "type": "number"
+  },
+  "usage": {
+   "type": "object"
+  }
+ },
+ "required": [
+  "schema_version",
+  "command",
+  "from",
+  "to",
+  "verdict",
+  "modes",
+  "cost_usd"
+ ],
+ "additionalProperties": true
+}

@@ -747,6 +747,65 @@ def check(
 
 
 @app.command()
+def compare(
+    old: Annotated[str, typer.Option("--from", help="model in use now, provider:model or a configured name")],
+    new: Annotated[str, typer.Option("--to", help="model you are moving to")],
+    config: Cfg = Path("misroute.yaml"),
+    modes: Annotated[str, typer.Option(help="comma separated")] = "json",
+    json_: Json = False,
+    yes: Yes = False,
+    max_cost: MaxCost = None,
+    estimate_only: EstimateOnly = False,
+    progress: ProgressMode = "bar",
+) -> None:
+    """Test whether routing changes when you move from one model to another, on the same requests"""
+    from misroute import compare as comparer
+    from misroute.config import load as load_config
+
+    opts = Opts("compare", json_, yes, max_cost, estimate_only, progress)
+    system_certs(config)
+    try:
+        cfg, (a, b) = comparer.with_models(load_config(config), [old, new])
+    except (OSError, ValueError, ValidationError, yaml.YAMLError) as e:
+        fail(opts, f"config problem: {e}")
+        return
+    if a == b:
+        fail(opts, "--from and --to name the same model")
+    proj = Project(cfg, root=config.parent / cfg.workdir)
+    if max_cost is not None:
+        proj.cap(max_cost)
+    md = split(modes) or ["json"]
+    calls, cost = asyncio.run(proj.discover_cost([a, b], md))
+    gate(opts, proj, calls, cost)
+    res = run(opts, proj, comparer.compare(proj, a, b, md), calls)
+
+    def text() -> None:
+        for r in res["modes"]:
+            was, now = r["rates"][a], r["rates"][b]
+            out.print(
+                f"{r['mode']}: {r['verdict']}, {r['reason']}. First choice right {was['accuracy']:.0%} with {a}, "
+                f"{now['accuracy']:.0%} with {b}, change in error rate {r['diff']:+.1%} "
+                f"(95% {r['ci'][0]:+.1%} to {r['ci'][1]:+.1%}) over {r['templates']} request wordings"
+            )
+            out.print(
+                f"  target reached {was['reached_rate']:.0%} to {now['reached_rate']:.0%}, arguments off schema "
+                f"{was['bad_args_rate']:.0%} to {now['bad_args_rate']:.0%}",
+                style="dim",
+            )
+            for t in r["tools"][:8]:
+                out.print(f"  {t['tool']}: {t['errors_from']} to {t['errors_to']} errors of {t['trials']}")
+            for label, key in (("newly confused", "new"), ("no longer confused", "gone")):
+                if r["pairs"][key]:
+                    out.print(f"  {label}: {', '.join(p.replace('|', ' and ') for p in r['pairs'][key])}")
+        if res["by_kind"] != ["real"] and "real" not in res["by_kind"]:
+            out.print("all requests were written by a model. Add real_requests to compare on your own traffic")
+        out.print(f"spent ${res['cost_usd']:.2f}", style="dim")
+        usage_note(opts, res)
+
+    emit(opts, res, warned(res, text), check_code(res["verdict"]))
+
+
+@app.command()
 def improve(
     target: Annotated[
         str | None,
