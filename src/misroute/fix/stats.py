@@ -6,6 +6,7 @@ from scipy import stats
 
 ALPHA = 0.05
 FLAG_MIN_ERRORS = 6
+FLAG_MIN_TEMPLATES = 2
 EPS = 1e-12
 
 

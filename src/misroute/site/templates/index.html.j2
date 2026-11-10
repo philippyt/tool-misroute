@@ -30,7 +30,7 @@ th { font-weight: 700; }
 {% for e in entries %}
 <div class="card">
   <h2><a href="{{ e.slug }}.html">{{ e.name }}</a></h2>
-  <p class="muted">{% if e.tools %}{{ e.tools }} tools, {{ e.weak }} with weak descriptions{% endif %}{% if e.gate_failed %}, {{ e.gate_failed }} pairs flagged by the surface gate{% endif %}</p>
+  <p class="muted">{% if e.tools %}{{ e.tools }} tools, {{ e.weak }} with weak descriptions{% endif %}{% if e.flagged %}, {{ e.flagged }} confused pairs flagged{% endif %}</p>
   {% if e.cells %}
   <div class="scroll"><table><tr><th>Model</th><th>Mode</th><th>Trials</th><th>Wrong tool</th><th>Called both</th><th>Called both, write tools</th></tr>
   {% for c in e.cells %}<tr><td>{{ c.model }}</td><td>{{ c.mode }}</td><td>{{ c.trials }}</td><td>{{ c.wrong_rate|pct }}</td><td>{{ c.hedge_rate|pct }}</td><td>{{ c.write_hedge_rate|pct }}</td></tr>{% endfor %}

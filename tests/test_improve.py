@@ -75,7 +75,7 @@ async def test_improve_end_to_end(tmp_path):
     import jsonschema
 
     schema = json.loads(resources.files("misroute.schemas").joinpath("improve.json").read_text(encoding="utf-8"))
-    jsonschema.validate({"schema_version": 1, "command": "improve", **json.loads(json.dumps(res, default=str))}, schema)
+    jsonschema.validate({"schema_version": 2, "command": "improve", **json.loads(json.dumps(res, default=str))}, schema)
 
     files = res["files"]
     over = yaml.safe_load(Path(files["overlay"]).read_text(encoding="utf-8"))

@@ -12,11 +12,6 @@ def matrix(trials: list[Trial]) -> dict[str, Counter]:
     return dict(out)
 
 
-def wrong_pairs(trials: list[Trial]) -> Counter:
-    """Counts of (target, chosen) for single wrong picks."""
-    return Counter((t.target, t.chosen) for t in trials if t.wrong and not t.hedge)
-
-
 def directions(trials: list[Trial], a: str, b: str) -> dict[str, dict[str, float]]:
     out = {}
     for src, dst in ((a, b), (b, a)):

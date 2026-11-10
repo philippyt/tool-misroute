@@ -19,7 +19,7 @@ async def test_discover_probe_fix_report(project, tmp_path):
     code = next(c for c in res["cells"] if c["mode"] == "code")
     assert code["failures"].get("faked", 0) > 0
     assert res["removal"]
-    assert res["gate_failed"] and any(s["gate_failed"] for s in res["spots"])
+    assert all(s["templates"] >= 2 for s in res["spots"] if s["flagged"])
     assert all("near" not in s["signals"] for s in res["spots"])
 
     probe = await project.probe(pairs=[("get_case_comments", "get_case_events")])

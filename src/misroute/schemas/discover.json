@@ -5,7 +5,7 @@
  "type": "object",
  "properties": {
   "schema_version": {
-   "const": 1
+   "const": 2
   },
   "command": {
    "type": "string"
@@ -80,11 +80,13 @@
      "score",
      "signals",
      "write",
-     "gate_failed",
      "thin",
      "directions",
      "where",
-     "ci95"
+     "ci95",
+     "flagged",
+     "one_wording",
+     "templates"
     ],
     "properties": {
      "a": {
@@ -103,9 +105,6 @@
       }
      },
      "write": {
-      "type": "boolean"
-     },
-     "gate_failed": {
       "type": "boolean"
      },
      "thin": {
@@ -129,7 +128,7 @@
      },
      "flagged": {
       "type": "boolean",
-      "description": "errors at least 6, the thesis flag rule"
+      "description": "errors at least 6, the thesis flag rule, over at least 2 request templates"
      },
      "ci95": {
       "type": "array",
@@ -138,13 +137,18 @@
       },
       "minItems": 2,
       "maxItems": 2,
-      "description": "Wilson 95% interval for the signal the score came from"
+      "description": "Wilson 95% interval for the signal the score came from, counting request templates, not trials"
+     },
+     "templates": {
+      "type": "integer",
+      "description": "distinct request templates behind those errors"
+     },
+     "one_wording": {
+      "type": "boolean",
+      "description": "errors at least 6 from a single request template, one observation, not flagged"
      }
     }
    }
-  },
-  "gate_failed": {
-   "type": "array"
   },
   "near_misses": {
    "type": "array"
@@ -265,7 +269,6 @@
   "command",
   "cells",
   "spots",
-  "gate_failed",
   "untested",
   "spent"
  ],

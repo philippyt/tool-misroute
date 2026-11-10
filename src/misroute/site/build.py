@@ -23,7 +23,7 @@ def entry(name: str, root: Path) -> dict:
         "weak": len(lint.get("findings", [])),
         "cells": disc.get("cells", []),
         "spots": disc.get("spots", [])[:5],
-        "gate_failed": len(disc.get("gate_failed", [])),
+        "flagged": sum(bool(s.get("flagged")) for s in disc.get("spots", [])),
         "fix": fix.get("across", []),
     }
 

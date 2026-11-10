@@ -42,7 +42,7 @@ def call(*args):
 def test_lint_json(config):
     code, out = call("lint", "-c", config(), "--json")
     data = json.loads(out)
-    assert code == 0 and data["schema_version"] == 1 and data["command"] == "lint"
+    assert code == 0 and data["schema_version"] == 2 and data["command"] == "lint"
     assert {f["tool"] for f in data["findings"]} == {"get_attachment", "get_document"}
 
 

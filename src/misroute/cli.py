@@ -453,7 +453,7 @@ def discover(
             d = s["directions"]
             dirs = f"{d.get(s['a'] + '>' + s['b'], 0)} to {d.get(s['b'] + '>' + s['a'], 0)}" if d else ""
             gone = [x for x in (s["a"], s["b"]) if x in res["untested"]]
-            flags = (("gate failed", s["gate_failed"]), ("few requests", s["thin"] and not gone))
+            flags = (("one wording", s["one_wording"]), ("few requests", s["thin"] and not gone))
             note = ", ".join([*(f"UNTESTED {x}" for x in gone), *(x for x, on in flags if on)])
             lo, hi = s["ci95"]
             row = (s["a"], s["b"], f"{s['score']:.2f}", f"{lo:.2f}-{hi:.2f}", sig, dirs, ", ".join(s["where"]), note)
@@ -484,11 +484,15 @@ def discover(
                 f"{u['trials']}, {', '.join(u['where'])}), e.g. {u['example']!r}",
                 style="yellow",
             )
-        if res["gate_failed"]:
+        flagged = sum(s["flagged"] for s in res["spots"])
+        lone = [s for s in res["spots"] if s["one_wording"]]
+        out.print(f"{flagged} pairs flagged: at least 6 errors in one model and mode, over 2 or more wordings")
+        if lone:
             out.print(
-                f"{len(res['gate_failed'])} tool pairs have request sets that surface words can tell apart. "
-                "Their spots stay in the ranking marked 'gate failed': the rate is real model behaviour, but "
-                "surface cues may have helped or hurt it, so confirm with probe or real_requests before acting"
+                f"{len(lone)} pairs marked 'one wording' reached 6 errors from a single request wording repeated "
+                "across slots and orders. That is one observation, so they are not flagged. Read the request "
+                "with explain, and add real_requests to test the pair properly",
+                style="yellow",
             )
         if res["near_misses"]:
             out.print("near misses, unvalidated, not in the ranking", style="dim")

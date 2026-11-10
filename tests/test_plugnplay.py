@@ -128,7 +128,7 @@ def test_init_quick_doctor_explain_schema(tmp_path, monkeypatch):
     assert res.exit_code == 0, res.stdout
     data = json.loads(res.stdout)
     assert data["discover"]["spots"] and (tmp_path / ".misroute" / "report.html").exists()
-    jsonschema.validate({"schema_version": 1, "command": "discover", **data["discover"]}, schema_of("discover"))
+    jsonschema.validate({"schema_version": 2, "command": "discover", **data["discover"]}, schema_of("discover"))
     res = runner.invoke(app, ["doctor", "--json"])
     doc = json.loads(res.stdout)
     jsonschema.validate(doc, schema_of("doctor"))

@@ -315,13 +315,11 @@ class Project:
                 noise[m], found = nearmiss.from_repeats(ts)
                 near += [(f"{m} json", x) for x in found]
         writes = {t.name for t in tools if t.is_write}
-        gated = await asyncio.to_thread(gate.screen, tools, reqs)
-        failed = {(min(a, b), max(a, b)) for a, b, _ in gated}
-        spots = rank.rank(trials, {}, writes, failed)
+        spots = rank.rank(trials, {}, writes)
         cand = list(dict.fromkeys(n for s in spots if s.flagged for n in (s.a, s.b)))
         removed = await self.removal(cand, reqs, models_, tools)
         moved = removal.neighbours(removed)
-        spots = rank.rank(trials, moved, writes, failed)
+        spots = rank.rank(trials, moved, writes)
         for s in spots:
             s.thin = min(len(reqs.get(s.a, [])), len(reqs.get(s.b, []))) < stats.MIN_DISCORDANT_TEMPLATES
         result = self.summarize(trials, tools, models_, modes)
@@ -330,7 +328,6 @@ class Project:
             unrouted=codemode.unrouted(trials),
             noise=noise,
             near_misses=[{"where": w, **asdict(n)} for w, n in near],
-            gate_failed=[list(g) for g in gated],
             removal={k: dict(v) for k, v in moved.items()},
             short=self.shortfall(reqs),
             roles_warning=self.cfg.role_warnings(),

@@ -5,7 +5,7 @@ from typing import Any
 import duckdb
 from misroute.trial import Trial
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 RESULTS = ("lint", "discover", "probe", "fix")
 
 SCHEMA = """

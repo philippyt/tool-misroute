@@ -1,7 +1,6 @@
 import itertools
 import math
 import re
-from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 from misroute.fix.stats import mc_draws
 from misroute.server.catalog import Tool
@@ -90,21 +89,3 @@ def gate(a: Tool, b: Tool, reqs_a: list[Request], reqs_b: list[Request], seed: i
         lab[list(c)] = 0
         nulls.append(lopo(x, lab[groups], groups))
     return float(np.mean(np.array(nulls) >= real - 1e-12))
-
-
-def _screen(job: tuple) -> tuple[str, str, float]:
-    a, b, ra, rb = job
-    return a.name, b.name, gate(a, b, ra, rb)
-
-
-def screen(tools: list[Tool], reqs: dict[str, list[Request]]) -> list[tuple[str, str, float]]:
-    """Sampled gate on every tool pair. Returns the pairs whose request sets surface cues can tell apart."""
-    jobs = [
-        (a, b, reqs.get(a.name, []), reqs.get(b.name, []))
-        for i, a in enumerate(tools)
-        for b in tools[i + 1 :]
-        if reqs.get(a.name) and reqs.get(b.name)
-    ]
-    with ProcessPoolExecutor() as ex:
-        results = list(ex.map(_screen, jobs, chunksize=8))
-    return [r for r in results if r[2] <= ALPHA]

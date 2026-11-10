@@ -101,7 +101,7 @@ def test_spot_ci_follows_the_scoring_signal():
 
     wrongs = [t("a", ["b"], rid=f"w{i}") for i in range(3)] + [t("a", ["a"], rid="w3")]
     s = rank(wrongs, {}, set())[0]
-    assert s.score == 0.75 and s.counts["wrong"] == (3, 4)
+    assert s.score == 0.75 and s.counts["wrong"] == (3, 4, 4)
     assert s.to_json()["ci95"] == list(wilson(3, 4))
     lo, hi = s.to_json()["ci95"]
     assert lo < 0.75 < hi
@@ -114,3 +114,21 @@ def test_wilson_widens_on_thin_samples():
     lo_fat, hi_fat = wilson(24, 96)
     assert hi_thin - lo_thin > hi_fat - lo_fat
     assert wilson(0, 0) == (0.0, 1.0)
+
+
+def test_one_wording_repeated_is_not_a_flagged_pair():
+    from misroute.detectors.rank import rank, wilson
+
+    fine = [t("a", ["a"], rid=f"ok{i}", rep=r) for i in range(5) for r in range(6)]
+    same = [t("a", ["b"], rid="one", rep=r) for r in range(6)]
+    s = rank(fine + same, {}, set())[0]
+    assert s.errors == 6 and s.templates == 1 and s.one_wording and not s.flagged
+    assert s.to_json()["ci95"] == list(wilson(1, 6))
+    spread = [t("a", ["b"], rid=f"w{i}", rep=r) for i in range(2) for r in range(3)]
+    s = rank(fine + spread, {}, set())[0]
+    assert s.errors == 6 and s.templates == 2 and s.flagged and not s.one_wording
+
+
+def test_target_called_second_is_a_hedge_not_a_wrong_pick():
+    tr = t("a", ["b", "a"])
+    assert tr.hedge and tr.error and not tr.wrong
