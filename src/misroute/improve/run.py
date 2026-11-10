@@ -334,7 +334,15 @@ async def estimate(proj, models_: list[str], modes: list[str]) -> tuple[int, flo
     return await proj.discover_cost(models_, modes)
 
 
-def stage_cost(proj, found: list[list[str]], spots: list[dict], models_: list[str], modes: list[str], n_styles: int):
+def stage_cost(
+    proj,
+    found: list[list[str]],
+    spots: list[dict],
+    models_: list[str],
+    modes: list[str],
+    n_styles: int,
+    tools: list[Tool],
+):
     """Model calls and dollars for candidates, race and confirmation over the groups discover found."""
     langs = len(proj.cfg.request_languages or ["en"])
     per_set = proj.cfg.requests_per_tool * langs
@@ -347,7 +355,7 @@ def stage_cost(proj, found: list[list[str]], spots: list[dict], models_: list[st
         trials = round(half * proj.cfg.slots * 2 * runs) * len(modes)
         side = len(group) * (2 + n_styles) + len(partners(spots, group)) * (1 + per_set)
         calls += trials * len(models_) + side
-        cost += sum(proj.estimate(trials, m, []) for m in models_) + proj.estimate(side, helper, [])
+        cost += sum(proj.estimate(trials, m, tools) for m in models_) + proj.estimate(side, helper, [], 1)
     return calls, cost
 
 
@@ -377,7 +385,7 @@ async def improve(
     imp = Improver(proj, models_, modes, max_chars, styles)
     domain = proj.domain()
     found_groups = groups(spots, n_groups)
-    calls, cost = stage_cost(proj, found_groups, spots, models_, modes, len(imp.styles))
+    calls, cost = stage_cost(proj, found_groups, spots, models_, modes, len(imp.styles), tools)
     proj.add_total(calls)
     if proj.budget.spent + cost > proj.budget.limit:
         raise BudgetExceeded(

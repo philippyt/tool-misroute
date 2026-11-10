@@ -258,9 +258,12 @@ class Project:
             "reuses them at no cost"
         )
 
-    def estimate(self, n_calls: int, model: str, tools: list[Tool]) -> float:
+    def estimate(self, n_calls: int, model: str, tools: list[Tool], turns: int | None = None) -> float:
+        """Dollars for n_calls trials of up to max_turns model calls each. Helper calls and removal trials take
+        one call, so they pass turns 1."""
         a = self.adapter(model)
-        return n_calls * self.cfg.max_turns * a.estimate("x" * 200, [t.spec() for t in tools])
+        per_call = a.estimate("x" * 200, [t.spec() for t in tools])
+        return n_calls * (self.cfg.max_turns if turns is None else turns) * per_call
 
     async def cost(
         self,
@@ -311,12 +314,12 @@ class Project:
         requests = len(tools) * self.cfg.requests_per_tool * langs
         written, judged = len(tools) * langs, requests
         calls = written + judged
-        cost = self.estimate(written, self.cfg.role("generator").name, [])
-        cost += self.estimate(judged, self.cfg.role("validator").name, tools)
+        cost = self.estimate(written, self.cfg.role("generator").name, [], 1)
+        cost += self.estimate(judged, self.cfg.role("validator").name, tools, 1)
         for m in models_:
             removal_trials = requests if "json" in modes else 0
             calls += removal_trials
-            cost += self.estimate(removal_trials, m, tools)
+            cost += self.estimate(removal_trials, m, tools, 1)
             for mode in modes:
                 n = requests * self.cfg.rotations * self.repeats(m, mode)
                 calls += n

@@ -216,4 +216,5 @@ async def test_discover_estimate_covers_validation_and_removal(tmp_path):
     _, three = await proj.discover_cost(["m"], ["json"])
     proj.cfg.max_turns = 1
     _, one = await proj.discover_cost(["m"], ["json"])
-    assert three == pytest.approx(3 * one)
+    helpers = proj.estimate(1, "m", [], 1) + proj.estimate(2 * requests, "m", await proj.tools(), 1)
+    assert three - helpers == pytest.approx(3 * (one - helpers)) and one < three < 3 * one

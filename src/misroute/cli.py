@@ -560,9 +560,10 @@ def discover(
         dropped = [r for rs in res["rejected_requests"].values() for r in rs]
         if dropped:
             unfair = [r for r in dropped if not r["picked"]]
+            why = f", {len(unfair)} because no tool could do them as asked" if unfair else ""
             out.print(
-                f"the validator dropped {len(dropped)} written requests before any trial ran, {len(unfair)} because "
-                "no tool could do them as asked. Each one and its reason is under rejected_requests in discover.json",
+                f"the validator dropped {len(dropped)} written requests before any trial ran{why}. Each one, the "
+                "tool it picked and its reason is under rejected_requests in discover.json",
                 style="dim",
             )
             for r in unfair[:3]:
