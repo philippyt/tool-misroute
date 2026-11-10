@@ -1,11 +1,11 @@
 import asyncio
 from collections import Counter
 from collections.abc import Callable
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 from misroute import models
-from misroute.config import Config, load
+from misroute.config import Config, ServerConfig, load
 from misroute.detectors import codemode, confusion, hedge, nearmiss, rank, removal
 from misroute.fix import clause, stats
 from misroute.lint import descriptions
@@ -111,15 +111,34 @@ class Project:
         self.budget.limit = min(self.cfg.budget_usd, self.budget.spent + self.budget.reserved + max_cost)
 
     async def tools(self) -> list[Tool]:
+        """The catalog under test: the server's tools, then those of every further server under servers, the way
+        an agent with several servers connected sees them. A name two servers share gets the later server's label
+        in front."""
         if self._tools is None:
-            cfg = self.cfg.server
-            if (cfg.openapi or cfg.tools) and self.server is cfg:
-                found = openapi.tools(cfg.openapi) if cfg.openapi else static.tools(str(cfg.tools))
-                self._tools = [t for t in found if keep(t.name, cfg.include_tools, cfg.exclude_tools)]
-            else:
-                async with connect(self.server) as client:
-                    self._tools = await list_tools(client, cfg.include_tools, cfg.exclude_tools)
+            found = await self.load_tools(self.cfg.server, self.server)
+            for extra in self.cfg.servers:
+                taken = {t.name for t in found}
+                for t in await self.load_tools(extra, extra):
+                    found.append(replace(t, name=f"{extra.label}_{t.name}") if t.name in taken else t)
+            self._tools = found
         return self._tools
+
+    async def load_tools(self, cfg: ServerConfig, src: Any) -> list[Tool]:
+        if (cfg.openapi or cfg.tools) and src is cfg:
+            listed = openapi.tools(cfg.openapi) if cfg.openapi else static.tools(str(cfg.tools))
+            found = [t for t in listed if keep(t.name, cfg.include_tools, cfg.exclude_tools)]
+        else:
+            async with connect(src) as client:
+                found = await list_tools(client, cfg.include_tools, cfg.exclude_tools)
+        return [replace(t, server=cfg.label) for t in found] if self.cfg.servers else found
+
+    def system(self) -> str | None:
+        """The agent's own system prompt, as text or a file, so routing is measured under the instructions the
+        model has in production."""
+        text = self.cfg.system_prompt or ""
+        if text and len(text) < 260 and "\n" not in text and Path(text).is_file():
+            text = Path(text).read_text(encoding="utf-8")
+        return text.strip() or None
 
     async def catalog(self) -> str:
         return catalog_hash(await self.tools())
@@ -221,7 +240,7 @@ class Project:
 
     async def run_trials(self, trials: list[Trial], tools_for: Callable[[Trial], list[Tool]]) -> list[Trial]:
         stopped: list[BudgetExceeded] = []
-        fixed = self.fixtures()
+        fixed, system = self.fixtures(), self.system()
         async with Sandbox() as box:
 
             async def one(t: Trial) -> Trial | None:
@@ -230,9 +249,11 @@ class Project:
                 looks = self.lookups(ts)
                 try:
                     if t.mode == "code":
-                        await code_mode.run(adapter, box, t, ts, self.cfg.max_turns, fixtures=fixed, lookups=looks)
+                        await code_mode.run(
+                            adapter, box, t, ts, self.cfg.max_turns, fixtures=fixed, lookups=looks, system=system
+                        )
                     else:
-                        await json_mode.run(adapter, t, ts, self.cfg.max_turns, fixed, looks)
+                        await json_mode.run(adapter, t, ts, self.cfg.max_turns, fixed, looks, system)
                         if adapter.cfg.scoring:
                             t.probs = await adapter.score_names(t.text, [x.spec() for x in ts])
                 except ProviderRefused:
@@ -257,6 +278,12 @@ class Project:
             f"{why}. {len(done)} of {len(trials)} trials finished and were saved as {run}, a rerun with more budget "
             "reuses them at no cost"
         )
+
+    def cross_server(self, spots: list[dict], tools: list[Tool]) -> None:
+        """Mark pairs whose tools come from different servers, which no single server's owner would find alone."""
+        home = {t.name: t.server for t in tools}
+        for s in spots:
+            s["cross_server"] = bool(self.cfg.servers) and home.get(s["a"]) != home.get(s["b"])
 
     def estimate(self, n_calls: int, model: str, tools: list[Tool], turns: int | None = None) -> float:
         """Dollars for n_calls trials of up to max_turns model calls each. Helper calls and removal trials take
@@ -351,8 +378,12 @@ class Project:
         for s in spots:
             s.thin = min(len(reqs.get(s.a, [])), len(reqs.get(s.b, []))) < stats.MIN_DISCORDANT_TEMPLATES
         result = self.summarize(trials, tools, models_, modes)
+        found = [s.to_json() for s in spots]
+        self.cross_server(found, tools)
         result.update(
-            spots=[s.to_json() for s in spots],
+            spots=found,
+            servers={t.name: t.server for t in tools} if self.cfg.servers else {},
+            system_prompt=bool(self.system()),
             unrouted=codemode.unrouted(trials),
             noise=noise,
             near_misses=[{"where": w, **asdict(n)} for w, n in near],

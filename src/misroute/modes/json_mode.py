@@ -60,6 +60,7 @@ async def run(
     max_turns: int = 1,
     fixtures: dict[str, Any] | None = None,
     lookups: frozenset[str] = frozenset(),
+    system: str | None = None,
 ) -> Trial:
     specs = [t.spec() for t in tools]
     by = {t.name: t for t in tools}
@@ -68,7 +69,7 @@ async def run(
     turns: list[list[str]] = []
     text = ""
     for i in range(max_turns):
-        turn = await adapter.chat(messages if i else trial.text, specs, SYSTEM, rep=trial.rep)
+        turn = await adapter.chat(messages if i else trial.text, specs, system or SYSTEM, rep=trial.rep)
         text = turn.text
         names = [c.name for c in turn.calls]
         if not names:

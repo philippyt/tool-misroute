@@ -9,6 +9,7 @@ Mode = Literal["json", "code"]
 
 
 class ServerConfig(BaseModel):
+    name: str | None = None
     url: str | None = None
     command: list[str] | None = None
     openapi: str | None = None
@@ -24,6 +25,19 @@ class ServerConfig(BaseModel):
         if sum(map(bool, (self.url, self.command, self.openapi, self.tools))) != 1:
             raise ValueError("server needs exactly one of url, command, openapi or tools")
         return self
+
+    @property
+    def label(self) -> str:
+        """A short name for the server in results: its name, else its host, file or command."""
+        if self.name:
+            return self.name
+        if self.url:
+            from urllib.parse import urlparse
+
+            return urlparse(self.url).hostname or self.url
+        if self.command:
+            return Path(self.command[-1]).stem or self.command[0]
+        return Path(str(self.openapi or self.tools)).stem
 
 
 class ModelConfig(BaseModel):
@@ -64,6 +78,7 @@ class Config(BaseModel):
     """Run settings. Models can be written as provider:model shorthand, for example anthropic:claude-opus-5-5."""
 
     server: ServerConfig
+    servers: list[ServerConfig] = Field(default_factory=list)
     models: list[ModelConfig]
     modes: list[Mode] = ["json", "code"]
     budget_usd: float = 5.0
@@ -79,6 +94,7 @@ class Config(BaseModel):
     request_source: Literal["description", "spec"] = "description"
     request_languages: list[str] = Field(default_factory=lambda: ["en"])
     domain: str | None = None
+    system_prompt: str | None = None
     fixtures: str | None = None
     lookup_tools: list[str] = Field(default_factory=list)
     workdir: str = ".misroute"
@@ -94,6 +110,8 @@ class Config(BaseModel):
         from misroute.models.presets import expand
 
         data = dict(data)
+        if "server" not in data and isinstance(data.get("servers"), list) and data["servers"]:
+            data["server"], data["servers"] = data["servers"][0], data["servers"][1:]
         if isinstance(data.get("request_languages"), list):
             data["request_languages"] = ["no" if x is False else x for x in data["request_languages"]]
         models = [expand(m) if isinstance(m, str) else m for m in data.get("models") or []]

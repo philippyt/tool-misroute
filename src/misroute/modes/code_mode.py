@@ -40,8 +40,10 @@ async def run(
     single_call: bool = False,
     fixtures: dict[str, Any] | None = None,
     lookups: frozenset[str] = frozenset(),
+    system: str | None = None,
 ) -> Trial:
     spec = [run_code_tool(tools, single_call)]
+    system = f"{system.strip()}\n\n{SYSTEM}" if system else SYSTEM
     by = {t.name: t for t in tools}
     fakes = FakeTools(tools, fixtures or {})
     messages: list[dict] = [{"role": "user", "content": trial.text}]
@@ -49,7 +51,7 @@ async def run(
     failures: list[str | None] = []
     first = ""
     for i in range(max_turns):
-        turn = await adapter.chat(messages if i else trial.text, spec, SYSTEM, rep=trial.rep)
+        turn = await adapter.chat(messages if i else trial.text, spec, system, rep=trial.rep)
         code_calls = [c for c in turn.calls if c.name == "run_code"]
         if not code_calls:
             if i == 0:

@@ -88,6 +88,7 @@ class Tool:
     destructive: bool | None = None
     route: str = ""
     op_id: str = ""
+    server: str = ""
 
     @property
     def is_write(self) -> bool:

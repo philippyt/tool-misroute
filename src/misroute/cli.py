@@ -510,7 +510,11 @@ def discover(
             d = s["directions"]
             dirs = f"{d.get(s['a'] + '>' + s['b'], 0)} to {d.get(s['b'] + '>' + s['a'], 0)}" if d else ""
             gone = [x for x in (s["a"], s["b"]) if x in res["untested"]]
-            flags = (("one wording", s["one_wording"]), ("few requests", s["thin"] and not gone))
+            flags = (
+                ("one wording", s["one_wording"]),
+                ("few requests", s["thin"] and not gone),
+                ("cross server", s["cross_server"]),
+            )
             note = ", ".join([*(f"UNTESTED {x}" for x in gone), *(x for x, on in flags if on)])
             lo, hi = s["ci95"]
             row = (s["a"], s["b"], f"{s['score']:.2f}", f"{lo:.2f}-{hi:.2f}", sig, dirs, ", ".join(s["where"]), note)
@@ -546,6 +550,15 @@ def discover(
         flagged = sum(s["flagged"] for s in res["spots"])
         lone = [s for s in res["spots"] if s["one_wording"]]
         out.print(f"{flagged} pairs flagged: at least 6 errors in one model and mode, over 2 or more wordings")
+        across = sum(s["flagged"] and s["cross_server"] for s in res["spots"])
+        if across:
+            out.print(f"{across} of them join tools from different servers, which neither server shows on its own")
+        if not res["system_prompt"]:
+            out.print(
+                "run with a one line system prompt. Set system_prompt to your agent's own, as text or a file, to "
+                "measure routing under the instructions it has in production",
+                style="dim",
+            )
         if lone:
             out.print(
                 f"{len(lone)} pairs marked 'one wording' reached 6 errors from a single request wording repeated "
