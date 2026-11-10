@@ -181,6 +181,43 @@ def usage_note(opts: Opts, res: dict) -> None:
         out.print(f"  the estimate was ${est['cost_usd']:.2f} for {est['calls']} calls", style="dim")
 
 
+def cells_note(res: dict) -> None:
+    """One line per model and mode that keeps the first choice, reaching the target and the arguments apart."""
+    for c in res["cells"]:
+        ended = ", ".join(f"{k} {v:.0%}" for k, v in c["failures"].items())
+        out.print(
+            f"{c['model']} {c['mode']}: {c['trials']} trials, first choice right {c['accuracy']:.0%}, target "
+            f"reached {c['reached_rate']:.0%}, wrong tool {c['wrong_rate']:.0%}, both called {c['hedge_rate']:.0%}"
+            + (f", {ended}" if ended else "")
+        )
+        if c["bad_args"]:
+            worst = c["bad_args"][0]
+            out.print(
+                f"  arguments broke the tool's schema in {c['bad_args_rate']:.0%} of trials, most often "
+                f"{worst['problem']!r} ({worst['trials']}). The tool choice score does not see this",
+                style="yellow",
+            )
+
+
+def lookup_note(res: dict) -> None:
+    if res["lookup_tools"]:
+        out.print(f"lookup tools, not scored as choices: {', '.join(res['lookup_tools'])}", style="dim")
+    for row in res["lookup_candidates"]:
+        out.print(
+            f"{row['tool']} was called before the right tool in {row['trials']} trials, on the way to "
+            f"{', '.join(row['targets'])}. If agents are meant to call it first, add it to lookup_tools in "
+            "misroute.yaml so those calls stop counting against the tools it leads to",
+            style="yellow",
+        )
+    ended = sum(c["failures"].get("lookup_only", 0) + c["failures"].get("read_first", 0) for c in res["cells"])
+    if ended and res["max_turns"] == 1:
+        out.print(
+            "Some trials ended on a lookup or a read before the choice was seen. Set max_turns to 2 or more to "
+            "let them continue",
+            style="dim",
+        )
+
+
 def effect_note(names: list[str]) -> None:
     if names:
         out.print(
@@ -491,7 +528,9 @@ def discover(
                     "",
                 )
                 t.add_row(*row, style="yellow")
+        cells_note(res)
         out.print(t)
+        lookup_note(res)
         for tool in res["untested"]:
             out.print(
                 f"UNTESTED {tool}: the validator kept none of its requests, so it was never tested as a target. "

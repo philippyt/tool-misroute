@@ -132,3 +132,76 @@ def test_lint_reports_tools_with_an_unknown_effect(tmp_path, monkeypatch):
     runner = CliRunner()
     assert json.loads(runner.invoke(app, ["lint", "--json"]).stdout)["effect_unknown"] == ["azure_catalog"]
     assert "readOnlyHint" in " ".join(runner.invoke(app, ["lint"]).stdout.split())
+
+
+READ = Tool("azure_read", "Reads a resource.", SCHEMA, read_only=True)
+LOGS = Tool("azure_logs", "Reads logs.", SCHEMA, read_only=True)
+READS = [CATALOG, READ, LOGS, CHANGE]
+LOOKUPS = frozenset({"azure_catalog"})
+
+
+class Turns:
+    def __init__(self, *turns):
+        self.turns, self.seen = list(turns), 0
+
+    async def chat(self, user, tools, system=None, rep=0):
+        names = self.turns[min(self.seen, len(self.turns) - 1)]
+        self.seen += 1
+        return Turn([Call(n, {}, f"c{i}") for i, n in enumerate(names)])
+
+
+async def test_a_lookup_before_the_read_is_not_a_choice():
+    model = Turns(["azure_catalog"], ["azure_read"])
+    t = await json_mode.run(model, trial("azure_read"), READS, 2, lookups=LOOKUPS)
+    assert t.calls == ["azure_catalog", "azure_read"] and t.picks == ["azure_read"]
+    assert not t.error and t.failure is None and t.reached
+    plain = await json_mode.run(Turns(["azure_catalog"], ["azure_read"]), trial("azure_read"), READS, 2)
+    assert plain.picks == ["azure_catalog"] and plain.wrong and plain.reached
+
+
+async def test_the_wrong_read_after_a_lookup_is_still_wrong():
+    model = Turns(["azure_catalog"], ["azure_logs"], ["azure_read"])
+    t = await json_mode.run(model, trial("azure_read"), READS, 3, lookups=LOOKUPS)
+    assert t.picks == ["azure_logs"] and t.wrong and t.reached
+
+
+async def test_only_lookups_leaves_the_choice_unobserved():
+    t = await json_mode.run(Turns(["azure_catalog"]), trial("azure_read"), READS, 2, lookups=LOOKUPS)
+    assert t.failure == "lookup_only" and t.error and not t.wrong and not t.reached
+    own = await json_mode.run(Turns(["azure_catalog"]), trial("azure_catalog"), READS, 2, lookups=LOOKUPS)
+    assert own.picks == ["azure_catalog"] and not own.error
+
+
+async def test_a_trial_stops_once_the_target_is_called():
+    model = Turns(["azure_read"], ["azure_logs"])
+    t = await json_mode.run(model, trial("azure_read"), READS, 3)
+    assert model.seen == 1 and t.calls == ["azure_read"] and not t.error
+    gone = Turns(["azure_logs"], ["azure_logs"])
+    await json_mode.run(gone, trial("azure_read"), [CATALOG, LOGS], 3)
+    assert gone.seen == 1
+
+
+async def test_a_lookup_inside_one_program_is_not_a_choice():
+    class Coder:
+        async def chat(self, user, tools, system=None, rep=0):
+            return Turn([Call("run_code", {"code": "a = await azure_catalog()\nb = await azure_read()\nb"}, "c")])
+
+    async with Sandbox() as box:
+        t = await code_mode.run(Coder(), box, trial("azure_read", "code"), READS, lookups=LOOKUPS)
+        plain = await code_mode.run(Coder(), box, trial("azure_read", "code"), READS)
+    assert t.picks == ["azure_read"] and not t.error
+    assert plain.hedge and not plain.wrong
+
+
+def test_tools_that_lead_to_several_targets_are_lookup_candidates():
+    from misroute.detectors.rank import lookup_candidates
+
+    def led(target, first, i):
+        return Trial("m", "json", target, f"{target}{i}", "x", calls=[first, target], decisive=[first])
+
+    ts = [led("azure_read", "azure_catalog", i) for i in range(4)] + [led("azure_logs", "azure_catalog", 9)] * 2
+    ts += [led("azure_read", "azure_logs", i) for i in range(8)]
+    found = lookup_candidates(ts)
+    assert [r["tool"] for r in found] == ["azure_catalog"] and found[0]["trials"] == 6
+    assert found[0]["targets"] == ["azure_logs", "azure_read"]
+    assert lookup_candidates(ts, LOOKUPS) == []

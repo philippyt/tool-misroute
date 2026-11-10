@@ -112,3 +112,23 @@ def rank(trials: list[Trial], removal: Mapping[str, Mapping[str, int]], writes: 
         s.flagged = any(c >= FLAG_MIN_ERRORS and m >= FLAG_MIN_TEMPLATES for c, m in cells)
         s.one_wording = enough and not s.flagged
     return sorted(spots.values(), key=lambda s: (-s.score, not s.write, -s.signals.get("removal", 0.0), s.pair))
+
+
+def lookup_candidates(trials: list[Trial], known: frozenset[str] = frozenset()) -> list[dict]:
+    """Tools called before the target was reached, for at least FLAG_MIN_ERRORS trials and FLAG_MIN_TEMPLATES
+    different targets. A sibling that is confused with one tool leads to that one tool, a catalog or schema lookup
+    leads to many, so these are likely entry points to list under lookup_tools rather than wrong picks."""
+    led: dict[str, int] = defaultdict(int)
+    targets: dict[str, set[str]] = defaultdict(set)
+    for t in trials:
+        if not t.reached or t.calls[0] == t.target:
+            continue
+        for name in set(t.calls[: t.calls.index(t.target)]) - known:
+            led[name] += 1
+            targets[name].add(t.target)
+    rows = [
+        {"tool": name, "trials": n, "targets": sorted(targets[name])}
+        for name, n in led.items()
+        if n >= FLAG_MIN_ERRORS and len(targets[name]) >= FLAG_MIN_TEMPLATES
+    ]
+    return sorted(rows, key=lambda r: (-r["trials"], r["tool"]))

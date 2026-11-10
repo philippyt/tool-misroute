@@ -63,6 +63,11 @@ class Trial:
         )
 
     @property
+    def reached(self) -> bool:
+        """The target was called at some point within the turns the trial ran, whatever was called first."""
+        return self.target in self.calls
+
+    @property
     def error(self) -> bool:
         return self.chosen != self.target or self.hedge
 

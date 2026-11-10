@@ -80,6 +80,7 @@ class Config(BaseModel):
     request_languages: list[str] = Field(default_factory=lambda: ["en"])
     domain: str | None = None
     fixtures: str | None = None
+    lookup_tools: list[str] = Field(default_factory=list)
     workdir: str = ".misroute"
     system_certs: bool = False
     limits: Limits = Field(default_factory=Limits)

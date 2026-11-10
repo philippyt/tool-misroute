@@ -2,7 +2,7 @@ import ast
 import json
 from typing import Any
 from misroute.detectors.codemode import classify
-from misroute.modes.json_mode import decisive, read_first
+from misroute.modes.json_mode import decisive, read_first, settled
 from misroute.modes.stubs import run_code_tool
 from misroute.sandbox.fake_tools import FakeTools, arg_errors
 from misroute.sandbox.monty_runner import Sandbox
@@ -39,6 +39,7 @@ async def run(
     max_turns: int = 1,
     single_call: bool = False,
     fixtures: dict[str, Any] | None = None,
+    lookups: frozenset[str] = frozenset(),
 ) -> Trial:
     spec = [run_code_tool(tools, single_call)]
     by = {t.name: t for t in tools}
@@ -67,7 +68,7 @@ async def run(
         if i == 0:
             first = code
             trial.detail = code[:600] + ("\n# " + res.error[:200] if res.error else "")
-        if i == max_turns - 1 or any(by[r.tool].is_write for r in log):
+        if i == max_turns - 1 or settled(trial, [r.tool for r in log], by):
             break
         cid = code_calls[0].id or f"code{i}"
         body = json.dumps({"result": res.output, "stdout": res.stdout[:2000], "error": res.error}, default=str)
@@ -81,11 +82,15 @@ async def run(
             {"role": "tool", "results": [{"id": cid, "name": "run_code", "content": body[:8000]}]},
         ]
     trial.calls = [n for names in programs for n in names]
-    hard = [f for f in failures if f and f != "no_call"]
+    hard = [f for f in failures if f and f not in ("no_call", "unused_pagination")]
     trial.failure = hard[0] if hard else (None if trial.calls else "no_call")
-    trial.decisive = decisive(trial, programs, tools)
+    trial.decisive = decisive(trial, programs, tools, lookups)
     if trial.failure is None and read_first(trial, tools):
         trial.failure = "read_first"
+    elif trial.failure is None and trial.decisive == []:
+        trial.failure = "lookup_only"
+    elif trial.failure is None and "unused_pagination" in failures:
+        trial.failure = "unused_pagination"
     stripped = strip_stubs(first, set(by)) if failures and failures[0] == "faked" else None
     if stripped:
         again = FakeTools(tools, fixtures or {})

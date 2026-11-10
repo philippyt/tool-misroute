@@ -3,12 +3,14 @@ from misroute.trial import Trial
 
 NONE = "(none)"
 READ_FIRST = "(read first)"
+LOOKUP_ONLY = "(lookup only)"
+ENDED = {"read_first": READ_FIRST, "lookup_only": LOOKUP_ONLY}
 
 
 def matrix(trials: list[Trial]) -> dict[str, Counter]:
     out: dict[str, Counter] = defaultdict(Counter)
     for t in trials:
-        out[t.target][READ_FIRST if t.failure == "read_first" else t.chosen or NONE] += 1
+        out[t.target][ENDED.get(t.failure or "") or t.chosen or NONE] += 1
     return dict(out)
 
 

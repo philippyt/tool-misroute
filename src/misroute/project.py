@@ -146,6 +146,11 @@ class Project:
         self.store.write("lint", out)
         return out
 
+    def lookups(self, tools: list[Tool]) -> frozenset[str]:
+        """Tools named by lookup_tools, by name or pattern: entry points an agent is meant to call before another
+        tool, whose calls are not scored as choices."""
+        return frozenset(t.name for t in tools if self.cfg.lookup_tools and keep(t.name, self.cfg.lookup_tools, []))
+
     def fixtures(self) -> dict[str, Any]:
         if self._fixtures is None:
             self._fixtures = load_fixtures(self.cfg.fixtures)
@@ -220,11 +225,12 @@ class Project:
             async def one(t: Trial) -> Trial | None:
                 adapter = self.adapter(t.model)
                 ts = tools_for(t)
+                looks = self.lookups(ts)
                 try:
                     if t.mode == "code":
-                        await code_mode.run(adapter, box, t, ts, self.cfg.max_turns, fixtures=fixed)
+                        await code_mode.run(adapter, box, t, ts, self.cfg.max_turns, fixtures=fixed, lookups=looks)
                     else:
-                        await json_mode.run(adapter, t, ts, self.cfg.max_turns, fixed)
+                        await json_mode.run(adapter, t, ts, self.cfg.max_turns, fixed, looks)
                         if adapter.cfg.scoring:
                             t.probs = await adapter.score_names(t.text, [x.spec() for x in ts])
                 except ProviderRefused:
@@ -353,6 +359,9 @@ class Project:
             by_kind=rates_by(trials, "kind"),
             untested=sorted(k for k, v in reqs.items() if not v),
             effect_unknown=effect_unknown(tools),
+            lookup_tools=sorted(self.lookups(tools)),
+            lookup_candidates=rank.lookup_candidates(trials, self.lookups(tools)),
+            max_turns=self.cfg.max_turns,
             catalog=catalog_hash(tools),
             spent=self.budget.spent,
             usage=self.usage(),
@@ -403,6 +412,7 @@ class Project:
                         "mode": mode,
                         "trials": len(ts),
                         "accuracy": sum(not t.error for t in ts) / len(ts),
+                        "reached_rate": sum(t.reached for t in ts) / len(ts),
                         "wrong_rate": confusion.wrong_rate(ts),
                         "hedge_rate": hedge.hedge_rate(ts),
                         "write_hedge_rate": hedge.hedge_rate(ts, writes),
