@@ -53,6 +53,7 @@ class Guard:
         now = time.time()
         ev = self.rules.rephrase(text, self.last_user[0], now - self.last_user[1]) if self.last_user else None
         self.last_user = (text, now)
+        self._log("user", text=text)
         if ev:
             self.events.append(ev)
             self._log("event", **asdict(ev))

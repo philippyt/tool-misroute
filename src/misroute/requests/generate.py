@@ -194,7 +194,8 @@ async def generate(
 
 def load_real(path: str | Path, tools: list[Tool]) -> list[Request]:
     """Real requests from JSON lines with text, tool and optional lang. The tool can be named by its tool name,
-    operationId or METHOD /path."""
+    operationId or METHOD /path. Lines with reviewed false are candidates no person has confirmed yet and are
+    left out."""
     names = {k: t.name for t in tools for k in (t.name, t.op_id, t.route) if k}
     out = []
     for line in Path(path).read_text(encoding="utf-8").splitlines():
@@ -202,7 +203,7 @@ def load_real(path: str | Path, tools: list[Tool]) -> list[Request]:
             continue
         row = json.loads(line)
         name = names.get(str(row.get("tool", "")).strip())
-        if name:
+        if name and row.get("reviewed", True):
             lang = row.get("lang", "en")
             out.append(Request(rid(name, "real", row["text"], lang), name, row["text"], [], "real", lang=lang))
     return out

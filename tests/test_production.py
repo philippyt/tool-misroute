@@ -103,3 +103,45 @@ async def test_compare_two_models_on_the_same_requests(tmp_path):
     jsonschema.validate(json.loads(json.dumps({"schema_version": 2, "command": "compare", **res})), schema)
     added, names = compare.with_models(cfg, ["old", "ollama:qwen3.5:9b"])
     assert names == ["old", "qwen3.5-9b"] and len(added.models) == 3
+
+
+def test_real_requests_are_collected_then_confirmed_by_a_person(tmp_path):
+    from misroute.requests import generate, real
+
+    tools = [Tool("get_case", "A case.", read_only=True), Tool("update_case", "Change a case.", read_only=False)]
+    log = tmp_path / "guard.jsonl"
+    lines = [
+        {"type": "user", "text": "close case 7"},
+        {"type": "call", "tool": "get_case", "args": {}},
+        {"type": "call", "tool": "update_case", "args": {}},
+        {"type": "event", "kind": "hedge", "tool": "update_case"},
+        {"type": "user", "text": "thanks"},
+        {"text": "show case 9", "calls": [{"name": "get_case"}]},
+        {"request": "open case 3", "tool_calls": [{"function": {"name": "get_case"}}]},
+        {"text": "what is the weather", "calls": ["get_weather"]},
+    ]
+    log.write_text("".join(json.dumps(x) + "\n" for x in lines), encoding="utf-8")
+    found = real.collect(log, tools, [{"text": "show case 9", "tool": "get_case"}])
+    assert [(r["text"], r["tool"]) for r in found] == [("close case 7", "update_case"), ("open case 3", "get_case")]
+    assert found[0]["called"] == ["get_case", "update_case"] and not found[0]["reviewed"]
+    dest = tmp_path / "real.jsonl"
+    real.write(dest, [{"text": "show case 9", "tool": "get_case"}, *found])
+    assert [r.template for r in generate.load_real(dest, tools)] == ["show case 9"]
+    rows = real.read(dest)
+    rows[1]["reviewed"] = True
+    real.write(dest, rows)
+    assert [r.template for r in generate.load_real(dest, tools)] == ["show case 9", "close case 7"]
+    state = real.status(rows, tools)
+    assert state["reviewed"] == 2 and state["pending"] == 1 and state["per_tool"] == {"get_case": 1, "update_case": 1}
+
+
+def test_guard_logs_the_user_turn(tmp_path):
+    from misroute.config import GuardConfig
+    from misroute.guard.rules import Rules
+    from misroute.guard.wrapper import Guard
+    from misroute.requests import real
+
+    guard = Guard(None, Rules([], set(), GuardConfig()), tmp_path / "guard.jsonl")
+    guard.user_turn("close case 7")
+    assert guard.before("update_case", {"id": 7}) is None
+    assert real.turns(real.read(tmp_path / "guard.jsonl")) == [("close case 7", ["update_case"])]

@@ -31,6 +31,8 @@ app = typer.Typer(
 )
 guard_app = typer.Typer(no_args_is_help=True, help="Protect production calls")
 app.add_typer(guard_app, name="guard")
+requests_app = typer.Typer(no_args_is_help=True, help="Build a set of real user requests")
+app.add_typer(requests_app, name="requests")
 out = Console()
 err = Console(stderr=True)
 
@@ -797,7 +799,7 @@ def compare(
             for label, key in (("newly confused", "new"), ("no longer confused", "gone")):
                 if r["pairs"][key]:
                     out.print(f"  {label}: {', '.join(p.replace('|', ' and ') for p in r['pairs'][key])}")
-        if res["by_kind"] != ["real"] and "real" not in res["by_kind"]:
+        if "real" not in res["by_kind"]:
             out.print("all requests were written by a model. Add real_requests to compare on your own traffic")
         out.print(f"spent ${res['cost_usd']:.2f}", style="dim")
         usage_note(opts, res)
@@ -1103,6 +1105,105 @@ def guard_serve(config: Cfg = Path("misroute.yaml")) -> None:
 
     proj = Project.from_yaml(config)
     asyncio.run(serve(proj.cfg, proj.store.read("discover")))
+
+
+def real_file(proj: Project, path: Path | None) -> Path:
+    return path or Path(proj.cfg.real_requests or "real.jsonl")
+
+
+@requests_app.command("collect")
+def requests_collect(
+    source: Annotated[
+        Path | None,
+        typer.Option("--from", help="guard log or a JSON lines trace with text and calls, default the guard log"),
+    ] = None,
+    file: Annotated[Path | None, typer.Option(help="file to add candidates to, default real_requests")] = None,
+    config: Cfg = Path("misroute.yaml"),
+    json_: Json = False,
+) -> None:
+    """Add user requests from a guard log or a trace as candidates for review"""
+    from misroute.requests import real
+
+    opts = Opts("requests collect", json_)
+    proj = load(opts, config)
+    src, dest = source or Path(proj.cfg.guard.log), real_file(proj, file)
+    if not src.exists():
+        fail(opts, f"{src} not found, pass --from with a guard log or a JSON lines trace")
+    rows = real.read(dest)
+    tools = asyncio.run(proj.tools())
+    found = real.collect(src, tools, rows)
+    real.write(dest, rows + found)
+    res: dict[str, Any] = {"file": str(dest), "added": len(found), **real.status(rows + found, tools)}
+
+    def text() -> None:
+        out.print(f"added {len(found)} candidates to {dest}, {res['pending']} waiting for review")
+        out.print("run misroute requests review to confirm the right tool for each", style="dim")
+        if not proj.cfg.real_requests:
+            out.print(f"then set real_requests: {dest} in misroute.yaml", style="dim")
+
+    emit(opts, res, text)
+
+
+@requests_app.command("review")
+def requests_review(
+    file: Annotated[Path | None, typer.Option(help="file to review, default real_requests")] = None,
+    config: Cfg = Path("misroute.yaml"),
+) -> None:
+    """Confirm the right tool for each candidate request, one at a time"""
+    from misroute.requests import real
+
+    opts = Opts("requests review")
+    proj = load(opts, config)
+    dest = real_file(proj, file)
+    rows = real.read(dest)
+    names = {t.name for t in asyncio.run(proj.tools())}
+    pending = [r for r in rows if not r.get("reviewed", True)]
+    if not sys.stdin.isatty():
+        fail(opts, "review needs a terminal, a person confirms each request")
+    out.print(f"{len(pending)} to review. Enter keeps the suggested tool, a tool name replaces it, s skips, d drops")
+    dropped: list[dict] = []
+    for i, r in enumerate(pending, 1):
+        out.print(f"\n[{i}/{len(pending)}] {r['text']}")
+        out.print(f"  called: {', '.join(r.get('called') or []) or 'nothing'}", style="dim")
+        while True:
+            answer = typer.prompt("  right tool", default=r["tool"]).strip()
+            if answer in ("s", "d", "q") or answer in names:
+                break
+            out.print(f"  {answer} is not a tool on this server", style="yellow")
+        if answer == "q":
+            break
+        if answer == "d":
+            dropped.append(r)
+        elif answer != "s":
+            r["tool"], r["reviewed"] = answer, True
+    kept = [r for r in rows if not any(r is d for d in dropped)]
+    real.write(dest, kept)
+    left = sum(not r.get("reviewed", True) for r in kept)
+    out.print(f"{sum(bool(r.get('reviewed', True)) for r in kept)} reviewed, {left} still waiting, saved to {dest}")
+
+
+@requests_app.command("status")
+def requests_status(
+    file: Annotated[Path | None, typer.Option(help="file to count, default real_requests")] = None,
+    config: Cfg = Path("misroute.yaml"),
+    json_: Json = False,
+) -> None:
+    """Count reviewed and waiting real requests per tool"""
+    from misroute.requests import real
+
+    opts = Opts("requests status", json_)
+    proj = load(opts, config)
+    dest = real_file(proj, file)
+    res: dict[str, Any] = {"file": str(dest), **real.status(real.read(dest), asyncio.run(proj.tools()))}
+
+    def text() -> None:
+        out.print(f"{dest}: {res['reviewed']} reviewed, {res['pending']} waiting for review")
+        for name, n in res["per_tool"].items():
+            out.print(f"  {name}  {n}")
+        if res["tools_without"]:
+            out.print(f"no real requests yet for: {', '.join(res['tools_without'])}", style="yellow")
+
+    emit(opts, res, text)
 
 
 @guard_app.command("confirm")
