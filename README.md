@@ -344,7 +344,7 @@ Check the descriptions a pull request changed, and comment the result:
 ```yaml
 - uses: actions/checkout@v5
   with: {fetch-depth: 0}
-- uses: philippyt/tool-misroute@v0.2.4
+- uses: philippyt/tool-misroute@v0.4.0
   with:
     config: misroute.yaml
     max-cost: "2"
@@ -356,7 +356,7 @@ As a pre-commit hook:
 
 ```yaml
 - repo: https://github.com/philippyt/tool-misroute
-  rev: v0.2.4
+  rev: v0.4.0
   hooks:
     - id: misroute-lint
 ```
