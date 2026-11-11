@@ -158,9 +158,8 @@ def run(opts: Opts, proj: Project, coro, total: int):
             now = time.monotonic()
             if opts.progress == "ndjson" and (now - state["at"] > 1 or state["done"] >= state["total"]):
                 state["at"] = now
-                print(
-                    json.dumps({"event": "progress", "done": state["done"], "total": state["total"]}), file=sys.stderr
-                )
+                line = json.dumps({"event": "progress", "done": state["done"], "total": state["total"]})
+                print(line, file=sys.stderr, flush=True)
 
         proj.progress = tick
         proj.add_total = lambda n: state.update(total=state["total"] + n)
@@ -208,6 +207,19 @@ def cells_note(res: dict) -> None:
             f"reached {c['reached_rate']:.0%}, wrong tool {c['wrong_rate']:.0%}, both called {c['hedge_rate']:.0%}"
             + (f", {ended}" if ended else "")
         )
+        open_ = c["trials"] - c["decided"]
+        if open_:
+            out.print(
+                f"  {open_} trials ended before a choice was seen. Of the {c['decided']} where one was, "
+                f"{c['accuracy_decided']:.0%} were right. Raise max_turns to see more of them through",
+                style="dim",
+            )
+        if c["unread_pages_rate"]:
+            out.print(
+                f"  {c['unread_pages_rate']:.0%} of programs left later pages unread, a fault only when the request "
+                "needed everything",
+                style="dim",
+            )
         if c["bad_args"]:
             worst = c["bad_args"][0]
             out.print(
@@ -535,6 +547,11 @@ def discover(
         extra, more = asyncio.run(proj.cost("probe", tested, used, None, pairs(pair)))
         cost += more
         note = "" if pair else "The probe part counts the pairs the last discover flagged, a new ranking can change it"
+    if not proj.turns_measured(tested):
+        upper = (
+            f"Assumes every trial uses all {proj.cfg.max_turns} turns, the upper end. --pilot measures the real number"
+        )
+        note = f"{note}. {upper}" if note else upper
     gate(opts, proj, calls + extra, cost, note)
     res = run(opts, proj, proj.discover(ms, md), calls)
     if probing:

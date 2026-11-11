@@ -10,8 +10,15 @@ SLOT = """When a parameter takes one concrete value such as a record id, a name 
 placeholder {{slot}} exactly once, standing for a value of that parameter, and you give {slots} realistic values for it.
 When no parameter takes such a value, write complete requests without a placeholder and give an empty slots list.
 Never ask to filter, narrow or sort by something the parameters cannot express.
+Ask for one thing that this tool alone answers in full. Do not combine it with something another tool is
+needed for.
 Each request is the first message of a conversation and must stand on its own: do not refer to an earlier reply,
 a previous call, a next page or a cursor.
+"""
+
+FEEDBACK = """A reviewer rejected these earlier requests for this tool. Write different ones that avoid the same
+problem:
+{rejected}
 """
 
 GOAL = """Write requests that a user of an AI agent would send, where the right tool to answer is the one below.
@@ -63,6 +70,9 @@ Sibling: {sibling_name}: {sibling}
 Count: {count}
 
 Reply with JSON only: {{"slot_kind": "...", "slots": ["..."], "requests": ["..."]}}"""
+
+ROUNDS = 3
+FEEDBACK_SHOWN = 8
 
 LANGUAGES = {
     "en": "English",
@@ -146,6 +156,14 @@ def lenient(text: str) -> dict:
     return out
 
 
+def feedback(rejected: list[dict]) -> str:
+    lines = []
+    for r in rejected[-FEEDBACK_SHOWN:]:
+        why = r.get("reason") or (f"fits {r['picked']} better" if r.get("picked") else "no tool can do it")
+        lines.append(f"- {r['request']} ({why})")
+    return FEEDBACK.format(rejected="\n".join(lines)) if lines else ""
+
+
 def rid(tool: str, kind: str, template: str, lang: str = "en") -> str:
     tag = "" if lang == "en" else f"|{lang}"
     return hashlib.sha256(f"{tool}|{kind}|{template}{tag}".encode()).hexdigest()[:10]
@@ -161,8 +179,11 @@ async def generate(
     source: str = "description",
     lang: str = "en",
     domain: str = "",
+    rejected: list[dict] | None = None,
 ) -> list[Request]:
-    """Requests for a tool. With source spec the generator sees the tool's interface and never its description."""
+    """Requests for a tool. With source spec the generator sees the tool's interface and never its description.
+    rejected holds earlier requests the validator turned down, with the tool it picked or its reason, so a
+    further round does not repeat them."""
     kind = "borrowed" if sibling else "goal"
     spec = source == "spec"
     tpl = (SPEC_BORROWED if sibling else SPEC) if spec else (BORROWED if sibling else GOAL)
@@ -173,7 +194,7 @@ async def generate(
         params=list(tool.params),
         returns=", ".join(fields(tool.output_schema)) or "not documented",
         view=view(tool),
-        domain=f"Domain: {domain.strip()}\n" if domain.strip() else "",
+        domain=(f"Domain: {domain.strip()}\n" if domain.strip() else "") + feedback(rejected or []),
         language=language(lang),
         count=count,
         slots=slots,

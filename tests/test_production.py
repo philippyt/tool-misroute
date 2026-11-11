@@ -181,3 +181,72 @@ async def test_requests_written_under_other_instructions_are_not_reused(tmp_path
     await again.request_set(tools, tools[:1])
     assert again.adapter("m").calls == 0 and proj.adapter("m").calls == made
     assert project(domain="Cases are support tickets.").request_key(tools[0]) != proj.request_key(tools[0])
+
+
+async def test_the_estimate_uses_measured_turns_per_trial(tmp_path):
+    from misroute.testing.fake_server import app
+
+    def project():
+        cfg = Config.model_validate(
+            {"server": {"command": ["unused"]}, "models": ["mock:m"], "modes": ["json"], "max_turns": 3}
+        )
+        return Project(cfg, server=app, root=tmp_path)
+
+    proj = project()
+    assert proj.turns_per_trial("m") == 3 and not proj.turns_measured(["m"])
+    calls_before, _ = await proj.discover_cost(["m"], ["json"])
+    assert await proj.pilot(["m"], ["json"]) == 3
+    later = project()
+    assert later.turns_per_trial("m") < 3 and later.turns_measured(["m"])
+    calls_after, _ = await later.discover_cost(["m"], ["json"])
+    assert calls_after < calls_before
+    later.cfg.max_turns = 2
+    later._turns = None
+    assert later.turns_per_trial("m") == 2
+
+
+async def test_a_tool_with_no_valid_requests_gets_more_rounds_with_feedback(tmp_path):
+    from misroute.requests import generate
+
+    tools = [Tool("admin_api_catalog", "Routes of the admin API."), Tool("admin_api_request", "Calls a route.")]
+
+    class Helper:
+        name, family = "h", "x"
+
+        def __init__(self):
+            self.prompts = []
+
+        async def chat(self, user, tools, system=None):
+            raise AssertionError
+
+        async def complete(self, prompt, kind=None, rep=0):
+            if kind == "validate":
+                return "admin_api_catalog" if "which routes" in prompt else "admin_api_request"
+            self.prompts.append(prompt)
+            text = "which routes exist" if "rejected these earlier" in prompt else "list the repositories"
+            return json.dumps({"slots": [], "requests": [text]})
+
+        async def score_names(self, user, tools):
+            return None
+
+    cfg = Config.model_validate({"server": {"command": ["unused"]}, "models": ["mock:m"], "requests_per_tool": 1})
+    proj = Project(cfg, root=tmp_path)
+    helper = Helper()
+    proj.role = lambda role: helper
+    kept = await proj.requests_in(tools[0], tools, None, 0, "en")
+    assert [r.template for r in kept] == ["which routes exist"] and len(helper.prompts) == 2
+    assert "- list the repositories (fits admin_api_request better)" in helper.prompts[1]
+    assert proj.dropped["admin_api_catalog"][0]["picked"] == "admin_api_request"
+    assert generate.feedback([]) == ""
+
+
+async def test_unread_pages_and_undecided_trials_are_kept_apart_from_failures():
+    from misroute.sandbox.monty_runner import Sandbox as Box
+
+    paged = [Tool("list_lines", "Cart lines.", {"properties": {"cursor": {"type": "string"}}}, read_only=True)]
+    coder = Seen(Call("run_code", {"code": "r = await list_lines()\nr"}, "c"))
+    async with Box(max_processes=1) as box:
+        t = await code_mode.run(coder, box, Trial("m", "code", "list_lines", "r", "x"), paged)
+    assert t.unread_pages and t.failure is None and not t.error and t.turns == 1 and t.decided
+    ended = Trial("m", "json", "update_case", "r", "x", calls=["get_case"], failure="read_first")
+    assert ended.error and not ended.decided

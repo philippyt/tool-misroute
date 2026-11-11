@@ -13,6 +13,7 @@ After `pip install misroute` or `uv tool install misroute`, `misroute guide` pri
 - Report `trials`, `held_out` and `cost_usd` with every verdict, and the template counts from `confirm.tests` with every improve proposal.
 - `insufficient_data` is not an answer. Do not read anything into its rates.
 - Discover rates come from written requests. Present them as a routing diagnostic, not as a production success rate, and name `flagged` pairs apart from `one_wording` pairs, which rest on a single request wording.
+- When `accuracy` is low, check `decided` and `accuracy_decided` before calling it confusion: trials that ended before a choice was seen are errors that say nothing about which tool the model picks. Suggest a higher `max_turns` for those.
 - Report `bad_args_rate` next to the routing score, since a right tool name can hide a call the real tool would reject.
 - Do not tune a description against the same held out set. Each verdict on a set multiplies its p value by the number of verdicts the set has given (`looks`), so repeated checks lose power. Ask the user before passing `--refresh` for a fresh set.
 

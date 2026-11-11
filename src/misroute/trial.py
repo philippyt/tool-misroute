@@ -40,6 +40,8 @@ class Trial:
     detail: str = ""
     lang: str = "en"
     bad_args: list[str] = field(default_factory=list)
+    turns: int = 0
+    unread_pages: bool = False
 
     @property
     def picks(self) -> list[str]:
@@ -61,6 +63,12 @@ class Trial:
             and self.target not in self.picks
             and self.failure not in ("read_first", "unknown_tool")
         )
+
+    @property
+    def decided(self) -> bool:
+        """A choice was seen: the model called a tool and the trial did not end on a read before a write or on
+        lookups only. An undecided trial is an error but says nothing about which tool the model would pick."""
+        return self.chosen is not None and self.failure != "read_first"
 
     @property
     def reached(self) -> bool:

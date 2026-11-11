@@ -52,6 +52,7 @@ async def run(
     first = ""
     for i in range(max_turns):
         turn = await adapter.chat(messages if i else trial.text, spec, system, rep=trial.rep)
+        trial.turns += 1
         code_calls = [c for c in turn.calls if c.name == "run_code"]
         if not code_calls:
             if i == 0:
@@ -91,8 +92,7 @@ async def run(
         trial.failure = "read_first"
     elif trial.failure is None and trial.decisive == []:
         trial.failure = "lookup_only"
-    elif trial.failure is None and "unused_pagination" in failures:
-        trial.failure = "unused_pagination"
+    trial.unread_pages = "unused_pagination" in failures
     stripped = strip_stubs(first, set(by)) if failures and failures[0] == "faked" else None
     if stripped:
         again = FakeTools(tools, fixtures or {})

@@ -71,6 +71,7 @@ class Project:
         self.request_use = {"written": 0, "reused": 0}
         self.unreadable: Counter = Counter()
         self._fixtures: dict[str, Any] | None = None
+        self._turns: dict[str, Any] | None = None
 
     @classmethod
     def from_yaml(cls, path: str | Path, **kw: Any) -> "Project":
@@ -197,23 +198,22 @@ class Project:
     ) -> list[Request]:
         gen, val = self.role("generator"), self.role("validator")
         n, kept, src = self.cfg.requests_per_tool, [], self.cfg.request_source
-        attempt = 0
-        while len(kept) < n:
+        turned_down: list[dict] = []
+        for attempt in range(generate.ROUNDS):
+            if len(kept) >= n:
+                break
             try:
                 reqs = await generate.generate(
-                    gen, tool, n, self.cfg.slots, sibling, f"{seed}:{attempt}", src, lang, self.domain()
+                    gen, tool, n, self.cfg.slots, sibling, f"{seed}:{attempt}", src, lang, self.domain(), turned_down
                 )
             except (ValueError, KeyError, TypeError):
                 self.unreadable[tool.name] += 1
                 break
-            attempt += 1
             ok, bad = await validate.keep_valid(val, reqs, tools, src, self.domain())
             self.rejected.setdefault(tool.name, Counter()).update(b["picked"] or "(no tool)" for b in bad)
             self.dropped.setdefault(tool.name, []).extend(bad)
-            new = [r for r in ok if r.id not in {k.id for k in kept}]
-            if not new:
-                break
-            kept += new
+            turned_down += bad
+            kept += [r for r in ok if r.id not in {k.id for k in kept}]
         return kept[:n]
 
     async def request_set(self, tools: list[Tool], only: list[Tool] | None = None) -> dict[str, list[Request]]:
@@ -271,9 +271,39 @@ class Project:
                 return t
 
             done = [t for t in await asyncio.gather(*(one(t) for t in trials)) if t is not None]
+        self.note_turns(done)
         if stopped:
             raise await self.stop_early(stopped[0], done, trials)
         return done
+
+    def note_turns(self, done: list[Trial]) -> None:
+        """Keep how many model calls a trial took per model at this max_turns, so the next estimate uses what
+        was measured instead of assuming every trial runs all its turns."""
+        seen = self.store.read("turns") or {}
+        seen.pop("schema_version", None)
+        for t in done:
+            if t.phase == "removal" or not t.turns:
+                continue
+            row = seen.setdefault(t.model, {"max_turns": self.cfg.max_turns, "trials": 0, "calls": 0})
+            if row["max_turns"] != self.cfg.max_turns:
+                row.update(max_turns=self.cfg.max_turns, trials=0, calls=0)
+            row["trials"] += 1
+            row["calls"] += t.turns
+        if done:
+            self.store.write("turns", seen)
+        self._turns = None
+
+    def turns_per_trial(self, model: str) -> float:
+        """Measured model calls per trial for this model at this max_turns, else max_turns, the upper end."""
+        if self._turns is None:
+            self._turns = self.store.read("turns") or {}
+        row = self._turns.get(model)
+        if isinstance(row, dict) and row.get("trials") and row.get("max_turns") == self.cfg.max_turns:
+            return row["calls"] / row["trials"]
+        return float(self.cfg.max_turns)
+
+    def turns_measured(self, models_: list[str]) -> bool:
+        return self.cfg.max_turns == 1 or all(self.turns_per_trial(m) < self.cfg.max_turns for m in models_)
 
     async def stop_early(self, why: BudgetExceeded, done: list[Trial], trials: list[Trial]) -> BudgetExceeded:
         cat = await self.catalog()
@@ -296,7 +326,7 @@ class Project:
         one call, so they pass turns 1."""
         a = self.adapter(model)
         per_call = a.estimate("x" * 200, [t.spec() for t in tools])
-        return n_calls * (self.cfg.max_turns if turns is None else turns) * per_call
+        return n_calls * (self.turns_per_trial(model) if turns is None else turns) * per_call
 
     async def pilot(self, models_: list[str], modes: list[str], per_mode: int = PILOT_CALLS) -> int:
         """A few real trials per model and mode, so the estimate that follows uses reply sizes this model
@@ -369,7 +399,7 @@ class Project:
             cost += self.estimate(removal_trials, m, tools, 1)
             for mode in modes:
                 n = requests * self.cfg.rotations * self.repeats(m, mode)
-                calls += n
+                calls += round(n * self.turns_per_trial(m))
                 cost += self.estimate(n, m, tools)
         return calls, cost
 
@@ -470,6 +500,9 @@ class Project:
                         "mode": mode,
                         "trials": len(ts),
                         "accuracy": sum(not t.error for t in ts) / len(ts),
+                        "decided": sum(t.decided for t in ts),
+                        "accuracy_decided": sum(not t.error for t in ts) / max(sum(t.decided for t in ts), 1),
+                        "unread_pages_rate": sum(t.unread_pages for t in ts) / len(ts),
                         "reached_rate": sum(t.reached for t in ts) / len(ts),
                         "wrong_rate": confusion.wrong_rate(ts),
                         "hedge_rate": hedge.hedge_rate(ts),

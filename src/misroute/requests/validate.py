@@ -17,7 +17,8 @@ Which single tool is the right one? Reply with the tool name only.
 Reply none, a colon and a short reason instead when the request cannot be tested fairly:
 - no tool here can do what it asks
 - it asks to filter, narrow or return something the right tool's parameters and returned fields do not support
-- it depends on something it does not contain, such as an earlier reply, a cursor or a next page"""
+- it depends on something it does not contain, such as an earlier reply, a cursor or a next page
+- it asks for several things that need more than one of these tools to answer in full"""
 
 
 def recipe(domain: str = "", slots: int = 0) -> str:
@@ -25,6 +26,7 @@ def recipe(domain: str = "", slots: int = 0) -> str:
     instructions, the domain and the number of slot values. Stored requests are reused only under the recipe
     that wrote them, so a change to any of these writes them again."""
     parts = [generate.SLOT, generate.GOAL, generate.BORROWED, generate.SPEC, generate.SPEC_BORROWED, PROMPT]
+    parts += [generate.FEEDBACK, str(generate.ROUNDS)]
     return hashlib.sha256("".join([*parts, domain.strip(), str(slots)]).encode()).hexdigest()[:8]
 
 

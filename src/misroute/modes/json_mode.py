@@ -70,6 +70,7 @@ async def run(
     text = ""
     for i in range(max_turns):
         turn = await adapter.chat(messages if i else trial.text, specs, system or SYSTEM, rep=trial.rep)
+        trial.turns += 1
         text = turn.text
         names = [c.name for c in turn.calls]
         if not names:
