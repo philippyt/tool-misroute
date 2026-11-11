@@ -630,6 +630,14 @@ def discover(
             "Stored requests are reused only when the instructions, domain, source and languages are the same",
             style="dim",
         )
+        if res["thin_interface"]:
+            out.print(
+                f"{len(res['thin_interface'])} tools have no output schema. With request_source: spec the helper "
+                "sees only their name and parameters, so it cannot tell what they return and may write requests "
+                "that ask for more than they hold. Add output schemas, or use request_source: description when "
+                "the descriptions are not the thing under test",
+                style="yellow",
+            )
         dropped = [r for rs in res["rejected_requests"].values() for r in rs]
         if dropped:
             unfair = [r for r in dropped if not r["picked"]]

@@ -209,7 +209,7 @@ class Project:
             except (ValueError, KeyError, TypeError):
                 self.unreadable[tool.name] += 1
                 break
-            ok, bad = await validate.keep_valid(val, reqs, tools, src, self.domain())
+            ok, bad = await validate.keep_valid(val, reqs, tools, src, self.domain(), self.lookups(tools))
             self.rejected.setdefault(tool.name, Counter()).update(b["picked"] or "(no tool)" for b in bad)
             self.dropped.setdefault(tool.name, []).extend(bad)
             turned_down += bad
@@ -441,6 +441,7 @@ class Project:
             short=self.shortfall(reqs),
             rejected_requests={k: v for k, v in self.dropped.items() if v},
             request_use=dict(self.request_use),
+            thin_interface=[t.name for t in tools if not t.output_schema] if self.cfg.request_source == "spec" else [],
             roles_warning=self.cfg.role_warnings(),
             request_source=self.cfg.request_source,
             by_language=rates_by(trials, "lang"),

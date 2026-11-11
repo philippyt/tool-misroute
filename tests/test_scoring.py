@@ -104,6 +104,19 @@ async def test_validator_can_reject_a_request_no_tool_can_do():
     assert "Reply none" in judge.prompts[0] and "Domain:" not in judge.prompts[0]
 
 
+async def test_a_request_that_needs_two_tools_is_rejected_with_both_named():
+    judge = Judge("azure_change, azure_other")
+    kept, bad = await validate.keep_valid(judge, [request()], TOOLS)
+    assert not kept and bad[0]["picked"] == "azure_other"
+    assert bad[0]["reason"] == "asks for more than one thing, needs azure_change and azure_other"
+    looked = Judge("azure_catalog, azure_change")
+    kept, _ = await validate.keep_valid(looked, [request()], TOOLS, lookups=frozenset({"azure_catalog"}))
+    assert kept
+    kept, bad = await validate.keep_valid(Judge("azure_other"), [request()], TOOLS)
+    assert not kept and bad[0] == {"request": "suspend user 7", "picked": "azure_other", "reason": ""}
+    assert "everything the request asks for" in judge.prompts[0]
+
+
 async def test_validator_gives_the_reason_a_request_is_unfair():
     judge = Judge("none: azure_change has no project filter")
     kept, bad = await validate.keep_valid(judge, [request()], TOOLS)

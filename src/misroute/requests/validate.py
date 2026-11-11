@@ -13,12 +13,13 @@ PROMPT = """An AI agent has these tools:
 {domain}A user sends this as the first message of a conversation.
 Request: {request}
 
-Which single tool is the right one? Reply with the tool name only.
+Which of these tools does it take to give the user everything the request asks for? Reply with the tool names
+only, separated by commas, the most important first. Name a tool only when the request asks for that tool's own
+result or effect, not when it would merely be used to look something up on the way.
 Reply none, a colon and a short reason instead when the request cannot be tested fairly:
 - no tool here can do what it asks
-- it asks to filter, narrow or return something the right tool's parameters and returned fields do not support
-- it depends on something it does not contain, such as an earlier reply, a cursor or a next page
-- it asks for several things that need more than one of these tools to answer in full"""
+- it asks to filter, narrow or return something the tool's parameters and returned fields do not support
+- it depends on something it does not contain, such as an earlier reply, a cursor or a next page"""
 
 
 def recipe(domain: str = "", slots: int = 0) -> str:
@@ -30,21 +31,21 @@ def recipe(domain: str = "", slots: int = 0) -> str:
     return hashlib.sha256("".join([*parts, domain.strip(), str(slots)]).encode()).hexdigest()[:8]
 
 
-def read(reply: str, names: set[str]) -> tuple[str | None, str]:
-    """The tool a reply names, or None with the reason given after none."""
+def read(reply: str, names: set[str]) -> tuple[list[str], str]:
+    """The tools a reply names, in its order and once each, or none with the reason given after none."""
     text = reply.strip()
     if re.match(r"\W*none\b", text, re.I):
-        return None, text.split(":", 1)[1].strip()[:200] if ":" in text else ""
-    found = [w for w in re.findall(r"[\w.\-]+", text) if w in names]
-    return (found[0], "") if found else (None, "")
+        return [], text.split(":", 1)[1].strip()[:200] if ":" in text else ""
+    return list(dict.fromkeys(w for w in re.findall(r"[\w.\-]+", text) if w in names)), ""
 
 
 async def judge(
     adapter, req: Request, tools: list[Tool], seed: int = 0, source: str = "description", domain: str = ""
-) -> tuple[str | None, str]:
-    """The tool the validator picks for the request and, when it picks none, why. With source spec it sees each
-    tool's interface instead of its description, and in both it sees the parameters, so it can tell a request the
-    tool cannot express from one it can."""
+) -> tuple[list[str], str]:
+    """Every tool the validator says the request needs, most important first, and when it names none, why. With
+    source spec it sees each tool's interface instead of its description, and in both it sees the parameters, so
+    it can tell a request the tool cannot express from one it can. Asking for all the tools, not for one, is what
+    exposes a request that wants two things: a judge told to pick one tool picks one and says nothing."""
     shuffled = tools[:]
     random.Random(f"{req.id}{seed}").shuffle(shuffled)
     listing = "\n".join(f"- {t.name}: {shown(t, source)}" for t in shuffled)
@@ -59,8 +60,9 @@ async def judge(
 async def pick(
     adapter, req: Request, tools: list[Tool], seed: int = 0, source: str = "description", domain: str = ""
 ) -> str | None:
-    """The tool the validator picks for the request, or None when it names none."""
-    return (await judge(adapter, req, tools, seed, source, domain))[0]
+    """The tool the validator puts first for the request, or None when it names none."""
+    needed, _ = await judge(adapter, req, tools, seed, source, domain)
+    return needed[0] if needed else None
 
 
 def shown(tool: Tool, source: str) -> str:
@@ -70,15 +72,25 @@ def shown(tool: Tool, source: str) -> str:
 
 
 async def keep_valid(
-    adapter, reqs: list[Request], tools: list[Tool], source: str = "description", domain: str = ""
+    adapter,
+    reqs: list[Request],
+    tools: list[Tool],
+    source: str = "description",
+    domain: str = "",
+    lookups: frozenset[str] = frozenset(),
 ) -> tuple[list[Request], list[dict]]:
-    """Requests the validator routes to their own tool, and for each rejected one its text, the tool the
-    validator picked instead and the reason it gave when it picked none."""
+    """Requests the validator says need their own tool and no other, and for each rejected one its text, the
+    tool the validator put first and why: the reason it gave for none, or the tools it said the request needs.
+    Lookup tools do not count as a second tool, since an agent is meant to call them on the way."""
     found = await asyncio.gather(*(judge(adapter, r, tools, source=source, domain=domain) for r in reqs))
     ok, rejected = [], []
-    for r, (chosen, reason) in zip(reqs, found, strict=True):
-        if chosen == r.tool:
+    for r, (needed, reason) in zip(reqs, found, strict=True):
+        counted = [n for n in needed if n not in lookups or n == r.tool]
+        if counted == [r.tool]:
             ok.append(r)
-        else:
-            rejected.append({"request": r.texts()[0][1], "picked": chosen, "reason": reason})
+            continue
+        if len(counted) > 1:
+            reason = f"asks for more than one thing, needs {' and '.join(counted)}"
+        other = next((n for n in counted if n != r.tool), None)
+        rejected.append({"request": r.texts()[0][1], "picked": other, "reason": reason})
     return ok, rejected
