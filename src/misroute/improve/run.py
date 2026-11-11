@@ -542,6 +542,8 @@ async def served(
     differ = sorted(n for n in set(want) & set(got) if want[n] != got[n].description)
     hints = {e["tool"]: e["read_only"] for e in entries}
     hints_differ = sorted(n for n in set(hints) & set(got) if hints[n] != (got[n].read_only is True))
+    ours = {t.name: t for t in await proj.tools()}
+    args_differ = sorted(n for n in set(ours) & set(got) if set(ours[n].params) != set(got[n].params))
     rerun = []
     for g in results:
         held = [r for r in held_by[g["group"]] if r.tool in got]
@@ -557,11 +559,12 @@ async def served(
             }
         )
     return {
-        "ok": not (missing or differ or hints_differ),
+        "ok": not (missing or differ or hints_differ or args_differ),
         "tools": len(got),
         "missing": missing,
         "extra": extra,
         "descriptions_differ": differ,
         "hints_differ": hints_differ,
+        "arguments_differ": args_differ,
         "held_out": rerun,
     }

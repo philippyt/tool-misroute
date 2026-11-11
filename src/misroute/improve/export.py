@@ -1,8 +1,10 @@
+import json
 import os
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 import yaml
+from misroute.server.openapi import FIXES
 
 FASTMCP = "4.1.4"
 
@@ -147,7 +149,8 @@ def write(
     out: Path, entries: list[dict], spec: str | None = None, doc: dict | None = None, fastmcp: bool = False
 ) -> dict[str, str]:
     """Write descriptions.yaml always, overlay.yaml and overlay.openapi.yaml for an OpenAPI source, and server.py
-    with fastmcp. Nothing is applied to the source."""
+    with fastmcp. When the source was converted from Swagger 2.0 or repaired, the result is written as
+    openapi.json and the server uses that. Nothing is applied to the source."""
     out.mkdir(parents=True, exist_ok=True)
     changed = {e["tool"]: e["description"] for e in entries if e["description"] != e["original"]}
     files = {"descriptions": str(dump(out / "descriptions.yaml", changed))}
@@ -155,9 +158,15 @@ def write(
         title = str((doc.get("info") or {}).get("title") or Path(spec).stem)
         files["overlay"] = str(dump(out / "overlay.yaml", overlay(entries, str(Path(spec).resolve()))))
         files["openapi_overlay"] = str(dump(out / "overlay.openapi.yaml", openapi_overlay(entries, title)))
+        served = spec
+        if doc.get(FIXES):
+            fixed = out / "openapi.json"
+            clean = {k: v for k, v in doc.items() if k != FIXES}
+            fixed.write_text(json.dumps(clean, indent=1, ensure_ascii=False), encoding="utf-8")
+            files["spec"], served = str(fixed), str(fixed)
         if fastmcp:
             base = next((s.get("url") for s in doc.get("servers") or [] if s.get("url")), "http://127.0.0.1:9")
             path = out / "server.py"
-            path.write_text(server(out, spec, title, base), encoding="utf-8")
+            path.write_text(server(out, served, title, base), encoding="utf-8")
             files["server"] = str(path)
     return files

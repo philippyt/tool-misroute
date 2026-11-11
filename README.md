@@ -243,7 +243,7 @@ $ misroute improve api.json --model foundry:claude-opus-5-5 --helper openai:gpt-
 
 `improve` takes the same targets as `quick`: an OpenAPI or Swagger file, an MCP server, or a tool list. `--model` is the model under test and `--helper` writes and judges the requests and writes the candidates. Use a helper from another family, so no model grades its own test. Real user requests, passed with `--real-requests`, are the strongest evidence and are reported separately. It runs in stages:
 
-1. Audit, free: weak descriptions, names FastMCP cuts at 56 characters, POSTs that only read, overlapping routes, operations like health or auth that agents rarely need, and spec errors that stop converters.
+1. Audit, free: weak descriptions, names FastMCP cuts at 56 characters, POSTs that only read, overlapping routes, operations like health or auth that agents rarely need, uploads an agent cannot send, operations that return only a file, required headers that would become tool arguments, and spec errors that stop converters.
 2. Discover with requests written from the interface, so descriptions under test never shape the requests.
 3. Group confused tools and write up to four candidates per tool in different styles: a boundary clause, returns first, example led and minimal. The validator drops candidates that claim fields or behaviour the interface lacks.
 4. Race the candidates on the tuning half of the requests, one tool at a time with the others fixed at their best.
@@ -258,9 +258,12 @@ Results go to `improve/`:
 | `descriptions.yaml` | tool name to description, for MCP servers you edit in code |
 | `overlay.yaml` | per operationId: description, read and write hints, suggested exclusions and the evidence |
 | `overlay.openapi.yaml` | the same descriptions as an OpenAPI Overlay 1.0 file for docs and other converters |
-| `server.py` | with `--fastmcp`, a FastMCP 4.1.4 server that serves the untouched spec with the overlay applied |
+| `openapi.json` | only when the source needed it: the spec converted from Swagger 2.0 or repaired, which `server.py` then serves |
+| `server.py` | with `--fastmcp`, a FastMCP 4.1.4 server that serves the spec with the overlay applied |
 
-With `--fastmcp` misroute also starts the generated server, checks that names, descriptions and hints come through, and reruns the held out requests against it, since that is what agents will see. Run it with `uv run improve/server.py`, with `API_BASE_URL` and `API_HEADERS` set for the backend. Set `exclude: true` in `overlay.yaml` on operations to hide. Nothing is applied to your spec or server.
+A Swagger 2.0 file is converted to OpenAPI 3 on load: definitions, body and form parameters, parameter types, response schemas, host and security definitions all move to where converters expect them. Two repairs are made to any spec, and listed in the audit: OAuth flows with no scopes get an empty set, and a path parameter spelled differently from its placeholder in the route is renamed to match, since its value could not be filled in otherwise. Headers that carry a declared API key, and `Authorization`, `Cookie`, `Accept` and `Content-Type`, are never turned into tool arguments. Inherited fields under `allOf` become arguments like any others. Your source file is not changed.
+
+With `--fastmcp` misroute also starts the generated server, checks that names, descriptions, hints and argument names come through, and reruns the held out requests against it, since that is what agents will see. Run it with `uv run improve/server.py`, with `API_BASE_URL` and `API_HEADERS` set for the backend. Set `exclude: true` in `overlay.yaml` on operations to hide. Nothing is applied to your spec or server.
 
 ## For agents
 

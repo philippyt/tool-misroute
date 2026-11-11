@@ -50,7 +50,7 @@ def paging(tool: Tool) -> tuple[str, str] | None:
     offset is the caller's to choose, only a cursor has to come from an earlier reply. A date or a number named
     after is a filter, not a cursor."""
     for name, schema in tool.params.items():
-        low, t = name.lower(), types(schema)
+        low, t = name.lower().removeprefix("x-").replace("-", "_"), types(schema)
         if low in NUMBER_PARAMS and "string" not in t:
             return name, "offset" if low in OFFSET_PARAMS else "page"
         dated = isinstance(schema, dict) and schema.get("format") in ("date", "date-time")

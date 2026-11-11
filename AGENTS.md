@@ -105,7 +105,9 @@ Each entry in `entries` has a `status`:
 | `draft` | a weak tool outside any confused group, untested draft |
 | `unchanged` | no confusion and no weak description found |
 
-Files in `--out`: `descriptions.yaml` (tool name to description), and for OpenAPI `overlay.yaml` (per operationId, with hints, suggested exclusions and evidence), `overlay.openapi.yaml` (OpenAPI Overlay 1.0) and with `--fastmcp` `server.py`. A person reviews them, by hand or in the Improve tab of `misroute serve ui`, which shows each group's numbers, what the model picked on held out requests and every candidate, and saves Accept, Reject, Edit and Exclude decisions. Saving rewrites the files: rejected entries go back to the original, edits are marked untested, and each operation in overlay.yaml gets `review`. `exclude: true` hides an operation in server.py. Suggest `misroute serve ui` to the user when they should look over the results.
+A Swagger 2.0 source is converted to OpenAPI 3 on load, and `audit.notes` of kind `spec` list that and any repair. Other kinds to pass on to the user: `upload` (takes a file an agent cannot send), `binary` (returns only a file), `header` (a required header became a tool argument and may be a credential), `exclude`, `overlap`, `name` and `hint`.
+
+Files in `--out`: `descriptions.yaml` (tool name to description), `openapi.json` when the source was converted or repaired, and for OpenAPI `overlay.yaml` (per operationId, with hints, suggested exclusions and evidence), `overlay.openapi.yaml` (OpenAPI Overlay 1.0) and with `--fastmcp` `server.py`. A person reviews them, by hand or in the Improve tab of `misroute serve ui`, which shows each group's numbers, what the model picked on held out requests and every candidate, and saves Accept, Reject, Edit and Exclude decisions. Saving rewrites the files: rejected entries go back to the original, edits are marked untested, and each operation in overlay.yaml gets `review`. `exclude: true` hides an operation in server.py. Suggest `misroute serve ui` to the user when they should look over the results.
 
 ## Numbers behind the results
 

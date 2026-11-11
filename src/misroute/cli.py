@@ -483,7 +483,19 @@ def lint(
     """Flag missing, name only and path only descriptions"""
     opts = Opts("lint", json_)
     proj = load(opts, config)
-    res = asyncio.run(proj.lint(draft))
+    try:
+        res = asyncio.run(proj.lint(draft))
+    except BudgetExceeded as e:
+        fail(opts, str(e))
+        return
+    except Exception as e:
+        if not draft:
+            raise
+        from misroute.doctor import hint
+
+        why = f"{type(e).__name__}: {e}"
+        fail(opts, f"drafting needs the writer model and the call failed, {why}. {hint(why)}".strip())
+        return
     if sarif:
         source = proj.cfg.server.openapi or proj.cfg.server.tools or str(config)
         results = [
