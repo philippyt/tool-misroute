@@ -66,6 +66,7 @@ class Metered:
         self.in_tokens = 0
         self.out_tokens = 0
         self.out_calls = 0
+        self.reasoning_tokens = 0
         self.spent = 0.0
         self.cached_out: int | None = None
 
@@ -101,6 +102,7 @@ class Metered:
             "cached": self.hits,
             "tokens_in": self.in_tokens,
             "tokens_out": self.out_tokens,
+            "reasoning_tokens": self.reasoning_tokens,
             "cost_usd": round(self.spent, 4),
         }
 
@@ -153,6 +155,7 @@ class Metered:
             t = await self.inner.chat(user, tools, system)
             self.in_tokens += t.tokens_in
             self.out_tokens += t.tokens_out
+            self.reasoning_tokens += t.reasoning_tokens
             self.out_calls += 1
             return t, t.cost if t.cost is not None else self.price(t.tokens_in, t.tokens_out)
 

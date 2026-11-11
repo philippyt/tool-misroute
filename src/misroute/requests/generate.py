@@ -10,6 +10,8 @@ SLOT = """When a parameter takes one concrete value such as a record id, a name 
 placeholder {{slot}} exactly once, standing for a value of that parameter, and you give {slots} realistic values for it.
 When no parameter takes such a value, write complete requests without a placeholder and give an empty slots list.
 Never ask to filter, narrow or sort by something the parameters cannot express.
+When a parameter lists the only values it allows, or a largest or smallest value, stay inside them: a request and
+its slot values may name only allowed values, never an invented one.
 Ask for one thing that this tool alone answers in full. Do not combine it with something another tool is
 needed for.
 Each request is the first message of a conversation and must stand on its own: do not refer to an earlier reply,
@@ -73,6 +75,8 @@ Reply with JSON only: {{"slot_kind": "...", "slots": ["..."], "requests": ["..."
 
 ROUNDS = 3
 FEEDBACK_SHOWN = 8
+ENUM_SHOWN = 20
+RENDER = 2
 
 LANGUAGES = {
     "en": "English",
@@ -109,9 +113,18 @@ def fields(schema: dict | None) -> list[str]:
 
 
 def param(name: str, schema: dict) -> str:
+    """A parameter as the helper sees it: its type, the values or range it allows and what it is for, so a
+    written request stays inside what the tool accepts."""
+    if not isinstance(schema, dict):
+        return name
     bits = [str(schema["type"])] if schema.get("type") else []
     if schema.get("enum"):
-        bits.append("one of " + ", ".join(map(str, schema["enum"])))
+        allowed = [str(v) for v in schema["enum"]]
+        more = f" and {len(allowed) - ENUM_SHOWN} more" if len(allowed) > ENUM_SHOWN else ""
+        bits.append("only one of " + ", ".join(allowed[:ENUM_SHOWN]) + more)
+    for key, word in (("minimum", "at least"), ("maximum", "at most")):
+        if schema.get(key) is not None:
+            bits.append(f"{word} {schema[key]}")
     if schema.get("description"):
         bits.append(" ".join(str(schema["description"]).split()))
     return f"{name} ({'; '.join(bits)})" if bits else name
@@ -191,7 +204,7 @@ async def generate(
         slot_rule=SLOT.format(slots=slots),
         name=tool.name,
         description=tool.description or "none",
-        params=list(tool.params),
+        params=", ".join(param(k, v) for k, v in tool.params.items()) or "none",
         returns=", ".join(fields(tool.output_schema)) or "not documented",
         view=view(tool),
         domain=(f"Domain: {domain.strip()}\n" if domain.strip() else "") + feedback(rejected or []),

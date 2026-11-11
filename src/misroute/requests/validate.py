@@ -19,6 +19,7 @@ result or effect, not when it would merely be used to look something up on the w
 Reply none, a colon and a short reason instead when the request cannot be tested fairly:
 - no tool here can do what it asks
 - it asks to filter, narrow or return something the tool's parameters and returned fields do not support
+- it names a value that a parameter does not allow, such as one outside its listed values or range
 - it depends on something it does not contain, such as an earlier reply, a cursor or a next page"""
 
 
@@ -27,7 +28,7 @@ def recipe(domain: str = "", slots: int = 0) -> str:
     instructions, the domain and the number of slot values. Stored requests are reused only under the recipe
     that wrote them, so a change to any of these writes them again."""
     parts = [generate.SLOT, generate.GOAL, generate.BORROWED, generate.SPEC, generate.SPEC_BORROWED, PROMPT]
-    parts += [generate.FEEDBACK, str(generate.ROUNDS)]
+    parts += [generate.FEEDBACK, str(generate.ROUNDS), str(generate.RENDER)]
     return hashlib.sha256("".join([*parts, domain.strip(), str(slots)]).encode()).hexdigest()[:8]
 
 
@@ -68,7 +69,8 @@ async def pick(
 def shown(tool: Tool, source: str) -> str:
     if source == "spec":
         return brief(tool)
-    return (tool.description or "no description") + (f" Parameters: {', '.join(tool.params)}" if tool.params else "")
+    listed = ", ".join(generate.param(k, v) for k, v in tool.params.items())
+    return (tool.description or "no description") + (f" Parameters: {listed}" if listed else "")
 
 
 async def keep_valid(

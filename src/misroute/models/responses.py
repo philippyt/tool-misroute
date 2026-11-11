@@ -115,6 +115,7 @@ class ResponsesAdapter:
         usage = resp.usage
         details = resp.incomplete_details
         cut = resp.status == "incomplete" and bool(details) and details.reason == "max_output_tokens"
+        thought = getattr(getattr(usage, "output_tokens_details", None), "reasoning_tokens", 0) or 0
         return Turn(
             calls,
             resp.output_text or "",
@@ -122,6 +123,7 @@ class ResponsesAdapter:
             usage.output_tokens if usage else 0,
             raw=json.dumps([i.model_dump(exclude_none=True) for i in items]),
             truncated=cut,
+            reasoning_tokens=thought,
         )
 
     async def complete(self, prompt: str, kind: str | None = None) -> str:

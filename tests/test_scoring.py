@@ -147,6 +147,28 @@ async def test_generator_sees_the_domain_from_descriptions_too():
     assert all("Domain: Allowed operations: restart a VM." in p for p in judge.prompts)
 
 
+async def test_the_helper_sees_the_values_and_range_a_parameter_allows():
+    tool = Tool(
+        "azure_read",
+        "Reads an app.",
+        {
+            "properties": {
+                "app": {"type": "string", "enum": ["atlas-api", "atlas-web"]},
+                "limit": {"type": "integer", "maximum": 100},
+            }
+        },
+    )
+    judge = Judge('{"slots": ["atlas-api"], "requests": ["show logs for {slot}"]}')
+    await generate.generate(judge, tool, 1, 1)
+    assert "app (string; only one of atlas-api, atlas-web), limit (integer; at most 100)" in judge.prompts[0]
+    assert "never an invented one" in judge.prompts[0]
+    checker = Judge("azure_read")
+    await validate.keep_valid(checker, [Request("r", "azure_read", "show logs for {slot}", ["atlas-api"])], [tool])
+    assert "only one of atlas-api, atlas-web" in checker.prompts[0] and "does not allow" in checker.prompts[0]
+    many = generate.param("k", {"enum": list(range(30))})
+    assert "and 10 more" in many and " 20," not in many
+
+
 async def test_generator_prompt_is_unchanged_without_a_domain():
     judge = Judge('{"slots": ["7"], "requests": ["restart vm {slot}"]}')
     await generate.generate(judge, CHANGE, 1, 1)

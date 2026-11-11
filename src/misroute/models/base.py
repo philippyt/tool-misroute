@@ -28,6 +28,7 @@ class Turn:
     raw: str = ""
     cost: float | None = None
     truncated: bool = False
+    reasoning_tokens: int = 0
 
     def to_json(self) -> dict[str, Any]:
         return asdict(self)
@@ -35,7 +36,9 @@ class Turn:
     @classmethod
     def from_json(cls, d: dict[str, Any]) -> "Turn":
         calls = [Call(**c) for c in d["calls"]]
-        return cls(calls, d["text"], d["tokens_in"], d["tokens_out"], d.get("raw", ""), d.get("cost"))
+        made = cls(calls, d["text"], d["tokens_in"], d["tokens_out"], d.get("raw", ""), d.get("cost"))
+        made.reasoning_tokens = d.get("reasoning_tokens", 0)
+        return made
 
 
 class Adapter(Protocol):
@@ -97,6 +100,7 @@ def affordable(wanted: int | None, used: int = 0) -> int | None:
 def merged(earlier: Turn, later: Turn) -> Turn:
     later.tokens_in += earlier.tokens_in
     later.tokens_out += earlier.tokens_out
+    later.reasoning_tokens += earlier.reasoning_tokens
     if earlier.cost is not None or later.cost is not None:
         later.cost = (earlier.cost or 0.0) + (later.cost or 0.0)
     return later
