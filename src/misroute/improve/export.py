@@ -19,15 +19,18 @@ API_BASE_URL sets the backend and API_HEADERS takes a JSON object of headers, fo
 import json
 import os
 from pathlib import Path
+from urllib.parse import quote
 import httpx2
 import yaml
 from fastmcp import FastMCP
 from fastmcp.server.providers.openapi import MCPType
+from fastmcp.tools import Tool, ToolResult
 from mcp_types import ToolAnnotations
 
 HERE = Path(__file__).resolve().parent
 SPEC = Path(os.environ.get("API_SPEC", HERE / {spec!r}))
 OVERLAY = yaml.safe_load((HERE / "overlay.yaml").read_text(encoding="utf-8"))["operations"]
+MERGED = json.loads((HERE / "merged.json").read_text(encoding="utf-8")) if (HERE / "merged.json").exists() else {{}}
 
 
 def load_spec() -> dict:
@@ -71,6 +74,58 @@ mcp = FastMCP.from_openapi(
     mcp_component_fn=component,
     mcp_names={{k: v["tool"] for k, v in OVERLAY.items() if v.get("op_id")}},
 )
+
+
+class Merged(Tool):
+    """One tool for several operations. The selector argument picks which one runs."""
+
+    plan: dict
+
+    async def run(self, arguments):
+        plan = self.plan
+        op = plan["operations"].get(str(arguments.get(plan["selector"])))
+        if op is None:
+            choices = ", ".join(plan["operations"])
+            problem = {{"error": f"{{plan['selector']}} must be one of {{choices}}"}}
+            return ToolResult(structured_content=problem, is_error=True)
+        path, query, headers = op["path"], {{}}, {{}}
+        for p in op["params"]:
+            value = arguments.get(p["arg"])
+            if value is None:
+                continue
+            if p["in"] == "path":
+                path = path.replace("{{" + p["name"] + "}}", quote(str(value), safe=""))
+            elif p["in"] == "query":
+                query[p["name"]] = value
+            elif p["in"] == "header":
+                headers[p["name"]] = str(value)
+        body = None
+        if op["body"] == "fields":
+            body = {{f["name"]: arguments[f["arg"]] for f in op["fields"] if arguments.get(f["arg"]) is not None}}
+        elif op["body"] == "whole":
+            body = arguments.get("body")
+        reply = await client.request(op["method"], path, params=query, headers=headers, json=body)
+        try:
+            data = reply.json()
+        except ValueError:
+            data = reply.text
+        shaped = data if isinstance(data, dict) else {{"result": data}}
+        return ToolResult(structured_content=shaped, is_error=reply.status_code >= 400)
+
+
+for name, plan in MERGED.items():
+    found = OVERLAY.get(name) or {{}}
+    if found.get("exclude"):
+        continue
+    mcp.add_tool(
+        Merged(
+            name=name,
+            description=found.get("description") or plan["description"],
+            parameters=plan["parameters"],
+            annotations=ToolAnnotations(readOnlyHint=plan["read_only"], destructiveHint=plan["destructive"]),
+            plan=plan,
+        )
+    )
 
 if __name__ == "__main__":
     mcp.run(show_banner=False)
@@ -146,11 +201,18 @@ def server(out: Path, spec: str, title: str, base_url: str) -> str:
 
 
 def write(
-    out: Path, entries: list[dict], spec: str | None = None, doc: dict | None = None, fastmcp: bool = False
+    out: Path,
+    entries: list[dict],
+    spec: str | None = None,
+    doc: dict | None = None,
+    fastmcp: bool = False,
+    merged: dict | None = None,
 ) -> dict[str, str]:
     """Write descriptions.yaml always, overlay.yaml and overlay.openapi.yaml for an OpenAPI source, and server.py
     with fastmcp. When the source was converted from Swagger 2.0 or repaired, the result is written as
-    openapi.json and the server uses that. Nothing is applied to the source."""
+    openapi.json and the server uses that. merged holds what the server needs to run tools that merge several
+    operations, written as merged.json and kept when a later write passes none. Nothing is applied to the
+    source."""
     out.mkdir(parents=True, exist_ok=True)
     changed = {e["tool"]: e["description"] for e in entries if e["description"] != e["original"]}
     files = {"descriptions": str(dump(out / "descriptions.yaml", changed))}
@@ -159,6 +221,10 @@ def write(
         files["overlay"] = str(dump(out / "overlay.yaml", overlay(entries, str(Path(spec).resolve()))))
         files["openapi_overlay"] = str(dump(out / "overlay.openapi.yaml", openapi_overlay(entries, title)))
         served = spec
+        if merged:
+            (out / "merged.json").write_text(json.dumps(merged, indent=1, ensure_ascii=False), encoding="utf-8")
+        if (out / "merged.json").exists():
+            files["merged"] = str(out / "merged.json")
         if doc.get(FIXES):
             fixed = out / "openapi.json"
             clean = {k: v for k, v in doc.items() if k != FIXES}

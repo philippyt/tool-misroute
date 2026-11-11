@@ -8,7 +8,7 @@ from misroute.fix import clause, stats
 from misroute.improve import audit, candidates, export
 from misroute.lint import descriptions
 from misroute.models.base import BudgetExceeded
-from misroute.server import openapi
+from misroute.server import merge, openapi
 from misroute.server.catalog import Tool, replace_descriptions
 from misroute.trial import Request, Trial
 
@@ -445,7 +445,11 @@ async def improve(
     if not spec:
         result["note"] = "descriptions.yaml maps tool names to descriptions, apply them in the server's code"
     if out is not None:
-        result["files"] = export.write(out, entries, spec, doc, fastmcp)
+        plan = proj.plan()
+        table = merge.calls(await proj.source_tools(), tools, plan, doc) if plan and doc else None
+        result["files"] = export.write(out, entries, spec, doc, fastmcp, table)
+        if plan:
+            result["catalog_plan"] = merge.coverage(await proj.source_tools(), plan)
         if fastmcp and "server" in result["files"]:
             result["fastmcp"] = await served(proj, Path(result["files"]["server"]), entries, results, held_by, imp)
     result["cost_usd"] = round(proj.budget.spent - start, 4)

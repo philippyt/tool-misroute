@@ -182,7 +182,15 @@ def test_a_clean_openapi_3_file_is_served_as_it_is(tmp_path):
     import json
     from misroute.server import openapi
 
-    spec = {"openapi": "3.0.0", "paths": {"/a": {"get": {"operationId": "A_Get"}}}}
+    ok = {"200": {"description": "ok"}}
+    spec = {"openapi": "3.0.0", "paths": {"/a": {"get": {"operationId": "A_Get", "responses": ok}}}}
     path = tmp_path / "spec.json"
     path.write_text("﻿" + json.dumps(spec), encoding="utf-8")
     assert openapi.load(path)[openapi.FIXES] == []
+    spec["paths"]["/a"]["post"] = {"operationId": "A_Make", "responses": {"200": {}}}
+    spec["paths"]["/a"]["put"] = {"operationId": "A_Set"}
+    path.write_text(json.dumps(spec), encoding="utf-8")
+    assert openapi.load(path)[openapi.FIXES] == [
+        "1 operations listed no responses, which converters require",
+        "1 responses had no description, which converters require",
+    ]

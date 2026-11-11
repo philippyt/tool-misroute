@@ -14,7 +14,7 @@ from misroute.modes import code_mode, json_mode
 from misroute.requests import gate, generate, validate
 from misroute.sandbox.fake_tools import load_fixtures
 from misroute.sandbox.monty_runner import Sandbox
-from misroute.server import openapi, static
+from misroute.server import merge, openapi, static
 from misroute.server.catalog import Tool, catalog_hash, effect_unknown, replace_descriptions
 from misroute.server.connect import connect, keep, list_tools
 from misroute.store.cache import Metered, fill_price
@@ -64,6 +64,7 @@ class Project:
         self.budget = Budget(cfg.budget_usd)
         self._adapters: dict[str, Metered] = {}
         self._tools: list[Tool] | None = None
+        self._source: list[Tool] | None = None
         self.progress: Progress = lambda n: None
         self.add_total: Progress = lambda n: None
         self.rejected: dict[str, Counter] = {}
@@ -118,13 +119,27 @@ class Project:
         an agent with several servers connected sees them. A name two servers share gets the later server's label
         in front."""
         if self._tools is None:
+            plan = self.plan()
+            self._tools = merge.apply(await self.source_tools(), plan) if plan else await self.source_tools()
+        return self._tools
+
+    async def source_tools(self) -> list[Tool]:
+        """One tool per operation, as the servers list them, before any catalog plan merges or excludes."""
+        if self._source is None:
+            if self._tools is not None:
+                return self._tools
             found = await self.load_tools(self.cfg.server, self.server)
             for extra in self.cfg.servers:
                 taken = {t.name for t in found}
                 for t in await self.load_tools(extra, extra):
                     found.append(replace(t, name=f"{extra.label}_{t.name}") if t.name in taken else t)
-            self._tools = found
-        return self._tools
+            self._source = found
+        return self._source
+
+    def plan(self) -> dict[str, Any] | None:
+        """The catalog plan named by server.catalog: tools that merge several operations behind a selector, and
+        operations to exclude."""
+        return merge.load_plan(self.cfg.server.catalog) if self.cfg.server.catalog else None
 
     async def load_tools(self, cfg: ServerConfig, src: Any) -> list[Tool]:
         if (cfg.openapi or cfg.tools) and src is cfg:
@@ -217,24 +232,42 @@ class Project:
         return kept[:n]
 
     async def request_set(self, tools: list[Tool], only: list[Tool] | None = None) -> dict[str, list[Request]]:
+        """Validated requests per tool. Under a catalog plan requests are written and validated per original
+        operation, against the one tool per operation catalog, so every catalog design is tested on the same
+        requests. A merged tool gets the requests of each operation it reaches, each carrying the selector value
+        that is right for it."""
         cached = self.store.read("requests") or {}
         cached.pop("schema_version", None)
         out: dict[str, list[Request]] = {}
         wanted = only or tools
         key = self.request_key
         full = self.cfg.requests_per_tool * len(self.cfg.request_languages or ["en"])
-        missing = [t for t in wanted if len(cached.get(key(t)) or []) < full]
-        self.request_use["written"] += len(missing)
-        self.request_use["reused"] += len(wanted) - len(missing)
-        fresh = await asyncio.gather(*(self.requests_for(t, tools) for t in missing))
-        for t, reqs in zip(missing, fresh, strict=True):
-            cached[key(t)] = [asdict(r) for r in reqs]
-        self.store.write("requests", cached)
+        planned = bool(self.cfg.server.catalog)
+        source = await self.source_tools() if planned else tools
+        origin = {t.name: t for t in source}
+        parts: list[tuple[Tool, Tool, str]] = []
         for t in wanted:
-            out[t.name] = [Request(**r) for r in cached[key(t)]]
+            if t.operations:
+                parts += [(t, origin[name], value) for value, name in t.operations.items() if name in origin]
+            else:
+                parts.append((t, origin.get(t.name, t) if planned else t, ""))
+        missing = [src for _, src, _ in parts if len(cached.get(key(src)) or []) < full]
+        self.request_use["written"] += len(missing)
+        self.request_use["reused"] += len(parts) - len(missing)
+        fresh = await asyncio.gather(*(self.requests_for(src, source) for src in missing))
+        for src, reqs in zip(missing, fresh, strict=True):
+            cached[key(src)] = [asdict(r) for r in reqs]
+        self.store.write("requests", cached)
+        for t, src, value in parts:
+            out.setdefault(t.name, []).extend(
+                replace(Request(**r), tool=t.name, operation=value) for r in cached[key(src)]
+            )
         if self.cfg.real_requests:
-            for r in generate.load_real(self.cfg.real_requests, wanted):
-                out[r.tool].append(r)
+            where = merge.reach(wanted)
+            for r in generate.load_real(self.cfg.real_requests, source if planned else wanted):
+                name, value = where.get(r.tool, (r.tool, ""))
+                if name in out:
+                    out[name].append(replace(r, tool=name, operation=value))
         return out
 
     def request_key(self, tool: Tool) -> str:
@@ -382,14 +415,16 @@ class Project:
                             slot, text = texts[o % len(texts)]
                             for rep in range(self.repeats(m, mode)):
                                 t = Trial(m, mode, r.tool, r.id, text, r.kind, slot, o, rep, "discover", lang=r.lang)
+                                t.operation = r.operation
                                 out.append(t)
         return out
 
     async def discover_cost(self, models_: list[str], modes: list[str]) -> tuple[int, float]:
         tools = await self.tools()
         langs = len(self.cfg.request_languages or ["en"])
-        requests = len(tools) * self.cfg.requests_per_tool * langs
-        written, judged = len(tools) * langs, requests
+        reached = sum(len(t.operations) or 1 for t in tools)
+        requests = reached * self.cfg.requests_per_tool * langs
+        written, judged = reached * langs, requests
         calls = written + judged
         cost = self.estimate(written, self.cfg.role("generator").name, [], 1)
         cost += self.estimate(judged, self.cfg.role("validator").name, tools, 1)
@@ -441,6 +476,7 @@ class Project:
             short=self.shortfall(reqs),
             rejected_requests={k: v for k, v in self.dropped.items() if v},
             request_use=dict(self.request_use),
+            catalog_plan=merge.coverage(await self.source_tools(), self.plan() or {}) if self.plan() else None,
             thin_interface=[t.name for t in tools if not t.output_schema] if self.cfg.request_source == "spec" else [],
             roles_warning=self.cfg.role_warnings(),
             request_source=self.cfg.request_source,
@@ -504,6 +540,8 @@ class Project:
                         "decided": sum(t.decided for t in ts),
                         "accuracy_decided": sum(not t.error for t in ts) / max(sum(t.decided for t in ts), 1),
                         "unread_pages_rate": sum(t.unread_pages for t in ts) / len(ts),
+                        "wrong_operation_rate": sum(t.wrong_operation for t in ts) / len(ts),
+                        "operations": confusion.operations(ts),
                         "reached_rate": sum(t.reached for t in ts) / len(ts),
                         "wrong_rate": confusion.wrong_rate(ts),
                         "hedge_rate": hedge.hedge_rate(ts),
@@ -546,7 +584,9 @@ class Project:
                 for r in reqs:
                     for slot, text in r.texts()[:slots]:
                         for o in range(2):
-                            out.append(Trial(m, mode, r.tool, r.id, text, r.kind, slot, o, 0, lang=r.lang, **kw))
+                            t = Trial(m, mode, r.tool, r.id, text, r.kind, slot, o, 0, lang=r.lang, **kw)
+                            t.operation = r.operation
+                            out.append(t)
         return out
 
     async def probe(

@@ -11,6 +11,7 @@ class Request:
     kind: str = "goal"
     sibling: str | None = None
     lang: str = "en"
+    operation: str = ""
 
     def texts(self) -> list[tuple[str, str]]:
         if "{slot}" not in self.template or not self.slots:
@@ -42,6 +43,8 @@ class Trial:
     bad_args: list[str] = field(default_factory=list)
     turns: int = 0
     unread_pages: bool = False
+    operation: str = ""
+    operation_picked: str | None = None
 
     @property
     def picks(self) -> list[str]:
@@ -76,8 +79,14 @@ class Trial:
         return self.target in self.calls
 
     @property
+    def wrong_operation(self) -> bool:
+        """The right tool, called alone, with the wrong selector value: the request was for one of the
+        operations a merged tool reaches and the call picked another."""
+        return bool(self.operation) and self.chosen == self.target and self.operation_picked != self.operation
+
+    @property
     def error(self) -> bool:
-        return self.chosen != self.target or self.hedge
+        return self.chosen != self.target or self.hedge or self.wrong_operation
 
     @property
     def key(self) -> tuple:

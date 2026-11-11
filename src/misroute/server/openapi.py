@@ -172,14 +172,32 @@ def name_of(method: str, path: str, op: dict) -> str:
 
 def repair(doc: dict) -> list[str]:
     """Fix spec problems that stop converters from loading it or from building a working call. Returns what was
-    changed. A path parameter spelled differently from its placeholder in the route is renamed to the
-    placeholder, since the value could not be filled in otherwise."""
+    changed. An operation with no responses gets an empty one and a response with no description an empty
+    description, both of which converters insist on. A path parameter spelled differently from its placeholder
+    in the route is renamed to the placeholder, since the value could not be filled in otherwise."""
     fixed = []
     for name, scheme in ((doc.get("components") or {}).get("securitySchemes") or {}).items():
         for flow, body in (scheme.get("flows") or {}).items():
             if isinstance(body, dict) and "scopes" not in body:
                 body["scopes"] = {}
                 fixed.append(f"securitySchemes.{name}.flows.{flow} had no scopes")
+    bare = unnamed = 0
+    for item in (doc.get("paths") or {}).values():
+        for method in METHODS:
+            op = item.get(method)
+            if not isinstance(op, dict):
+                continue
+            if not op.get("responses"):
+                op["responses"] = {"200": {"description": ""}}
+                bare += 1
+            for resp in op["responses"].values():
+                if isinstance(resp, dict) and "$ref" not in resp and "description" not in resp:
+                    resp["description"] = ""
+                    unnamed += 1
+    if bare:
+        fixed.append(f"{bare} operations listed no responses, which converters require")
+    if unnamed:
+        fixed.append(f"{unnamed} responses had no description, which converters require")
     for route, item in (doc.get("paths") or {}).items():
         holes = {h.lower(): h for h in re.findall(r"{([^{}]+)}", route)}
         for method in METHODS:
@@ -217,9 +235,10 @@ def uploads(body: dict) -> list[str]:
     return [k for k, v in (body.get("properties") or {}).items() if "binary" in json.dumps(v)]
 
 
-def args(doc: dict, shared: list, op: dict) -> dict[str, Any]:
-    """Input schema with an object request body flattened into top level arguments, as FastMCP does. A parameter
-    whose name a body field also uses becomes name__location."""
+def shape(doc: dict, shared: list, op: dict) -> tuple[list[tuple[str, dict]], dict | None, dict]:
+    """How an operation takes its input: each parameter with the argument name it gets, the body fields when an
+    object body is flattened into arguments, and the body schema. A parameter whose name a body field also uses
+    gets the argument name name__location."""
     hidden = secrets(doc)
     params = [
         p
@@ -229,10 +248,18 @@ def args(doc: dict, shared: list, op: dict) -> dict[str, Any]:
     content = resolve(doc, (op.get("requestBody") or {}).get("content", {}))
     body = merged((best(content).get("schema") if content else None) or {})
     fields = body.get("properties") if body.get("type", "object") == "object" and body.get("properties") else None
+    keyed = [
+        (f"{p['name']}__{p.get('in', 'query')}" if fields and p["name"] in fields else p["name"], p) for p in params
+    ]
+    return keyed, fields, body
+
+
+def args(doc: dict, shared: list, op: dict) -> dict[str, Any]:
+    """Input schema with an object request body flattened into top level arguments, as FastMCP does."""
+    keyed, fields, body = shape(doc, shared, op)
     props: dict[str, Any] = {}
     required: list[str] = []
-    for p in params:
-        key = f"{p['name']}__{p.get('in', 'query')}" if fields and p["name"] in fields else p["name"]
+    for key, p in keyed:
         props[key] = {**(p.get("schema") or {}), "description": p.get("description", "")}
         if p.get("required"):
             required.append(key)

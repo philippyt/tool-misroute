@@ -107,7 +107,27 @@ class MockAdapter:
         if later:
             return Turn([Call(n, id=f"m{i}") for i, n in enumerate(chosen)]) if reads else Turn(text="done")
         names = reads or chosen
-        return Turn([Call(n, id=f"m{i}") for i, n in enumerate(names)], tokens_in=len(text) // 4, tokens_out=20)
+        by = {t["name"]: t for t in tools}
+        made = [Call(n, self.choices(text, by.get(n, {})), f"m{i}") for i, n in enumerate(names)]
+        return Turn(made, tokens_in=len(text) // 4, tokens_out=20)
+
+    def choices(self, user: str, tool: dict[str, Any]) -> dict[str, Any]:
+        """A value for each required argument that lists its allowed values: the one whose own words and
+        description share most words with the request. selector_miss sends that share of requests to the next
+        value instead, to stand in for a model that picks the wrong one."""
+        schema = tool.get("input_schema") or {}
+        out: dict[str, Any] = {}
+        for name in schema.get("required") or []:
+            prop = (schema.get("properties") or {}).get(name) or {}
+            values = [str(v) for v in prop.get("enum") or []]
+            if not values:
+                continue
+            said = dict(re.findall(r"(\w+): ([^;]*)", str(prop.get("description", ""))))
+            q = bag(user)
+            ranked = sorted(values, key=lambda v: (-len(q & bag(f"{v} {said.get(v, '')}")), values.index(v)))
+            miss = unit(self.name, user, "selector") < self.opts.get("selector_miss", 0.0)
+            out[name] = ranked[1] if miss and len(ranked) > 1 else ranked[0]
+        return out
 
     def code_turn(self, user: str, description: str) -> Turn:
         stubs = {m[0]: (m[1], m[2]) for m in STUB.findall(description)}

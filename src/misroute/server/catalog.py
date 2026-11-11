@@ -89,6 +89,8 @@ class Tool:
     route: str = ""
     op_id: str = ""
     server: str = ""
+    selector: str = ""
+    operations: dict[str, str] = field(default_factory=dict)
 
     @property
     def is_write(self) -> bool:

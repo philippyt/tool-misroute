@@ -14,6 +14,7 @@ class ServerConfig(BaseModel):
     command: list[str] | None = None
     openapi: str | None = None
     tools: str | None = None
+    catalog: str | None = None
     auth: str | None = None
     headers: dict[str, str] = Field(default_factory=dict)
     env: dict[str, str] = Field(default_factory=dict)

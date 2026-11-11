@@ -68,6 +68,7 @@ real_requests: real.jsonl      # optional, lines of {"text": ..., "tool": name, 
 | You changed one description | `misroute check --tool NAME --description "..." --json --max-cost 1` | a few hundred model calls |
 | You want to find confused tools | `misroute discover --json --max-cost 5` | grows with the number of tools |
 | The estimate looks off, or the model reasons | add `--pilot` to `discover` or `compare` | three trials per model and mode |
+| A converted API has too many near identical tools | `misroute compare --design catalog.yaml --json --max-cost 5`, then ask the user to review `catalog.yaml` | free to propose, two runs of every request to test |
 | The model is being changed | `misroute compare --from OLD --to NEW --json --max-cost 5` | a discover for each model, cached calls are free |
 | There are logs of real use | `misroute requests collect --from FILE --json`, then ask the user to run `misroute requests review` | free |
 | You want better descriptions for a server or a Swagger file | `misroute improve <target> --model M --helper H --json --max-cost 5` | discover plus a race per confused group |
@@ -116,6 +117,10 @@ Every threshold comes from a source or is derived. 0.05 and Holm are convention.
 ## Commands
 
 There are twelve: `quick`, `doctor`, `lint`, `discover`, `check`, `improve`, `compare`, `ci`, `report`, `requests`, `serve` and `guide`. Older names were folded in and answer with the new form, exit code 3: `init` is `quick --config-only`, `probe` is `discover --probe`, `fix` is `check --pair`, `explain` is `report --pair`, `site` is `report --site`, `schema` is `guide --schema`, `ui` and `guard` are `serve ui` and `serve guard`. `serve-mcp` and `catalog` (now `serve mcp` and `ci --snapshot`) still run.
+
+## Catalog plans
+
+A catalog plan merges several operations of an API into one tool with a selector argument and excludes operations an agent cannot use. `compare --design FILE` writes a proposed plan when the file is not there (`proposed: true`), which no person has reviewed, and tests the plan against one tool per operation on the same requests. Never adopt a plan yourself: show the user `coverage`, the `verdict`, each cell's `rates` for `mirror` and `merged`, and `merged_tools`, and let them edit the file and set `server.catalog`. `wrong_operation_rate` is the share of trials with the right tool and the wrong selector value, which counts as an error. A plan that loses an operation, puts one in two tools or mixes reads with writes is refused with exit code 3.
 
 ## Check verdicts
 

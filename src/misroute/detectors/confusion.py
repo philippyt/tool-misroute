@@ -33,5 +33,23 @@ def leakage(trials: list[Trial], a: str, b: str) -> Counter:
     return Counter(t.chosen for t in trials if t.target in (a, b) and t.chosen not in (a, b, None))
 
 
+def operations(trials: list[Trial]) -> dict[str, dict[str, dict]]:
+    """For merged tools, per tool and wanted selector value: trials, how many reached the tool, how many of
+    those picked the wrong value, and which values were picked instead."""
+    out: dict[str, dict[str, dict]] = {}
+    for t in trials:
+        if not t.operation:
+            continue
+        row = out.setdefault(t.target, {}).setdefault(
+            t.operation, {"trials": 0, "reached_tool": 0, "wrong_operation": 0, "picked": Counter()}
+        )
+        row["trials"] += 1
+        row["reached_tool"] += t.chosen == t.target
+        if t.wrong_operation:
+            row["wrong_operation"] += 1
+            row["picked"][t.operation_picked or NONE] += 1
+    return {k: {v: {**r, "picked": dict(r["picked"])} for v, r in rows.items()} for k, rows in out.items()}
+
+
 def wrong_rate(trials: list[Trial]) -> float:
     return sum(t.wrong for t in trials) / len(trials) if trials else 0.0

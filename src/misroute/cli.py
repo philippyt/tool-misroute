@@ -453,7 +453,7 @@ def guide_text() -> str:
     return "\n\n".join(docs.joinpath(f).read_text(encoding="utf-8") for f in ("AGENTS.md", "llms.txt"))
 
 
-SCHEMAS = "lint, discover, check, check_pair, compare, improve, report_pair, doctor, estimate or error"
+SCHEMAS = "lint, discover, check, check_pair, compare, compare_design, improve, report_pair, doctor, estimate or error"
 
 
 @app.command()
@@ -673,6 +673,15 @@ def discover(
                 style="dim",
             )
         effect_note(res["effect_unknown"])
+        for c in res["cells"]:
+            for tool, rows in c["operations"].items():
+                missed = sum(r["wrong_operation"] for r in rows.values())
+                if missed:
+                    out.print(
+                        f"{tool} ({c['model']} {c['mode']}): right tool with the wrong selector value in {missed} "
+                        f"of {sum(r['trials'] for r in rows.values())} trials",
+                        style="yellow",
+                    )
         if probing:
             probe_table(res["probe"])
         out.print(f"spent ${proj.budget.spent:.2f}, results in {proj.store.root}")
@@ -836,10 +845,87 @@ def check(
     emit(opts, res, warned(res, text), check_code(res["verdict"]))
 
 
+def compare_designs(opts: Opts, config: Path, design: Path, models: str | None, md: list[str]) -> None:
+    """Test a catalog plan against the one tool per operation catalog. Writes a proposed plan first when the
+    file is not there yet."""
+    from misroute import compare as comparer
+    from misroute.config import load as load_config
+    from misroute.server import merge, openapi
+
+    try:
+        cfg = load_config(config)
+        proposed = not design.exists()
+        if proposed:
+            source = asyncio.run(Project(cfg, root=config.parent / cfg.workdir).source_tools())
+            doc = openapi.load(cfg.server.openapi) if cfg.server.openapi else None
+            plan = merge.propose(source, doc)
+            if not plan["tools"]:
+                fail(opts, "found nothing to merge: no repeated listings, query variants or bare lists", INSUFFICIENT)
+            design.write_text(yaml.safe_dump(plan, sort_keys=False, allow_unicode=True, width=110), encoding="utf-8")
+        cfg = cfg.model_copy(update={"server": cfg.server.model_copy(update={"catalog": str(design)})})
+        proj = Project(cfg, root=config.parent / cfg.workdir)
+        source, merged = asyncio.run(proj.source_tools()), asyncio.run(proj.tools())
+        mirror = merge.apply(source, {"exclude": (proj.plan() or {}).get("exclude") or {}})
+    except (OSError, ValueError, ValidationError, yaml.YAMLError) as e:
+        fail(opts, f"config problem: {e}")
+        return
+    if opts.max_cost is not None:
+        proj.cap(opts.max_cost)
+    ms = split(models) or proj.cfg.tested()
+    calls, cost = comparer.design_cost(proj, source, mirror, merged, ms, md)
+    note = f"wrote a proposed plan to {design}, tested as proposed. Review it before adopting it" if proposed else ""
+    gate(opts, proj, calls, cost, note)
+    res = run(opts, proj, comparer.designs(proj, ms, md), calls)
+    res["proposed"] = proposed
+
+    def text() -> None:
+        cov = res["coverage"]
+        inside = sum(len(v) for v in cov["merged"].values())
+        out.print(
+            f"{cov['operations']} operations: {res['tools']['mirror']} tools one per operation, "
+            f"{res['tools']['merged']} with the plan. {len(cov['merged'])} merged tools reach {inside} operations, "
+            f"{len(cov['excluded'])} operations excluded"
+        )
+        for c in res["cells"]:
+            was, now = c["rates"]["mirror"], c["rates"]["merged"]
+            out.print(
+                f"{c['model']} {c['mode']}: {c['verdict']}, {c['reason']}. Right {was['accuracy']:.0%} one per "
+                f"operation, {now['accuracy']:.0%} merged, change in error rate {c['diff']:+.1%} "
+                f"(95% {c['ci'][0]:+.1%} to {c['ci'][1]:+.1%}) over {c['templates']} request wordings"
+            )
+            out.print(
+                f"  wrong tool {was['wrong_rate']:.0%} to {now['wrong_rate']:.0%}, right tool with the wrong "
+                f"selector value {now['wrong_operation_rate']:.0%}",
+                style="dim",
+            )
+        for t in res["merged_tools"]:
+            out.print(
+                f"  {t['tool']}: {t['operations']} operations, errors {t['errors_mirror']} apart to "
+                f"{t['errors_merged']} merged of {t['trials']}, {t['wrong_operation']} from the selector"
+            )
+        if res["proposed"]:
+            out.print(f"the plan in {design} was proposed from routes and parameters, review it", style="yellow")
+        out.print(f"to adopt the plan set server.catalog: {design} in misroute.yaml", style="dim")
+        out.print(f"spent ${res['cost_usd']:.2f}", style="dim")
+        usage_note(opts, res)
+
+    emit(opts, res, warned(res, text), check_code(res["verdict"]))
+
+
 @app.command()
 def compare(
-    old: Annotated[str, typer.Option("--from", help="model in use now, provider:model or a configured name")],
-    new: Annotated[str, typer.Option("--to", help="model you are moving to")],
+    old: Annotated[
+        str | None, typer.Option("--from", help="model in use now, provider:model or a configured name")
+    ] = None,
+    new: Annotated[str | None, typer.Option("--to", help="model you are moving to")] = None,
+    design: Annotated[
+        Path | None,
+        typer.Option(
+            help="catalog plan to test against one tool per operation instead of comparing models. A proposed "
+            "plan is written there when the file does not exist"
+        ),
+    ] = None,
+    models: Annotated[str | None, typer.Option(help="with --design, models to test, comma separated")] = None,
     config: Cfg = Path("misroute.yaml"),
     modes: Annotated[str, typer.Option(help="comma separated")] = "json",
     json_: Json = False,
@@ -849,12 +935,19 @@ def compare(
     progress: ProgressMode = "bar",
     pilot: Pilot = False,
 ) -> None:
-    """Test whether routing changes when you move from one model to another, on the same requests"""
+    """Test two conditions on the same requests: two models with --from and --to, or a merged catalog against
+    one tool per operation with --design"""
     from misroute import compare as comparer
     from misroute.config import load as load_config
 
     opts = Opts("compare", json_, yes, max_cost, estimate_only, progress)
     system_certs(config)
+    if design:
+        compare_designs(opts, config, design, models, split(modes) or ["json"])
+        return
+    if not old or not new:
+        fail(opts, "give --from and --to to compare two models, or --design to test a catalog plan")
+        return
     try:
         cfg, (a, b) = comparer.with_models(load_config(config), [old, new])
     except (OSError, ValueError, ValidationError, yaml.YAMLError) as e:

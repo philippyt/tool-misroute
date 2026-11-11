@@ -2,7 +2,7 @@ import ast
 import json
 from typing import Any
 from misroute.detectors.codemode import classify
-from misroute.modes.json_mode import decisive, read_first, settled
+from misroute.modes.json_mode import decisive, picked, read_first, settled
 from misroute.modes.stubs import run_code_tool
 from misroute.sandbox.fake_tools import FakeTools, arg_errors
 from misroute.sandbox.monty_runner import Sandbox
@@ -88,6 +88,10 @@ async def run(
     hard = [f for f in failures if f and f not in ("no_call", "unused_pagination")]
     trial.failure = hard[0] if hard else (None if trial.calls else "no_call")
     trial.decisive = decisive(trial, programs, tools, lookups)
+    first_args: dict[str, dict] = {}
+    for r in fakes.log:
+        first_args.setdefault(r.tool, r.args)
+    trial.operation_picked = picked(by.get(trial.target), first_args)
     if trial.failure is None and read_first(trial, tools):
         trial.failure = "read_first"
     elif trial.failure is None and trial.decisive == []:

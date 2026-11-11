@@ -1,0 +1,123 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "misroute/compare_design.json",
+ "title": "misroute compare --design output",
+ "type": "object",
+ "properties": {
+  "schema_version": {
+   "const": 2
+  },
+  "command": {
+   "type": "string"
+  },
+  "design": {
+   "type": "string",
+   "description": "the catalog plan that was tested"
+  },
+  "proposed": {
+   "type": "boolean",
+   "description": "the plan was written by this run and no person has reviewed it"
+  },
+  "verdict": {
+   "enum": [
+    "better",
+    "worse",
+    "no_difference",
+    "insufficient_data"
+   ],
+   "description": "the least favourable over models and modes, better means the merged catalog makes fewer errors"
+  },
+  "cells": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "properties": {
+     "model": {
+      "type": "string"
+     },
+     "mode": {
+      "enum": [
+       "json",
+       "code"
+      ]
+     },
+     "verdict": {
+      "enum": [
+       "better",
+       "worse",
+       "no_difference",
+       "insufficient_data"
+      ]
+     },
+     "templates": {
+      "type": "integer"
+     },
+     "p": {
+      "type": "number"
+     },
+     "diff": {
+      "type": "number",
+      "description": "error rate merged minus one tool per operation"
+     },
+     "ci": {
+      "type": "array",
+      "items": {
+       "type": "number"
+      }
+     },
+     "rates": {
+      "type": "object",
+      "properties": {
+       "mirror": {
+        "type": "object",
+        "description": "trials, accuracy, reached_rate, wrong_rate, hedge_rate, bad_args_rate, wrong_operation_rate"
+       },
+       "merged": {
+        "type": "object",
+        "description": "trials, accuracy, reached_rate, wrong_rate, hedge_rate, bad_args_rate, wrong_operation_rate"
+       }
+      }
+     }
+    },
+    "required": [
+     "model",
+     "mode",
+     "verdict",
+     "templates",
+     "p",
+     "diff",
+     "rates"
+    ]
+   }
+  },
+  "merged_tools": {
+   "type": "array",
+   "description": "per merged tool: operations, trials, errors_mirror, errors_merged, wrong_operation, by_operation"
+  },
+  "coverage": {
+   "type": "object",
+   "description": "operations, tools, merged (tool to selector value to operation), excluded (operation to reason), unreachable"
+  },
+  "tools": {
+   "type": "object",
+   "description": "tool counts: mirror and merged"
+  },
+  "cost_usd": {
+   "type": "number"
+  },
+  "usage": {
+   "type": "object"
+  }
+ },
+ "required": [
+  "schema_version",
+  "command",
+  "design",
+  "verdict",
+  "cells",
+  "merged_tools",
+  "coverage",
+  "cost_usd"
+ ],
+ "additionalProperties": true
+}

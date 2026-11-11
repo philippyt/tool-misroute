@@ -168,7 +168,7 @@ There are twelve. Most work needs three of them: `discover` finds the confused t
 | `misroute discover` | ranks confused tool pairs from model behaviour. `--probe` then presses the flagged pairs with requests that borrow words from the sibling, `--pair a,b` presses the pairs you name |
 | `misroute check` | tests a description change on held out requests: `--tool` and `--description` for your own text, `--pair a,b` to draft and test a boundary clause for two confused tools, `--flagged` for every flagged pair |
 | `misroute improve` | writes, races and confirms new descriptions for confused tools, and exports them for review |
-| `misroute compare` | tests whether routing changes when you move from one model to another |
+| `misroute compare` | tests whether routing changes when you move from one model to another, or with `--design` whether a merged catalog routes better than one tool per operation |
 | `misroute ci` | fails on exceeded limits, or with `--changed` on descriptions that got worse. `--snapshot` prints the tool hashes a later `--baseline` compares against |
 | `misroute report` | reads results, free: a self-contained HTML report, `--pair a,b` for the misrouted requests between two tools and what the model called, `--site name=workdir` for a static site of several runs |
 | `misroute requests` | `collect`, `review` and `status`: real user requests from logs, confirmed by a person |
@@ -206,6 +206,50 @@ $ misroute requests status
 ```
 
 `collect` reads the guard log, or any JSON lines file where a line has the request as `text` and what was called as `calls` or `tool`. It proposes the first write, else the first call, as the right tool. That is a suggestion: what an agent called is not proof of what was right, so `review` asks a person to confirm each one, and unconfirmed lines are left out of every run. The guard records user turns when your agent passes them with `guard.user_turn(text)`. A proxy in front of an MCP server sees calls but not what the user asked, so use a trace export there. The file holds what your users wrote, keep it out of version control.
+
+## Design the catalog
+
+A converted API gives one tool per operation. That is rarely the catalog an agent should have: generated APIs repeat the same listing under different parents, offer one query in several forms, and scatter small lists across many endpoints. A catalog plan merges such operations into one tool with a selector argument, and excludes the ones an agent cannot use.
+
+```console
+$ misroute compare --design catalog.yaml --max-cost 10
+47 operations: 40 tools one per operation, 27 with the plan. 4 merged tools reach 17 operations, 7 operations excluded
+json: better, p 0.012 over 14 differing templates. Right 88% one per operation, 93% merged
+  wrong tool 9% to 4%, right tool with the wrong selector value 1%
+  Vedlegg_by_parent: 4 operations, errors 14 apart to 5 merged of 66, 2 from the selector
+```
+
+When `catalog.yaml` is not there, misroute writes a proposed one from routes and parameters alone, with no model call, and tests it as proposed. The numbers above are an illustration of the output, not a result. Review the file: rename tools and values, write descriptions, and remove merges that do not share one intent.
+
+```yaml
+tools:
+  attachments:
+    selector: parent
+    description: Lists the attachments stored on one work order, incident or site.
+    operations:
+      work_order: {operation: Vedlegg_GetArbeidsordreVedlegg, args: {id: arbeidsordreId}}
+      incident: {operation: Vedlegg_GetHendelseVedlegg, args: {id: HendelseId}}
+exclude:
+  Ekstern_Upload: takes a file, which an agent cannot pass as text
+```
+
+The rules a plan has to keep, checked every time it is loaded:
+
+- every operation stays reachable through exactly one tool, or is excluded with a reason. Merging never drops one.
+- a merged tool never mixes reads with writes, since read only and destructive hints are per tool.
+- an argument is required only when every merged operation requires it. One that only some take says which.
+
+The test is what makes this more than tidying. Requests are written and validated once per original operation, so both catalogs face the same requests, and for a merged tool misroute knows which selector value is right. A trial counts as right only when the tool and the value are both right, so a merge that just moves the confusion into its selector gains nothing. `better` means the merged catalog makes fewer errors, and `worse` exits 1.
+
+To adopt a plan, name it in the config. Every command then works on the merged catalog, and `improve --fastmcp` writes a server whose merged tools call the right operation.
+
+```yaml
+server:
+  openapi: api.json
+  catalog: catalog.yaml
+```
+
+Proposals cover three shapes and only reads: the same listing under different parents, forms of one query that take the same arguments, and lists with no arguments. Writes are never merged or excluded by a proposal. Anything else is yours to add by hand.
 
 ## Changing models
 
@@ -258,6 +302,7 @@ Results go to `improve/`:
 | `descriptions.yaml` | tool name to description, for MCP servers you edit in code |
 | `overlay.yaml` | per operationId: description, read and write hints, suggested exclusions and the evidence |
 | `overlay.openapi.yaml` | the same descriptions as an OpenAPI Overlay 1.0 file for docs and other converters |
+| `merged.json` | with a catalog plan: what the server needs to run each merged tool |
 | `openapi.json` | only when the source needed it: the spec converted from Swagger 2.0 or repaired, which `server.py` then serves |
 | `server.py` | with `--fastmcp`, a FastMCP 4.1.4 server that serves the spec with the overlay applied |
 

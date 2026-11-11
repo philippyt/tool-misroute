@@ -45,6 +45,14 @@ def settled(trial: Trial, names: list[str], by: dict[str, Tool]) -> bool:
     return trial.target not in by or trial.target in names or any(by[n].is_write for n in names if n in by)
 
 
+def picked(target: Tool | None, first_args: dict[str, dict]) -> str | None:
+    """The selector value of the first call to a merged target, None when it was not called or has no selector."""
+    if target is None or not target.selector or target.name not in first_args:
+        return None
+    value = first_args[target.name].get(target.selector)
+    return None if value is None else str(value)
+
+
 def results(fakes: FakeTools, calls: list, by: dict[str, Tool]) -> list[dict]:
     out = []
     for c in calls:
@@ -67,6 +75,7 @@ async def run(
     fakes = FakeTools(tools, fixtures or {})
     messages: list[dict] = [{"role": "user", "content": trial.text}]
     turns: list[list[str]] = []
+    first_args: dict[str, dict] = {}
     text = ""
     for i in range(max_turns):
         turn = await adapter.chat(messages if i else trial.text, specs, system or SYSTEM, rep=trial.rep)
@@ -76,6 +85,8 @@ async def run(
         if not names:
             break
         turns.append(names)
+        for c in turn.calls:
+            first_args.setdefault(c.name, c.args)
         trial.bad_args += [e for c in turn.calls if c.name in by for e in arg_errors(by[c.name], c.args)]
         if i == max_turns - 1 or settled(trial, names, by):
             break
@@ -88,6 +99,7 @@ async def run(
         ]
     trial.calls = [n for names in turns for n in names]
     trial.decisive = decisive(trial, turns, tools, lookups)
+    trial.operation_picked = picked(by.get(trial.target), first_args)
     if not trial.calls:
         trial.failure = "no_tool_call"
     elif any(c not in by for c in trial.calls):
