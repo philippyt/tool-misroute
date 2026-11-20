@@ -12,7 +12,9 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "uvx",
-      "args": ["mcp-server-fetch"],
+      "args": [
+        "mcp-server-fetch"
+      ],
       "env": {},
       "notes": "Official MCP reference server (control: minimal single-tool surface)."
     },
@@ -26,7 +28,9 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "uvx",
-      "args": ["mcp-server-time"],
+      "args": [
+        "mcp-server-time"
+      ],
       "env": {},
       "notes": "Official MCP reference server (control: 2 distinct time tools)."
     },
@@ -40,7 +44,10 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
       "env": {},
       "notes": "Official MCP reference server (control: single reasoning tool)."
     },
@@ -54,7 +61,10 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-everything"],
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-everything"
+      ],
       "env": {},
       "notes": "Official MCP reference test server exercising protocol features."
     },
@@ -68,7 +78,11 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-filesystem", "{cwd}"],
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "{cwd}"
+      ],
       "env": {},
       "notes": "Official MCP reference filesystem server; sibling risk across read/edit/write/list/search tools."
     },
@@ -82,7 +96,9 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "uvx",
-      "args": ["mcp-server-git"],
+      "args": [
+        "mcp-server-git"
+      ],
       "env": {},
       "notes": "Official MCP reference Git server; sibling risk across diff/show/log/status/branch tools."
     },
@@ -96,7 +112,10 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
       "env": {},
       "notes": "Official MCP reference knowledge-graph memory server; sibling risk across entities/relations/observations."
     },
@@ -110,7 +129,10 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"],
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ],
       "env": {},
       "notes": "Official Microsoft Playwright MCP server; high sibling risk across browser automation tools."
     },
@@ -124,7 +146,10 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@latest"],
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ],
       "env": {},
       "notes": "Official Google Chrome DevTools MCP server; high sibling risk across DOM/network/console/perf tools."
     },
@@ -138,7 +163,10 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "next-devtools-mcp@latest"],
+      "args": [
+        "-y",
+        "next-devtools-mcp@latest"
+      ],
       "env": {},
       "notes": "Official Vercel Next.js DevTools MCP server."
     },
@@ -152,7 +180,10 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
       "env": {},
       "notes": "Official Upstash Context7 documentation MCP server."
     },
@@ -166,7 +197,10 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "firecrawl-mcp"],
+      "args": [
+        "-y",
+        "firecrawl-mcp"
+      ],
       "env": {
         "FIRECRAWL_API_KEY": "fc-dummy-key-for-tools-list"
       },
@@ -182,7 +216,10 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "tavily-mcp@latest"],
+      "args": [
+        "-y",
+        "tavily-mcp@latest"
+      ],
       "env": {
         "TAVILY_API_KEY": "tvly-dummy-key-for-tools-list"
       },
@@ -198,7 +235,10 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "exa-mcp-server"],
+      "args": [
+        "-y",
+        "exa-mcp-server"
+      ],
       "env": {
         "EXA_API_KEY": "exa-dummy-key-for-tools-list"
       },
@@ -214,7 +254,12 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@brave/brave-search-mcp-server", "--transport", "stdio"],
+      "args": [
+        "-y",
+        "@brave/brave-search-mcp-server",
+        "--transport",
+        "stdio"
+      ],
       "env": {
         "BRAVE_API_KEY": "BSA-dummy-key-for-tools-list"
       },
@@ -230,7 +275,11 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "uvx",
-      "args": ["mcp-server-sqlite", "--db-path", ":memory:"],
+      "args": [
+        "mcp-server-sqlite",
+        "--db-path",
+        ":memory:"
+      ],
       "env": {},
       "notes": "Official MCP reference SQLite server (archived); in-memory DB used for tools/list."
     },
@@ -244,7 +293,12 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@supabase/mcp-server-supabase@latest", "--access-token", "sbp_dummy_token_for_tools_list"],
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--access-token",
+        "sbp_dummy_token_for_tools_list"
+      ],
       "env": {
         "SUPABASE_ACCESS_TOKEN": "sbp_dummy_token_for_tools_list"
       },
@@ -260,7 +314,12 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@neondatabase/mcp-server-neon", "start", "napi_dummy_key_for_tools_list"],
+      "args": [
+        "-y",
+        "@neondatabase/mcp-server-neon",
+        "start",
+        "napi_dummy_key_for_tools_list"
+      ],
       "env": {
         "NEON_API_KEY": "napi_dummy_key_for_tools_list"
       },
@@ -276,7 +335,10 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "mongodb-mcp-server@latest"],
+      "args": [
+        "-y",
+        "mongodb-mcp-server@latest"
+      ],
       "env": {
         "MDB_MCP_CONNECTION_STRING": "mongodb://localhost:27017/test"
       },
@@ -292,7 +354,11 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "uvx",
-      "args": ["--from", "redis-mcp-server", "redis-mcp-server"],
+      "args": [
+        "--from",
+        "redis-mcp-server",
+        "redis-mcp-server"
+      ],
       "env": {
         "REDIS_URL": "redis://localhost:6379"
       },
@@ -308,7 +374,9 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "uvx",
-      "args": ["mcp-clickhouse"],
+      "args": [
+        "mcp-clickhouse"
+      ],
       "env": {
         "CLICKHOUSE_HOST": "localhost",
         "CLICKHOUSE_PORT": "8123",
@@ -328,7 +396,9 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "uvx",
-      "args": ["mcp-server-qdrant"],
+      "args": [
+        "mcp-server-qdrant"
+      ],
       "env": {
         "QDRANT_URL": "http://localhost:6333",
         "COLLECTION_NAME": "test"
@@ -345,7 +415,12 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "uvx",
-      "args": ["mcp-server-motherduck", "--db-path", ":memory:", "--read-write"],
+      "args": [
+        "mcp-server-motherduck",
+        "--db-path",
+        ":memory:",
+        "--read-write"
+      ],
       "env": {},
       "notes": "Official MotherDuck/DuckDB MCP server; in-memory DuckDB used for tools/list."
     },
@@ -359,7 +434,10 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@elastic/mcp-server-elasticsearch"],
+      "args": [
+        "-y",
+        "@elastic/mcp-server-elasticsearch"
+      ],
       "env": {
         "ES_URL": "http://localhost:9200",
         "ES_API_KEY": "dummy-api-key-for-tools-list"
@@ -399,66 +477,15 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-gitlab"],
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-gitlab"
+      ],
       "env": {
         "GITLAB_PERSONAL_ACCESS_TOKEN": "glpat-dummy-token-for-tools-list",
         "GITLAB_API_URL": "https://gitlab.com/api/v4"
       },
       "notes": "Official MCP reference GitLab server (archived); dummy PAT used for tools/list only."
-    },
-    {
-      "name": "notion",
-      "display_name": "Notion MCP",
-      "category": "docs",
-      "repo_url": "https://github.com/makenotion/notion-mcp-server",
-      "package": "@notionhq/notion-mcp-server",
-      "ecosystem": "npm",
-      "runnable": true,
-      "capture_method": "mcp_stdio_tools_list",
-      "command": "npx",
-      "args": ["-y", "@notionhq/notion-mcp-server"],
-      "env": {
-        "NOTION_TOKEN": "ntn_dummy_token_for_tools_list"
-      },
-      "notes": "Official Notion MCP server; OpenAPI-derived tools with high sibling risk. Dummy NOTION_TOKEN used."
-    },
-    {
-      "name": "slack",
-      "display_name": "MCP Slack (Reference)",
-      "category": "comms",
-      "repo_url": "https://github.com/modelcontextprotocol/servers-archived",
-      "package": "@modelcontextprotocol/server-slack",
-      "ecosystem": "npm",
-      "runnable": true,
-      "capture_method": "mcp_stdio_tools_list",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-slack"],
-      "env": {
-        "SLACK_BOT_TOKEN": "xoxb-dummy-token-for-tools-list",
-        "SLACK_TEAM_ID": "T00000000"
-      },
-      "notes": "Official MCP reference Slack server (archived); dummy bot token and team ID used for tools/list."
-    },
-    {
-      "name": "atlassian-oss",
-      "display_name": "Atlassian Jira/Confluence MCP (sooperset)",
-      "category": "issue_tracker",
-      "repo_url": "https://github.com/sooperset/mcp-atlassian",
-      "package": "mcp-atlassian",
-      "ecosystem": "pypi",
-      "runnable": true,
-      "capture_method": "mcp_stdio_tools_list",
-      "command": "uvx",
-      "args": ["mcp-atlassian"],
-      "env": {
-        "JIRA_URL": "https://example.atlassian.net",
-        "JIRA_USERNAME": "user@example.com",
-        "JIRA_API_TOKEN": "dummy-token",
-        "CONFLUENCE_URL": "https://example.atlassian.net/wiki",
-        "CONFLUENCE_USERNAME": "user@example.com",
-        "CONFLUENCE_API_TOKEN": "dummy-token"
-      },
-      "notes": "Widely-used open-source Atlassian Jira+Confluence MCP server; dummy credentials used for tools/list."
     },
     {
       "name": "hubspot",
@@ -470,7 +497,10 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@hubspot/mcp-server"],
+      "args": [
+        "-y",
+        "@hubspot/mcp-server"
+      ],
       "env": {
         "HUBSPOT_ACCESS_TOKEN": "pat-na1-dummy-token-for-tools-list"
       },
@@ -486,7 +516,11 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@stripe/mcp", "--tools=all"],
+      "args": [
+        "-y",
+        "@stripe/mcp",
+        "--tools=all"
+      ],
       "env": {
         "STRIPE_SECRET_KEY": "sk_test_dummy_key_for_tools_list"
       },
@@ -502,32 +536,16 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@paypal/mcp", "--tools=all"],
+      "args": [
+        "-y",
+        "@paypal/mcp",
+        "--tools=all"
+      ],
       "env": {
         "PAYPAL_ACCESS_TOKEN": "dummy-paypal-access-token",
         "PAYPAL_ENVIRONMENT": "SANDBOX"
       },
       "notes": "Official PayPal MCP server (--tools=all); dummy sandbox token used for tools/list only."
-    },
-    {
-      "name": "twilio",
-      "display_name": "Twilio MCP",
-      "category": "comms",
-      "repo_url": "https://github.com/twilio-labs/mcp",
-      "package": "@twilio-alpha/mcp",
-      "ecosystem": "npm",
-      "runnable": true,
-      "capture_method": "mcp_stdio_tools_list",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@twilio-alpha/mcp",
-        "AC00000000000000000000000000000000/SK00000000000000000000000000000000:dummy",
-        "--services",
-        "twilio_api_v2010"
-      ],
-      "env": {},
-      "notes": "Official Twilio MCP server (scoped to twilio_api_v2010); dummy credentials used for tools/list."
     },
     {
       "name": "sentry",
@@ -539,7 +557,10 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@sentry/mcp-server@latest"],
+      "args": [
+        "-y",
+        "@sentry/mcp-server@latest"
+      ],
       "env": {
         "SENTRY_AUTH_TOKEN": "sntryu_dummy_token_for_tools_list"
       },
@@ -555,7 +576,9 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "uvx",
-      "args": ["mcp-grafana"],
+      "args": [
+        "mcp-grafana"
+      ],
       "env": {
         "GRAFANA_URL": "http://localhost:3000",
         "GRAFANA_SERVICE_ACCOUNT_TOKEN": "glsa_dummy_token_for_tools_list"
@@ -572,7 +595,10 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "kubernetes-mcp-server@latest"],
+      "args": [
+        "-y",
+        "kubernetes-mcp-server@latest"
+      ],
       "env": {},
       "notes": "Official containers/Red Hat Kubernetes MCP server; sibling risk across pods/resources/namespaces/helm."
     },
@@ -586,7 +612,12 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "npx",
-      "args": ["-y", "@azure/mcp@latest", "server", "start"],
+      "args": [
+        "-y",
+        "@azure/mcp@latest",
+        "server",
+        "start"
+      ],
       "env": {},
       "notes": "Official Microsoft Azure MCP server; large cloud management tool surface."
     },
@@ -654,25 +685,26 @@
       "runnable": true,
       "capture_method": "mcp_stdio_tools_list",
       "command": "docker",
-      "args": ["run", "-i", "--rm", "hashicorp/terraform-mcp-server:latest"],
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "hashicorp/terraform-mcp-server:latest"
+      ],
       "env": {},
       "notes": "Official HashiCorp Terraform MCP server; requires Docker."
     },
     {
-      "name": "figma-developer",
-      "display_name": "Figma Developer MCP (Framelink)",
-      "category": "design",
-      "repo_url": "https://github.com/GLips/Figma-Context-MCP",
-      "package": "figma-developer-mcp",
-      "ecosystem": "npm",
+      "name": "entur",
+      "display_name": "Entur Journey Planner MCP",
+      "category": "transport",
+      "repo_url": "https://developer.entur.org/",
+      "package": "https://api.entur.io/journey-planner-mcp/v1/mcp",
+      "ecosystem": "http",
       "runnable": true,
-      "capture_method": "mcp_stdio_tools_list",
-      "command": "npx",
-      "args": ["-y", "figma-developer-mcp", "--stdio"],
-      "env": {
-        "FIGMA_API_KEY": "figd_dummy_token_for_tools_list"
-      },
-      "notes": "Popular open-source Figma MCP server; dummy FIGMA_API_KEY used for tools/list only."
+      "capture_method": "mcp_http_tools_list",
+      "url": "https://api.entur.io/journey-planner-mcp/v1/mcp",
+      "notes": "Official Norwegian national public transport MCP server (Entur); sibling risk across departures/poll-departures, trip/poll-trip, nearby-stops/nearby-mobility."
     }
   ],
   "remote_only_servers": [

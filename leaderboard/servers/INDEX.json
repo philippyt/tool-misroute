@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-20T13:50:39Z",
-  "server_count": 33,
-  "total_tools": 942,
-  "total_writes": 155,
+  "generated_at": "2026-11-20T14:21:03Z",
+  "server_count": 29,
+  "total_tools": 621,
+  "total_writes": 108,
   "total_with_output_schema": 0,
   "servers": [
     {
@@ -125,36 +125,6 @@
       "has_output_schema_count": 0,
       "tools_sha256": "83d2a7c12ed39aeb2474aa14c81feac66f44b9705b10b76d026d6f87fc860a9e",
       "notes": "Official Vercel Next.js DevTools MCP server."
-    },
-    {
-      "name": "slack",
-      "display_name": "MCP Slack (Reference)",
-      "category": "comms",
-      "repo_url": "https://github.com/modelcontextprotocol/servers-archived",
-      "package": "@modelcontextprotocol/server-slack",
-      "source_ref": "2025.4.25",
-      "captured_at": "2026-11-20T13:48:37Z",
-      "capture_method": "mcp_stdio_tools_list",
-      "tool_count": 8,
-      "write_count": 2,
-      "has_output_schema_count": 0,
-      "tools_sha256": "b12e8ca30b88ec9b389a4ce49497e597207ab1ef723b3820e5cf612fc66ec35c",
-      "notes": "Official MCP reference Slack server (archived); dummy bot token and team ID used for tools/list."
-    },
-    {
-      "name": "twilio",
-      "display_name": "Twilio MCP",
-      "category": "comms",
-      "repo_url": "https://github.com/twilio-labs/mcp",
-      "package": "@twilio-alpha/mcp",
-      "source_ref": "0.7.0",
-      "captured_at": "2026-11-20T13:50:09Z",
-      "capture_method": "mcp_stdio_tools_list",
-      "tool_count": 197,
-      "write_count": 0,
-      "has_output_schema_count": 0,
-      "tools_sha256": "94e694ab29809402f4685c897a4c4802cd7db3a1b70f16a565b0c6ddbea5018f",
-      "notes": "Official Twilio MCP server (scoped to twilio_api_v2010); dummy credentials used for tools/list."
     },
     {
       "name": "everything",
@@ -337,21 +307,6 @@
       "notes": "Official Supabase MCP server; dummy access token used for tools/list only."
     },
     {
-      "name": "figma-developer",
-      "display_name": "Figma Developer MCP (Framelink)",
-      "category": "design",
-      "repo_url": "https://github.com/GLips/Figma-Context-MCP",
-      "package": "figma-developer-mcp",
-      "source_ref": "0.13.2",
-      "captured_at": "2026-11-20T13:50:39Z",
-      "capture_method": "mcp_stdio_tools_list",
-      "tool_count": 2,
-      "write_count": 0,
-      "has_output_schema_count": 0,
-      "tools_sha256": "6287d0ff7718e8d80435b9843718d09f9ab18c3783c07699bd74720a70d07bab",
-      "notes": "Popular open-source Figma MCP server; dummy FIGMA_API_KEY used for tools/list only."
-    },
-    {
       "name": "context7",
       "display_name": "Context7 MCP",
       "category": "docs",
@@ -365,36 +320,6 @@
       "has_output_schema_count": 0,
       "tools_sha256": "b8c7ad941ac5b35f669e2102edf2294b98ac9a2adfe98add253c5e802ba7f83d",
       "notes": "Official Upstash Context7 documentation MCP server."
-    },
-    {
-      "name": "notion",
-      "display_name": "Notion MCP",
-      "category": "docs",
-      "repo_url": "https://github.com/makenotion/notion-mcp-server",
-      "package": "@notionhq/notion-mcp-server",
-      "source_ref": "2.6.1",
-      "captured_at": "2026-11-20T13:48:34Z",
-      "capture_method": "mcp_stdio_tools_list",
-      "tool_count": 24,
-      "write_count": 11,
-      "has_output_schema_count": 0,
-      "tools_sha256": "afe4c2afd90c5d027a897517b20afb780157235b7ef3663934980665a6e25f45",
-      "notes": "Official Notion MCP server; OpenAPI-derived tools with high sibling risk. Dummy NOTION_TOKEN used."
-    },
-    {
-      "name": "atlassian-oss",
-      "display_name": "Atlassian Jira/Confluence MCP (sooperset)",
-      "category": "issue_tracker",
-      "repo_url": "https://github.com/sooperset/mcp-atlassian",
-      "package": "mcp-atlassian",
-      "source_ref": "0.24.7",
-      "captured_at": "2026-11-20T13:48:44Z",
-      "capture_method": "mcp_stdio_tools_list",
-      "tool_count": 98,
-      "write_count": 34,
-      "has_output_schema_count": 0,
-      "tools_sha256": "41be662ac76c297fca10b2ea6cd71882472971cfd553a05fd26829808a616772",
-      "notes": "Widely-used open-source Atlassian Jira+Confluence MCP server; dummy credentials used for tools/list."
     },
     {
       "name": "grafana",
@@ -500,6 +425,21 @@
       "has_output_schema_count": 0,
       "tools_sha256": "2e22c42d56ce83775bc321e3c497fa15733838f3356b599d46f69e4611772950",
       "notes": "Official Tavily MCP server; dummy TAVILY_API_KEY used for tools/list only."
+    },
+    {
+      "name": "entur",
+      "display_name": "Entur Journey Planner MCP",
+      "category": "transport",
+      "repo_url": "https://developer.entur.org/",
+      "package": "https://api.entur.io/journey-planner-mcp/v1/mcp",
+      "source_ref": "v1",
+      "captured_at": "2026-11-20T14:21:03Z",
+      "capture_method": "mcp_http_tools_list",
+      "tool_count": 8,
+      "write_count": 0,
+      "has_output_schema_count": 0,
+      "tools_sha256": "c7494aa7504fb83d8f420acab60e9e82ffdb171cceb2b410e40fc7b9a5b9f4e0",
+      "notes": "Official Norwegian national public transport MCP server (Entur)."
     }
   ],
   "remote_only_servers": [

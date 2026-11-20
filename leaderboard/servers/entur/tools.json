@@ -1,0 +1,351 @@
+{
+  "tools": [
+    {
+      "name": "nearby-mobility",
+      "description": "Find the closest shared-mobility vehicles (e-scooters, city bikes, car-share, mopeds)\nand rental stations near a location in Norway. Use when the user asks about renting a\nscooter, bike, or car nearby (\"nærmeste sparkesykkel\", \"find an electric scooter\",\n\"are there city bikes near X\"). Returns both free-floating vehicles and docking\nstations within a search radius, sorted by distance. For public transport stops,\nuse `nearby-stops` instead.\n",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "Search location — address, place name, or lat,lng coordinates"
+          },
+          "radius": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Search radius in metres (default: 500, max: 2000)"
+          },
+          "formFactors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by form factors: BICYCLE, CARGO_BICYCLE, CAR, MOPED, SCOOTER_STANDING, SCOOTER_SEATED, OTHER"
+          },
+          "propulsionTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by propulsion types: HUMAN, ELECTRIC_ASSIST, ELECTRIC, COMBUSTION, COMBUSTION_DIESEL, HYBRID, PLUG_IN_HYBRID, HYDROGEN_FUEL_CELL"
+          },
+          "operators": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by operator IDs (e.g. 'YVO:Operator:voi')"
+          },
+          "maxResults": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Maximum results per category (vehicles, stations). Default 20, max 50."
+          },
+          "language": {
+            "type": "string",
+            "description": "Language for the UI. Detect from the conversation: 'nb' for Norwegian Bokmål, 'nn' for Norwegian Nynorsk, 'en' for English."
+          }
+        },
+        "required": [
+          "location",
+          "language"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "alerts",
+      "description": "Get active service disruptions and alerts for Norwegian public transport.\nReturns situations with severity, affected lines/stops, validity period,\nand descriptions in Norwegian and English.\nUse when the user asks about delays, cancellations, strikes, or service disruptions.\nSeverity levels from lowest to highest: noImpact, verySlight, slight, normal, severe, verySevere.\nReturns the most severe situations first, at most maxResults of them; situationCount\ngives the total, and moreSituations is present when some were left out.\n",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "severities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by severity. Valid values: noImpact, verySlight, slight, normal, severe, verySevere. Default: returns all severities."
+          },
+          "maxResults": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Maximum number of situations to return, most severe first (1-50). Default: 20."
+          }
+        },
+        "required": []
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "departures",
+      "description": "Get real-time departures from a single stop or station in Norway. Use when the user\nwants to see what's leaving soon from a specific location. Shows upcoming vehicles with\nline numbers, destinations, platforms, occupancy, and live delay information. For planning routes\nbetween two locations, use the trip tool instead.\n",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "stop": {
+            "type": "string",
+            "description": "Stop place name (e.g., 'Oslo S', 'Bergen stasjon') or NSR ID (e.g., NSR:StopPlace:337)"
+          },
+          "numberOfDepartures": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of departures to return (default: 5, max: 50)"
+          },
+          "startTime": {
+            "type": "string",
+            "description": "Start time in ISO format (default: now)"
+          },
+          "timeRangeMinutes": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Time range in minutes to search (default: 60, max: 1440)"
+          },
+          "transportModes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by transport modes: air, bus, cableway, coach, funicular, lift, metro, monorail, rail, taxi, tram, trolleybus, unknown, water. Omit for all modes."
+          },
+          "language": {
+            "type": "string",
+            "description": "Language for the UI. Detect from the conversation: 'nb' for Norwegian Bokmål, 'nn' for Norwegian Nynorsk, 'en' for English."
+          }
+        },
+        "required": [
+          "stop",
+          "language"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "geocode",
+      "description": "Convert place names or addresses into geographic coordinates.\nStops come back with an NSR:StopPlace ID in properties.id, which the trip and\ndepartures tools accept as a location.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Location text to search for"
+          },
+          "maxResults": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Maximum number of results to return"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "nearby-stops",
+      "description": "    Find public transport stops near a location in Norway. Use this whenever\n    the user asks about stops, holdeplasser, or transit options near a place,\n    address, or area — not just from their current location. This is the\n    canonical tool for \"what's nearby\" transit questions in Norway and should\n    be preferred over general map/place search when the question is about\n    public transport.\n\n    Accepts addresses (\"Rådhusgata 5, Oslo\"), place names (\"Aker brygge\"),\n    or coordinates. Returns stops sorted by distance with transport modes\n    and live next-departures.\n\n    Triggers (English): \"stops near X\", \"what stops are around X\", \"show me\n    transit near X\", \"what can I take from here\", \"nearest bus/tram/metro to X\".\n\n    Triggers (Norwegian): \"vis stopp/holdeplasser i nærheten av X\", \"hva\n    går fra X\", \"nærmeste buss/trikk/T-bane til X\", \"kollektiv i nærheten\n    av X\".\n\n    Use the trip tool instead for routing between two locations, and the\n    departures tool when the user already knows which stop they want.\n",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "Starting location — address, place name, or lat,lng coordinates"
+          },
+          "radiusMeters": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Search radius in metres (default: 500, max: 2000)"
+          },
+          "maxResults": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Maximum number of stops to return (default: 10, max: 50)"
+          },
+          "transportModes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by transport modes: air, bus, cableway, coach, funicular, lift, metro, monorail, rail, taxi, tram, trolleybus, unknown, water. Omit for all modes."
+          },
+          "language": {
+            "type": "string",
+            "description": "Language for the UI. Detect from the conversation: 'nb' for Norwegian Bokmål, 'nn' for Norwegian Nynorsk, 'en' for English."
+          }
+        },
+        "required": [
+          "location",
+          "language"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "poll-departures",
+      "description": "Refreshes departure data for a stop. Called by the departures UI.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "stop": {
+            "type": "string",
+            "description": "NSR stop place ID (e.g. NSR:StopPlace:337)"
+          },
+          "numberOfDepartures": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of departures to return"
+          },
+          "startTime": {
+            "type": "string",
+            "description": "Start time in ISO format"
+          },
+          "timeRangeMinutes": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Time range in minutes"
+          },
+          "transportModes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by transport modes"
+          },
+          "language": {
+            "type": "string",
+            "description": "Language code (en, nb, nn)"
+          }
+        },
+        "required": [
+          "stop"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "poll-trip",
+      "description": "Re-plans a trip with updated parameters. Called by the trip map UI.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Starting location"
+          },
+          "to": {
+            "type": "string",
+            "description": "Destination location"
+          },
+          "departureTime": {
+            "type": "string",
+            "description": "Departure time in ISO format"
+          },
+          "arrivalTime": {
+            "type": "string",
+            "description": "Arrival time in ISO format"
+          },
+          "maxResults": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Maximum number of trip options"
+          },
+          "language": {
+            "type": "string",
+            "description": "Language code (en, nb, nn)"
+          },
+          "transportModes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by transport modes"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    },
+    {
+      "name": "trip",
+      "description": "Plan multi-leg public transport routes between two locations across Norway and the Nordic region.\nUse when the user needs journey options with departure/arrival times, transfers, occupancy, and trip duration.\nFor real-time departures from a specific stop, use the departures tool instead.",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Starting location: address, place name, coordinates (lat,lng), or a stop ID (NSR:StopPlace:<digits>). A name uses the geocoder's first match; when it is ambiguous, such as a town with several ferry terminals, call geocode and pass the right stop's ID."
+          },
+          "to": {
+            "type": "string",
+            "description": "Destination location: address, place name, coordinates (lat,lng), or a stop ID (NSR:StopPlace:<digits>). A name uses the geocoder's first match; when it is ambiguous, such as a town with several ferry terminals, call geocode and pass the right stop's ID."
+          },
+          "departureTime": {
+            "type": "string",
+            "description": "Departure time in ISO format (e.g., 2023-05-26T12:00:00)"
+          },
+          "arrivalTime": {
+            "type": "string",
+            "description": "Arrival time in ISO format (e.g., 2023-05-26T14:00:00)"
+          },
+          "maxResults": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Maximum number of trip options to return"
+          },
+          "language": {
+            "type": "string",
+            "description": "Language for the UI. Detect from the conversation: 'nb' for Norwegian Bokmål, 'nn' for Norwegian Nynorsk, 'en' for English."
+          },
+          "transportModes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by transport modes: air, bus, cableway, coach, funicular, lift, metro, monorail, rail, taxi, tram, trolleybus, unknown, water. Omit for all modes."
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "language"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false
+      }
+    }
+  ]
+}

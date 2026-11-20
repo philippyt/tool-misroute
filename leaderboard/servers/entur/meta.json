@@ -1,0 +1,15 @@
+{
+  "name": "entur",
+  "display_name": "Entur Journey Planner MCP",
+  "category": "transport",
+  "repo_url": "https://developer.entur.org/",
+  "package": "https://api.entur.io/journey-planner-mcp/v1/mcp",
+  "source_ref": "v1",
+  "captured_at": "2026-11-20T14:21:03Z",
+  "capture_method": "mcp_http_tools_list",
+  "tool_count": 8,
+  "write_count": 0,
+  "has_output_schema_count": 0,
+  "tools_sha256": "c7494aa7504fb83d8f420acab60e9e82ffdb171cceb2b410e40fc7b9a5b9f4e0",
+  "notes": "Official Norwegian national public transport MCP server (Entur)."
+}

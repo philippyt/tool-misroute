@@ -31,14 +31,12 @@ LEADERBOARD_DIR = Path(__file__).resolve().parent
 SERVERS_DIR = LEADERBOARD_DIR / "servers"
 
 SURFACE_SERVERS = [
-    "filesystem",
-    "git",
-    "memory",
-    "slack",
-    "playwright",
-    "notion",
     "fetch",
     "time",
+    "entur",
+    "memory",
+    "git",
+    "filesystem",
 ]
 
 # 6 families: budget + open-weight + frontier (surface preset uses budget+open-weight + mid/frontier)

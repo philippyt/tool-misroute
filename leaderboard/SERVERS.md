@@ -1,7 +1,7 @@
 # MCP Leaderboard Server Snapshots
 
-Generated: `2026-11-20T13:50:39Z`  
-Captured servers: **33** | Total tools: **942** | Write tools: **155** | With `outputSchema`: **0**
+Generated: `2026-11-20T14:21:03Z`  
+Captured servers: **29** | Total tools: **621** | Write tools: **108** | With `outputSchema`: **0**
 
 ## Captured Servers
 
@@ -15,8 +15,6 @@ Captured servers: **33** | Total tools: **942** | Write tools: **155** | With `o
 | [`filesystem`](servers/filesystem/tools.json) | code | 16 | 4 | 0 | `2.4.0` | `mcp_stdio_tools_list` | `@modelcontextprotocol/server-filesystem` |
 | [`git`](servers/git/tools.json) | code | 14 | 4 | 0 | `2026.11.18` | `mcp_stdio_tools_list` | `mcp-server-git` |
 | [`next-devtools`](servers/next-devtools/tools.json) | code | 4 | 0 | 0 | `0.4.0` | `mcp_stdio_tools_list` | `next-devtools-mcp` |
-| [`slack`](servers/slack/tools.json) | comms | 8 | 2 | 0 | `2025.4.25` | `mcp_stdio_tools_list` | `@modelcontextprotocol/server-slack` |
-| [`twilio`](servers/twilio/tools.json) | comms | 197 | 0 | 0 | `0.7.0` | `mcp_stdio_tools_list` | `@twilio-alpha/mcp` |
 | [`everything`](servers/everything/tools.json) | control | 16 | 0 | 0 | `2.3.1` | `mcp_stdio_tools_list` | `@modelcontextprotocol/server-everything` |
 | [`fetch`](servers/fetch/tools.json) | control | 1 | 0 | 0 | `2026.11.18` | `mcp_stdio_tools_list` | `mcp-server-fetch` |
 | [`sequential-thinking`](servers/sequential-thinking/tools.json) | control | 1 | 0 | 0 | `2.2.0` | `mcp_stdio_tools_list` | `@modelcontextprotocol/server-sequential-thinking` |
@@ -29,10 +27,7 @@ Captured servers: **33** | Total tools: **942** | Write tools: **155** | With `o
 | [`motherduck`](servers/motherduck/tools.json) | database | 4 | 1 | 0 | `1.1.1` | `mcp_stdio_tools_list` | `mcp-server-motherduck` |
 | [`redis`](servers/redis/tools.json) | database | 53 | 7 | 0 | `0.5.1` | `mcp_stdio_tools_list` | `redis-mcp-server` |
 | [`supabase`](servers/supabase/tools.json) | database | 36 | 13 | 0 | `0.19.0` | `mcp_stdio_tools_list` | `@supabase/mcp-server-supabase` |
-| [`figma-developer`](servers/figma-developer/tools.json) | design | 2 | 0 | 0 | `0.13.2` | `mcp_stdio_tools_list` | `figma-developer-mcp` |
 | [`context7`](servers/context7/tools.json) | docs | 2 | 0 | 0 | `4.7.3` | `mcp_stdio_tools_list` | `@upstash/context7-mcp` |
-| [`notion`](servers/notion/tools.json) | docs | 24 | 11 | 0 | `2.6.1` | `mcp_stdio_tools_list` | `@notionhq/notion-mcp-server` |
-| [`atlassian-oss`](servers/atlassian-oss/tools.json) | issue_tracker | 98 | 34 | 0 | `0.24.7` | `mcp_stdio_tools_list` | `mcp-atlassian` |
 | [`grafana`](servers/grafana/tools.json) | observability | 80 | 13 | 0 | `2.2.0` | `mcp_stdio_tools_list` | `mcp-grafana` |
 | [`sentry`](servers/sentry/tools.json) | observability | 74 | 21 | 0 | `0.50.0` | `mcp_stdio_tools_list` | `@sentry/mcp-server` |
 | [`paypal`](servers/paypal/tools.json) | payments | 28 | 12 | 0 | `1.8.1` | `mcp_stdio_tools_list` | `@paypal/mcp` |
@@ -40,20 +35,7 @@ Captured servers: **33** | Total tools: **942** | Write tools: **155** | With `o
 | [`exa`](servers/exa/tools.json) | search | 3 | 1 | 0 | `3.5.1` | `mcp_stdio_tools_list` | `exa-mcp-server` |
 | [`firecrawl`](servers/firecrawl/tools.json) | search | 34 | 0 | 0 | `3.41.0` | `mcp_stdio_tools_list` | `firecrawl-mcp` |
 | [`tavily`](servers/tavily/tools.json) | search | 5 | 0 | 0 | `0.2.22` | `mcp_stdio_tools_list` | `tavily-mcp` |
-
-## Failed Local Captures (Last Run)
-
-| Name | Error |
-|---|---|
-| `aws-cdk` | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception) |
-| `github` | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception) |
-| `gitlab` | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception) |
-| `kubernetes` | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception) |
-| `neon` | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception) |
-| `qdrant` | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception) |
-| `sqlite` | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception) |
-| `stripe` | TimeoutError:  |
-| `terraform` | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception) |
+| [`entur`](servers/entur/tools.json) | transport | 8 | 0 | 0 | `v1` | `mcp_http_tools_list` | `https://api.entur.io/journey-planner-mcp/v1/mcp` |
 
 ## Closed-Source / OAuth-Only Official Remote Servers
 
