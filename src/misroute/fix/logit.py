@@ -118,9 +118,7 @@ def _cr1_cov(
     return corr * (inv_info @ meat @ inv_info), G
 
 
-def _binary_ame(
-    X: np.ndarray, beta: np.ndarray, cov: np.ndarray, col: int
-) -> tuple[float, float]:
+def _binary_ame(X: np.ndarray, beta: np.ndarray, cov: np.ndarray, col: int) -> tuple[float, float]:
     """Average marginal effect and delta-method cluster-robust SE for a binary column."""
     X1 = X.copy()
     X0 = X.copy()

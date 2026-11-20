@@ -9,7 +9,6 @@ Usage (from repo root):
 """
 
 from __future__ import annotations
-
 import argparse
 import asyncio
 import hashlib
@@ -123,28 +122,27 @@ async def fetch_tools_stdio(
     with tempfile.TemporaryFile(mode="w+b") as errlog:
 
         async def _run() -> tuple[list[dict[str, Any]], dict[str, str]]:
-            async with stdio_client(params, errlog=errlog) as (read, write):
-                async with ClientSession(read, write) as session:
-                    init_res = await session.initialize()
-                    info_obj = getattr(init_res, "serverInfo", None)
-                    server_info = {
-                        "name": str(getattr(info_obj, "name", "") or ""),
-                        "version": str(getattr(info_obj, "version", "") or ""),
-                    }
-                    tools_out: list[dict[str, Any]] = []
-                    cursor: str | None = None
-                    while True:
-                        res = (
-                            await session.list_tools(params=PaginatedRequestParams(cursor=cursor))
-                            if cursor
-                            else await session.list_tools()
-                        )
-                        for t in res.tools:
-                            tools_out.append(serialize_tool(t))
-                        cursor = getattr(res, "nextCursor", None)
-                        if not cursor:
-                            break
-                    return tools_out, server_info
+            async with stdio_client(params, errlog=errlog) as (read, write), ClientSession(read, write) as session:
+                init_res = await session.initialize()
+                info_obj = getattr(init_res, "serverInfo", None)
+                server_info = {
+                    "name": str(getattr(info_obj, "name", "") or ""),
+                    "version": str(getattr(info_obj, "version", "") or ""),
+                }
+                tools_out: list[dict[str, Any]] = []
+                cursor: str | None = None
+                while True:
+                    res = (
+                        await session.list_tools(params=PaginatedRequestParams(cursor=cursor))
+                        if cursor
+                        else await session.list_tools()
+                    )
+                    for t in res.tools:
+                        tools_out.append(serialize_tool(t))
+                    cursor = getattr(res, "nextCursor", None)
+                    if not cursor:
+                        break
+                return tools_out, server_info
 
         try:
             return await asyncio.wait_for(_run(), timeout=timeout_s)
@@ -300,9 +298,7 @@ def rebuild_index(catalog: dict[str, Any], failures: dict[str, str] | None = Non
             ]
         )
         for r in remote_only:
-            lines.append(
-                f"| `{r['name']}` | {r['category']} | `{r['endpoint']}` | {r['auth']} | {r['notes']} |"
-            )
+            lines.append(f"| `{r['name']}` | {r['category']} | `{r['endpoint']}` | {r['auth']} | {r['notes']} |")
 
     lines.append("")
     SERVERS_MD_PATH.write_text("\n".join(lines), encoding="utf-8")
