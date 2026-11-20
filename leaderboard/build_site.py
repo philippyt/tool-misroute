@@ -262,30 +262,18 @@ def build_html(board: dict[str, Any], audit_summary: dict[str, Any] | None = Non
             "</tr>"
         )
 
-    gen_bias_note = "Not enough cross-family generator variation in this run."
-    if same_gen_term:
-        gen_bias_note = (
-            f"Generator-family match effect (clustered Firth logit): "
-            f"OR {same_gen_term['odds_ratio']:.2f}, "
-            f"AME {same_gen_term.get('ame', 0.0) * 100:+.1f} pp, "
-            f"p = {same_gen_term['p']:.3g}. All headline rates below exclude each model's own generator family."
-        )
-
     if audit_summary and audit_summary.get("labeled"):
         ap = audit_summary.get("audited_precision")
         ap_ci = audit_summary.get("audited_precision_ci95") or [0, 0]
         le = audit_summary.get("label_error_rate")
         le_ci = audit_summary.get("label_error_rate_ci95") or [0, 0]
         audit_html = (
-            f"<p>Human audit ({audit_summary['labeled']} labeled of {audit_summary['total_sampled']} sampled): "
-            f"audited precision <strong>{_pct(ap)}</strong> [{ap_ci[0] * 100:.0f}, {ap_ci[1] * 100:.0f}], "
-            f"label error rate <strong>{_pct(le)}</strong> [{le_ci[0] * 100:.0f}, {le_ci[1] * 100:.0f}].</p>"
+            f"<p class='sub'>Audit ({audit_summary['labeled']}/{audit_summary['total_sampled']}): "
+            f"precision <strong>{_pct(ap)}</strong> [{ap_ci[0] * 100:.0f}, {ap_ci[1] * 100:.0f}] &middot; "
+            f"label error <strong>{_pct(le)}</strong> [{le_ci[0] * 100:.0f}, {le_ci[1] * 100:.0f}]</p>"
         )
     else:
-        audit_html = (
-            "<p class='muted'>Human audit queue exported to <code>audit_sample.jsonl</code> (pending manual review). "
-            "Synthetic rates are a routing diagnostic until audited.</p>"
-        )
+        audit_html = ""
 
     srv_manifest_rows = "".join(
         f"<tr><td>{_esc(s['server'])}</td><td><code>{_esc(s.get('package'))}</code></td>"
@@ -304,18 +292,22 @@ def build_html(board: dict[str, Any], audit_summary: dict[str, Any] | None = Non
         for i, (k, lbl) in enumerate(metrics)
     )
 
-    built_at = _esc(str(board.get("generated_at", ""))[:19])
+    built_date = _esc(str(board.get("generated_at", ""))[:10])
     ver = _esc(board.get("misroute_version"))
-    spent = float(board.get("total_spent_usd", 0.0))
-    empty_pairs = "<tr><td colspan='6' class='muted'>No confused pairs recorded.</td></tr>"
+    empty_pairs = "<tr><td colspan='6' class='muted'>None</td></tr>"
     pairs_body = "".join(pair_rows_html) if pair_rows_html else empty_pairs
+    gen_chip = (
+        f" &middot; own-family OR {same_gen_term['odds_ratio']:.2f} (p={same_gen_term['p']:.2g})"
+        if same_gen_term
+        else ""
+    )
 
     return f"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>misroute MCP tool routing leaderboard</title>
+<title>misroute leaderboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 {FONT_LINK}
@@ -324,57 +316,41 @@ def build_html(board: dict[str, Any], audit_summary: dict[str, Any] | None = Non
 </style>
 </head>
 <body>
-<h1>misroute MCP tool routing leaderboard</h1>
-<p class="muted">
-  Cross-family tool confusion across {len(servers)} frozen official MCP servers and {len(models)} models.
-  Built {built_at}Z with misroute {ver} (spend ${spent:.2f}).
-</p>
+<h1>misroute leaderboard</h1>
+<p class="sub">{len(servers)} servers &middot; {len(models)} models &middot; v{ver} &middot; {built_date}{gen_chip}</p>
 
-<h2>1. Description vs. model variance decomposition</h2>
-<p>
-  Share of explained routing-error deviance from clustered Firth logistic regression
-  (<code>error ~ tool + model + mode + order + same_gen_family</code>):
-</p>
+<h2>Variance</h2>
 {_variance_bar_svg(logit)}
-<p class="muted">{_esc(gen_bias_note)}</p>
 
-<h2>2. Server &times; model confusion matrix (leave-own-family-out)</h2>
-<p class="muted">
-  Horizontal bands across all columns show description-level confusion shared across model families;
-  vertical bands show model-specific errors.
-</p>
+<h2>Matrix</h2>
 <div class="controls">
-  <div><span class="muted">Mode:</span> {mode_btns}</div>
-  <div><span class="muted">Metric:</span> {metric_btns}</div>
+  <div>{mode_btns}</div>
+  <div>{metric_btns}</div>
 </div>
 {"".join(matrix_blocks)}
 
-<h2>3. Model summary (leave-own-family-out)</h2>
+<h2>Models</h2>
 <div class="scroll"><table>
   <tr>
-    <th>Model</th><th>Wrong tool (95% CI)</th><th>Forest plot</th><th>Hedged</th>
+    <th>Model</th><th>Wrong tool (95% CI)</th><th></th><th>Hedged</th>
     <th>Write-hedged</th><th>Bad args</th><th>Adj. OR</th><th>Own-family &Delta;</th>
   </tr>
   {"".join(model_rows_html)}
 </table></div>
 
-<h2>4. Cross-family confused tool pairs</h2>
-<p class="muted">
-  Ranked by distinct model families tripped on leave-own-family-out requests.
-  Write tools highlighted in vermilion.
-</p>
+<h2>Pairs</h2>
 <div class="scroll"><table>
   <tr>
-    <th>Server</th><th>Confused pair</th><th>Families</th>
-    <th>Error rate (95% CI)</th><th>Breakdown</th><th>Direction</th>
+    <th>Server</th><th>Pair</th><th>Families</th>
+    <th>Error (95% CI)</th><th>Split</th><th>Direction</th>
   </tr>
   {pairs_body}
 </table></div>
 
-<h2>5. Reproducibility manifest &amp; human audit</h2>
+<h2>Manifest</h2>
 {audit_html}
 <div class="scroll"><table>
-  <tr><th>Server</th><th>Package</th><th>Pinned ref</th><th>Tools</th><th>Validator agreement</th></tr>
+  <tr><th>Server</th><th>Package</th><th>Ref</th><th>Tools</th><th>Validator agreement</th></tr>
   {srv_manifest_rows}
 </table></div>
 
