@@ -226,12 +226,16 @@ class Project:
         vals = self.cfg.validator_models()
         n, src = self.cfg.requests_per_tool, self.cfg.request_source
         quotas = [n // len(gens) + (1 if i < n % len(gens) else 0) for i in range(len(gens))]
-        panel = [(self.adapter(v.name), v.name, family(v)) for v in vals]
+        panel = (
+            [(self.adapter(v.name), v.name, family(v)) for v in vals]
+            if self.cfg.validators
+            else [(self.role("validator"), vals[0].name, family(vals[0]))]
+        )
 
         async def from_one(gen_cfg, quota: int) -> list[Request]:
             if quota <= 0:
                 return []
-            gen = self.adapter(gen_cfg.name)
+            gen = self.adapter(gen_cfg.name) if self.cfg.generators else self.role("generator")
             gfam = family(gen_cfg)
             kept: list[Request] = []
             turned_down: list[dict] = []
