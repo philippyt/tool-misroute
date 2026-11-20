@@ -1,0 +1,15 @@
+{
+  "name": "sentry",
+  "display_name": "Sentry MCP",
+  "category": "observability",
+  "repo_url": "https://github.com/getsentry/sentry-mcp",
+  "package": "@sentry/mcp-server",
+  "source_ref": "0.50.0",
+  "captured_at": "2026-11-20T13:50:12Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 74,
+  "write_count": 21,
+  "has_output_schema_count": 0,
+  "tools_sha256": "653de82e48ab0d6bd7e3cc2356f517c1339c43e8db215d544522a452ceaa34b4",
+  "notes": "Official Sentry MCP server; dummy SENTRY_AUTH_TOKEN used for tools/list only."
+}

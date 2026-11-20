@@ -1,0 +1,15 @@
+{
+  "name": "sequential-thinking",
+  "display_name": "MCP Sequential Thinking (Reference Control)",
+  "category": "control",
+  "repo_url": "https://github.com/modelcontextprotocol/servers",
+  "package": "@modelcontextprotocol/server-sequential-thinking",
+  "source_ref": "2.2.0",
+  "captured_at": "2026-11-20T13:45:47Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 1,
+  "write_count": 0,
+  "has_output_schema_count": 0,
+  "tools_sha256": "9cf0f27807e4369ef0a78ce1d27632b01ff08a2422954318f2137f02f5b733b7",
+  "notes": "Official MCP reference server (control: single reasoning tool)."
+}

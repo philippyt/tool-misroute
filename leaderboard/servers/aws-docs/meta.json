@@ -1,0 +1,15 @@
+{
+  "name": "aws-docs",
+  "display_name": "AWS Documentation MCP",
+  "category": "cloud",
+  "repo_url": "https://github.com/awslabs/mcp",
+  "package": "awslabs.aws-documentation-mcp-server",
+  "source_ref": "1.2.6",
+  "captured_at": "2026-11-20T13:50:26Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 5,
+  "write_count": 0,
+  "has_output_schema_count": 0,
+  "tools_sha256": "baa45ba7a66a436c01a17e2ce316b6b148c380fe6c3bc18ded59cc43afe531d9",
+  "notes": "Official AWS Labs documentation MCP server."
+}

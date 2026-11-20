@@ -1,0 +1,31 @@
+{
+  "tools": [
+    {
+      "name": "list_databases",
+      "description": "List available ClickHouse databases",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "List Databases"
+    },
+    {
+      "name": "list_tables",
+      "description": "List available ClickHouse tables in a database, including schema, comment,\nrow count, and column count.\n\nIntegers outside [-9007199254740991, 9007199254740991] in table metadata are\nreturned as decimal strings.\nPagination tokens are single-use and retained for up to one hour.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "List Tables"
+    },
+    {
+      "name": "run_query",
+      "description": "Execute SQL queries in ClickHouse. Queries run in read-only mode by default. Bind optional params by name with {name:Type} placeholders, such as {name:String} or {vector:Array(Float32)}. Values may be JSON scalars, nulls, or arrays. Pass exact large integers as decimal strings. JSON lists and objects cannot bind to Tuple and Map types. Python percent formatting and $name$ raw binary parameters are not supported. Parameter values stay out of the MCP server's normal SQL log lines, but may appear in errors and backend logs. Set CLICKHOUSE_ALLOW_WRITE_ACCESS=true to allow DDL and DML operations. Set CLICKHOUSE_ALLOW_DROP=true to additionally allow destructive operations (DROP, TRUNCATE, DELETE, UPDATE, REPLACE TABLE/PARTITION, CREATE OR REPLACE, CLEAR COLUMN/INDEX/PROJECTION, DETACH PERMANENTLY). That gate is a best-effort accident guard, not a security boundary. Integers outside [-9007199254740991, 9007199254740991] are returned as decimal strings. Two optional checks also run through this tool. Use DESCRIBE (<query>) when you need a query's output columns and types; it inspects the result schema and surfaces analysis errors such as an unknown column, but a query that describes cleanly can still fail at runtime. Consider EXPLAIN ESTIMATE <query> before a SELECT that could be expensive; it returns the estimated parts, rows and marks read from MergeTree family tables, which is not run time and not result size. Neither runs the query body, though analysis can execute scalar subqueries.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Run Query"
+    }
+  ]
+}

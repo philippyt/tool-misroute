@@ -1,0 +1,15 @@
+{
+  "name": "memory",
+  "display_name": "MCP Memory (Reference)",
+  "category": "database",
+  "repo_url": "https://github.com/modelcontextprotocol/servers",
+  "package": "@modelcontextprotocol/server-memory",
+  "source_ref": "2.2.1",
+  "captured_at": "2026-11-20T13:45:54Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 9,
+  "write_count": 6,
+  "has_output_schema_count": 0,
+  "tools_sha256": "cc7f27d41daefad466dd964046e2cf24a16183710824b06720f2df2df9991550",
+  "notes": "Official MCP reference knowledge-graph memory server; sibling risk across entities/relations/observations."
+}

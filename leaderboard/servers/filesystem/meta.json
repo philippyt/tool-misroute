@@ -1,0 +1,15 @@
+{
+  "name": "filesystem",
+  "display_name": "MCP Filesystem (Reference)",
+  "category": "code",
+  "repo_url": "https://github.com/modelcontextprotocol/servers",
+  "package": "@modelcontextprotocol/server-filesystem",
+  "source_ref": "2.4.0",
+  "captured_at": "2026-11-20T13:45:51Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 16,
+  "write_count": 4,
+  "has_output_schema_count": 0,
+  "tools_sha256": "c851bb2355a51e381427040bf726ec893ed1d307f57d0b18330bdda956475d71",
+  "notes": "Official MCP reference filesystem server; sibling risk across read/edit/write/list/search tools."
+}

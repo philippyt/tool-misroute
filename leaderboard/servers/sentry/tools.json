@@ -1,0 +1,1056 @@
+{
+  "tools": [
+    {
+      "name": "whoami",
+      "description": "Identify the authenticated Sentry user: name and email.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Who Am I",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "find_organizations",
+      "description": "List or search the Sentry organizations the user can access. Returns each organization's slug and region URL, which other Sentry tools take, plus its web URL; 25 per page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Find Organizations",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "find_teams",
+      "description": "List or search teams in a Sentry organization. Returns each team's slug and numeric ID, 25 per page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Find Teams",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "find_projects",
+      "description": "List or search projects in a Sentry organization. Returns project slugs, 25 per page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Find Projects",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "find_releases",
+      "description": "List or search releases (deployed versions) in a Sentry organization or project. Returns each release's dates, new issue count, last commit, and last deploy. Returns at most 25 releases with no next page; narrow by project or version to see others.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Find Releases",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_release_details",
+      "description": "Get one Sentry release by exact version: its projects, deploys, environments, recent commits, and optionally release health (adoption stages and session bounds). To find issues introduced in a release, use search_issues with `release:<version>`.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Release Details",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "find_dashboards",
+      "description": "List or search Sentry dashboards in an organization by title, returning dashboard IDs and titles. Open one with get_dashboard_details.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Find Dashboards",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_dashboard_details",
+      "description": "Get one Sentry dashboard by numeric ID or exact title: its widgets with saved query definitions and transformations, projects, environments, filters, and layout. Returns saved queries, not live widget data. To find a dashboard, use find_dashboards.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Dashboard Details",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "find_monitors",
+      "description": "Find Sentry cron monitors, which track scheduled jobs through check-ins. Returns each monitor's status, schedule, owner, project, and recent environment state.\nUptime URL checks: find_uptime_monitors. Metric thresholds: find_metric_monitors.\nWhen more results exist, narrow by project, environment, owner, or name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Find Cron Monitors",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_monitor_details",
+      "description": "Get a Sentry cron monitor (scheduled job): schedule, status, owner, environments, recent check-ins (missed, failed, timeout, OK), and check-in stats.\nUptime URL checks: find_uptime_monitors. Metric thresholds: find_metric_monitors.\nIssues for a monitor: search_issues with monitor.slug:<slug>.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Cron Monitor Details",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "create_monitor",
+      "description": "Create a Sentry cron monitor that alerts on missed, failed, or slow runs of a scheduled job. Uptime URL checks: find_uptime_monitors. Metric thresholds: find_metric_monitors.\nThe job must send check-ins with the returned slug (SDK monitor config or sentry monitor run).\nA disabled status you did not request means no cron seat was free: tell the user; it ignores check-ins until enabled.\nAfter an error or timeout, check find_monitors before retrying.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Create Cron Monitor",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "delete_monitor_environment",
+      "description": "Delete one environment from a Sentry cron monitor, irreversibly. The monitor and its other environments are kept; an absent environment counts as success.\nTo find the monitor and exact environment name, use find_monitors or get_monitor_details.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Delete Cron Monitor Environment",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "idempotent_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "find_uptime_monitors",
+      "description": "Find Sentry uptime monitors, which check a URL over HTTP. Returns each monitor's URL, status, interval, owner, and project.\nScheduled jobs (cron): find_monitors. Metric thresholds: find_metric_monitors.\nWhen more results exist, narrow by project, environment, owner, or name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Find Uptime Monitors",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_uptime_monitor_details",
+      "description": "Get a Sentry uptime monitor: its URL, interval, thresholds, status, and recent HTTP check results (status code, duration, failures). Request bodies are never returned; sensitive headers are redacted.\nScheduled jobs (cron): find_monitors. Metric thresholds: find_metric_monitors.\nRelated issues: search_issues with uptime_rule:<id>.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Uptime Monitor Details",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "find_metric_monitors",
+      "description": "Find Sentry Metric Monitors that alert when an error count, latency, log, metric, or crash rate crosses a threshold. Returns monitor IDs, queries, and connected Alerts.\nCron jobs: find_monitors. URL checks: find_uptime_monitors. Notifications: alert rules.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Find Metric Monitors",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_metric_monitor_details",
+      "description": "Get a Sentry Metric Monitor: its query, dataset, detection mode, thresholds, resolution conditions, and connected Alerts.\nCondition results: 75 critical, 50 warning, 0 resolved. Percent thresholds are absolute: 110 means 10% higher. Windows are in seconds.\nConnected Alerts: get_alert_rule. Cron jobs: find_monitors. URL checks: find_uptime_monitors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Metric Monitor Details",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "create_metric_monitor",
+      "description": "Create a Sentry Metric Monitor that detects when a metric, such as an error count or latency, crosses a static, percent-change, or dynamic threshold. New monitors start active.\nCopy a monitor's setup from get_metric_monitor_details. Notifications come from Alerts: create_alert_rule. Cron jobs: find_monitors. URL checks: find_uptime_monitors.\nCreation can persist before an error or timeout; check find_metric_monitors before retrying.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Create Metric Monitor",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "idempotent_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "update_metric_monitor",
+      "description": "Update a Sentry Metric Monitor: its query, detection mode and conditions, name, owner, status, or connected Alerts. Omitted fields stay unchanged.\nRead it with get_metric_monitor_details first. Alert notification actions change with update_alert_rule. Cron jobs: find_monitors. URL checks: find_uptime_monitors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Update Metric Monitor",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "idempotent_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "delete_metric_monitor",
+      "description": "Permanently delete a Sentry Metric Monitor, and its legacy metric alert and incident history if present. Connected Alerts are kept.\nTo pause detection instead, use update_metric_monitor. Cron jobs: find_monitors. URL checks: find_uptime_monitors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Delete Metric Monitor",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "idempotent_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "create_uptime_monitor",
+      "description": "Create a Sentry uptime monitor that checks a URL over HTTP on an interval. Response assertions are not supported; set them in the Sentry UI.\nScheduled jobs (cron): find_monitors. Metric thresholds: find_metric_monitors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Create Uptime Monitor",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "update_uptime_monitor",
+      "description": "Update a Sentry uptime monitor: URL, interval, timeout, HTTP method, headers, body, status, owner, environment, or failure thresholds. Omitted fields stay unchanged.\nScheduled jobs (cron): find_monitors. Metric thresholds: find_metric_monitors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Update Uptime Monitor",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "idempotent_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "delete_uptime_monitor",
+      "description": "Permanently delete a Sentry uptime (HTTP URL check) monitor. To pause it, use update_uptime_monitor.\nScheduled jobs (cron): find_monitors. Metric thresholds: find_metric_monitors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Delete Uptime Monitor",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "idempotent_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "find_alert_rules",
+      "description": "Find Sentry alert rules: Issue Alerts (notification workflows) and Metric Monitor alerts, with their conditions, actions, owner, and environment.\nMetric entries carry legacy IDs; find_metric_monitors returns canonical monitor IDs. Cron and uptime monitors: find_monitors, find_uptime_monitors.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Find Alert Rules",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_alert_rule",
+      "description": "Get one Sentry alert rule by ID or exact name: its triggers, conditions, notification actions, connected monitors, and project scope.\nPrefer get_metric_monitor_details for Metric Monitors; cron and uptime monitors have their own get tools.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Alert Rule",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_alert_options",
+      "description": "List what a Sentry Alert (notification workflow) can use: notification actions and integrations (Slack, Teams, email, PagerDuty) with their config schemas, trigger and filter conditions, or monitor and issue-stream sources.\nUse the results in create_alert_rule or update_alert_rule. Slack and Teams take channel names; Discord needs a channel ID or URL. Choices for dynamic Sentry App fields are not listed.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Alert Options",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "update_alert_rule",
+      "description": "Update a Sentry Alert (notification workflow): name, status, owner, environment, notification frequency, triggers, notification actions, and connected projects or monitors.\nRead it with get_alert_rule first; get_alert_options lists valid actions, conditions, and sources. Omitted fields stay unchanged.\nMetric Monitor queries and thresholds change with update_metric_monitor; cron and uptime monitors have their own tools.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Update Alert Rule",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "idempotent_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "create_alert_rule",
+      "description": "Create a Sentry Alert (notification workflow) that sends Slack, email, PagerDuty, or other notifications when its connected issue streams or monitors trigger.\nget_alert_options lists valid actions, conditions, and sources; update_alert_rule adds sources to an existing Alert.\nMonitors are separate tools: find_metric_monitors (metric thresholds), find_monitors (cron jobs), find_uptime_monitors (URL checks).\nAfter a timeout or error, search for the Alert before retrying: it may already exist.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Create Alert Rule",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "idempotent_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "delete_alert_rule",
+      "description": "Permanently delete a Sentry Alert (notification workflow) and its notifications for every connected project and monitor. Connected monitors are kept.\nTo stop one source or pause it, use update_alert_rule. Metric Monitors are deleted with delete_metric_monitor.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Delete Alert Rule",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "idempotent_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_issue_details",
+      "description": "Get the details of one Sentry issue, by issue ID, URL, or event ID: title, status, counts, the latest or a chosen event with its stacktrace, Seer root cause, suspect commit, linked tickets, and replays. Can also return installed package versions for one event. Use search_issues to list issues.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Issue Details",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_event_stacktrace",
+      "description": "Get the full stack trace (stacktrace) of one thread in a Sentry event, such as a non-crashed thread listed in the issue details. Lists the threads when the selector matches none or several.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Event Stacktrace",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_issue_activity",
+      "description": "Get the activity feed and comments of a Sentry issue: who resolved, ignored, assigned, or commented on it, and when.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Issue Activity",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_issue_breadcrumbs",
+      "description": "Get the breadcrumb trail of a Sentry issue event: the navigation, console, HTTP, and user actions leading up to the error.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Issue Breadcrumbs",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_issue_user_reports",
+      "description": "Get the legacy User Reports and crash-report feedback attached to a Sentry issue: what users said happened. For User Feedback widget submissions, use search_issues.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Issue User Reports",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_issue_tag_values",
+      "description": "Get the tag value distribution of a Sentry issue: counts of each browser, environment, release, URL, or other tag value affected. Tag keys vary by platform, SDK, and custom tags.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Issue Tag Values",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_trace_details",
+      "description": "Get an overview of one Sentry trace by trace ID: trace statistics, a span breakdown, and a link to the trace in Sentry. Shows a condensed subset of spans, not every span; to list all spans in a trace, use search_traces.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Trace Details",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_span_details",
+      "description": "Get one span in a Sentry trace by trace ID and span ID: its attributes, timing, errors, and child spans. For a whole-trace overview, use get_trace_details.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Span Details",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_replay_details",
+      "description": "Get a Sentry session replay's summary and a timeline of what the user did: page loads and navigations, clicks (including dead and rage clicks), inputs and key presses, console warnings and errors, failed requests, and feedback.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Replay Details",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_event_attachment",
+      "description": "List or download the attachments of a Sentry event, such as screenshots, log files, and minidumps uploaded with an error report.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Event Attachment",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "update_issue",
+      "description": "Update a Sentry issue: resolve, ignore (archive), or reopen it, assign it to a user or team, or change its priority.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Update Issue",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "idempotent_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "link_issue",
+      "description": "Link an existing external ticket or GitHub pull request to a Sentry issue by URL: Jira, GitHub, GitLab, Bitbucket, Azure DevOps, or an installed Sentry App such as Linear. Adds a reference only; it does not create the ticket or change the issue status (use update_issue).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Link Issue",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "idempotent_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "unlink_issue",
+      "description": "Remove a linked external ticket or GitHub pull request from a Sentry issue by URL. Deletes only the association, not the ticket or the issue; safe to repeat.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Unlink Issue",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "idempotent_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "search_errors",
+      "description": "Search Sentry error events: exceptions, crashes, and stack traces, including top errors and trends over time. Returns individual events, counts, and aggregates; for grouped issue lists, use search_issues. For log lines, including error-level logs, use search_logs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search Errors",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "search_logs",
+      "description": "Search Sentry logs: application log lines at any severity, including trends over time. Returns individual events, counts, and aggregates; for grouped issue lists, use search_issues. For exceptions and crashes, use search_errors; for requests whose trace has a matching log, use search_traces.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search Logs",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "search_traces",
+      "description": "Search Sentry traces and spans: requests, endpoints, HTTP and DB calls, and AI/LLM calls, for latency, throughput, and slowness over time. Also finds spans whose trace has a matching log, metric, or span. Returns individual events, counts, and aggregates; for grouped issue lists, use search_issues. For exceptions, use search_errors; for log lines, use search_logs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search Traces",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "search_metrics",
+      "description": "Search Sentry metrics: counters, gauges, and distributions, for values, percentiles, totals, and trends over time. Returns individual events, counts, and aggregates; for grouped issue lists, use search_issues. For latency recorded on spans, use search_traces.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search Metrics",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "search_profiles",
+      "description": "Search Sentry profiles: transaction and continuous profiles, to find profile IDs and profiled transactions. Returns individual events, counts, and aggregates; for grouped issue lists, use search_issues. Open a result with get_profile or get_profile_details for flamegraphs and hotspots.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search Profiles",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "search_replays",
+      "description": "Search Sentry session replays by rage clicks, dead clicks, visited pages, errors seen, and users. Returns replay lists, not counts or aggregates.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search Replays",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "create_team",
+      "description": "Create a new team in a Sentry organization. Returns the team's ID, slug, and name.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Create Team",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "create_project",
+      "description": "Create a new Sentry project for an app or service and provision its DSN (client key) for SDK setup. Optionally links a connected repository with a root code mapping. Returns the project, its DSN, whether the repository linked, and the Sentry signals its platform supports, each with a docs link.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Create Project",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "update_project",
+      "description": "Rename a Sentry project, change its slug, or change its platform. Returns the updated project. To change which teams can access a project, use add_team_to_project or remove_team_from_project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Update Project",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "idempotent_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "add_team_to_project",
+      "description": "Grant a team access to a Sentry project. Returns the project's teams; makes no change if the team already has access.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Add Team to Project",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "idempotent_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "remove_team_from_project",
+      "description": "Revoke a team's access to a Sentry project. Returns the project's remaining teams. Refuses to remove the project's last team.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Remove Team from Project",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "create_dsn",
+      "description": "Create an additional DSN (client key) for an existing Sentry project, such as a separate production key. Returns the new key's ID, name, and DSN. create_project already provisions a DSN for a new project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Create DSN",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "find_dsns",
+      "description": "List the DSNs (client keys) for a Sentry project: the SENTRY_DSN an SDK uses to send events. Returns each key's ID, name, and DSN.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Find DSNs",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "update_dsn",
+      "description": "Update a DSN (client key) on a Sentry project: rename it, activate or deactivate it, set or remove its rate limit, or change JavaScript Loader Script options. Returns the settings Sentry saved; tell the user if any requested setting did not change.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Update DSN",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "idempotent_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "analyze_issue_with_seer",
+      "description": "Run Seer AI root cause analysis on a Sentry issue and return the root cause, affected code locations, and a suggested code fix. Returns an existing analysis at once; a new one takes minutes, so call it only when the user asks for Seer or a fix, or the issue details do not show the cause. Does not support metric alert issues.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Analyze Issue with Seer",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "search_docs",
+      "description": "Search Sentry documentation for SDK setup, framework integrations, instrumentation, and configuration such as sampling, data scrubbing, and source maps. Returns matching page paths and snippets only. Use the Sentry tool `get_doc` to read a full page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search Sentry Docs",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_doc",
+      "description": "Fetch the full markdown content of a Sentry documentation page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Sentry Doc",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "search_issues",
+      "description": "Search Sentry issues (grouped errors, crashes, and user feedback) and list them with status, occurrences, users impacted, assignee, and first and last seen. Accepts natural language or Sentry issue search syntax. For individual events, counts, or aggregates, use search_errors, search_logs, or search_traces.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search Issues",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "find_related_issues",
+      "description": "Find Sentry issues related to an issue: likely duplicates with a similar stack trace in the same project, other errors in the same trace, and the error issues behind a metric alert. Returns each related issue with its status and why it's related. Use it before resolving or ignoring an issue. It doesn't compare titles or error messages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Find Related Issues",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "search_issue_events",
+      "description": "Search and filter the individual events (occurrences) of one Sentry issue, newest first, by environment, release, user, trace, or time. Accepts natural language or Sentry event search syntax. Use search_issues to search across issues.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search Issue Events",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "find_dropped_events",
+      "description": "Find events Sentry dropped before storing them (SDK sampling, filters, rate limits, quota, spike protection), as dropped and accepted volume over time by outcome and reason. Each drop is tagged intentional (sampling, filters) or unintentional (quota, abuse). Use it to explain flat, low, or missing data that searches, charts, and dashboards cannot show; no drops means the data is complete.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Find Dropped Events",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_profile",
+      "description": "Analyze aggregated CPU profiles (flamegraph) for one Sentry transaction: hot paths, per-function p75/p95/p99, user versus library code, and regressions against a baseline period. For one profile by ID or URL, use get_profile_details.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Transaction Profile",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_profile_details",
+      "description": "Inspect one Sentry profile by profile ID, profiler ID, or URL: transaction, trace, release, and runtime details, sample and thread structure, and top frames. Handles transaction and continuous profiles. For aggregated hot paths across a transaction, use get_profile.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Profile Details",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_sentry_mcp_info",
+      "description": "Get the version and details of the running Sentry MCP server, e.g. to check compatibility with a skill or integration.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Sentry MCP Info",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": false
+      }
+    },
+    {
+      "name": "get_sentry_resource",
+      "description": "Fetch a Sentry resource by URL or ID: issues, events, traces, spans, agent conversations, replays, monitors, dashboards, preprod snapshots, and snapshot images. Start here for any Sentry URL or issue, event, trace, or replay ID; the type is detected from the URL. To list agent conversations, use search_agent_conversations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Sentry Resource",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_snapshot",
+      "description": "Get a preprod snapshot comparison by ID, such as a failed visual regression or screenshot test from CI: its metadata, image counts, and changed images with the percent of pixels that differ. For an app's latest baseline screenshots, use get_latest_base_snapshot. For a snapshot URL, use get_sentry_resource.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Snapshot",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_snapshot_image",
+      "description": "Get one image from a preprod snapshot: the current, previous, or diff screenshot, with its metadata. Returns a preview image unless full resolution is requested. Get image file names from get_snapshot or get_latest_base_snapshot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Snapshot Image",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_latest_base_snapshot",
+      "description": "Get an app's latest UI screenshots (baseline or golden images) from preprod snapshots, such as the current screens, dark mode variants, or the baseline behind a visual regression. Returns each image's file name, display name, and description, grouped. For a snapshot comparison by ID, use get_snapshot.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Latest Base Snapshot",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "get_agent_conversation_details",
+      "description": "Get the transcript of one Sentry agent conversation (formerly AI conversation): user and assistant messages and tool calls in order, with trace and span IDs for debugging. To find conversations, use search_agent_conversations.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Agent Conversation Details",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "search_agent_conversations",
+      "description": "Search Sentry agent conversations (formerly AI conversations): one summary row per LLM agent conversation with title, cost, tokens, call counts, and previews. For one conversation's transcript, use get_agent_conversation_details.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search Agent Conversations",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "add_issue_note",
+      "description": "Add a comment (note) to a Sentry issue's activity feed, visible to the whole team. Use it to record findings or decisions; never post secrets or credentials.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Add Issue Note",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "onboarding_status_update",
+      "description": "Report progress to Sentry's agentic onboarding (getting started) UI for one stage of an SDK setup run. Use only with a run token from the Sentry getting started skill, at the stage boundaries it describes. Returns whether Sentry wants further updates; stop when it does not.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Update Onboarding Status",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "idempotent_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "submit_feedback_to_sentry_team",
+      "description": "Report friction with the Sentry MCP server to its maintainers (not the user's Sentry organization): a missing tool, a tool that failed or returned wrong data, a confusing tool, or an idea. Call it at most once per task, only when a Sentry MCP tool was missing, failed, or got in the way. Skip it if the task went fine or did not need Sentry; never use it to log progress or to test it. Do not include secrets or personal data.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Submit Feedback to Sentry Team",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    }
+  ]
+}

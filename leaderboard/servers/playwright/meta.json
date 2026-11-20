@@ -1,0 +1,15 @@
+{
+  "name": "playwright",
+  "display_name": "Playwright MCP",
+  "category": "browser",
+  "repo_url": "https://github.com/microsoft/playwright-mcp",
+  "package": "@playwright/mcp",
+  "source_ref": "0.0.86",
+  "captured_at": "2026-11-20T13:45:57Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 25,
+  "write_count": 2,
+  "has_output_schema_count": 0,
+  "tools_sha256": "c299deb672c9a4fc3acc177bb472271c46c96dc6bd952642224372ced6e4945a",
+  "notes": "Official Microsoft Playwright MCP server; high sibling risk across browser automation tools."
+}

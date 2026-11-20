@@ -1,0 +1,15 @@
+{
+  "name": "fetch",
+  "display_name": "MCP Fetch (Reference Control)",
+  "category": "control",
+  "repo_url": "https://github.com/modelcontextprotocol/servers",
+  "package": "mcp-server-fetch",
+  "source_ref": "2026.11.18",
+  "captured_at": "2026-11-20T13:45:35Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 1,
+  "write_count": 0,
+  "has_output_schema_count": 0,
+  "tools_sha256": "2352f8d2430b84876baa666563d3d7efc4aa68f39e816cac16bb84d5b1697e72",
+  "notes": "Official MCP reference server (control: minimal single-tool surface)."
+}

@@ -1,0 +1,15 @@
+{
+  "name": "mongodb",
+  "display_name": "MongoDB MCP",
+  "category": "database",
+  "repo_url": "https://github.com/mongodb-js/mongodb-mcp-server",
+  "package": "mongodb-mcp-server",
+  "source_ref": "3.3.0",
+  "captured_at": "2026-11-20T13:47:33Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 31,
+  "write_count": 6,
+  "has_output_schema_count": 0,
+  "tools_sha256": "64acedddd926e71cbb59d50710784c509e96328b2b8b230418aa15ddefcc8c03",
+  "notes": "Official MongoDB MCP server; dummy local connection string used for tools/list only."
+}

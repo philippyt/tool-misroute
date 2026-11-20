@@ -1,0 +1,44 @@
+{
+  "tools": [
+    {
+      "name": "tavily_search",
+      "description": "Search the web for current information on any topic. Use for news, facts, or data beyond your knowledge cutoff. Returns snippets and source URLs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "tavily_extract",
+      "description": "Extract content from URLs. Returns raw page content in markdown or text format.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "tavily_crawl",
+      "description": "Crawl a website starting from a URL. Extracts content from pages with configurable depth and breadth.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "tavily_map",
+      "description": "Map a website's structure. Returns a list of URLs found starting from the base URL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "tavily_research",
+      "description": "Perform comprehensive research on a given topic or question. Use this tool when you need to gather information from multiple sources to answer a question or complete a task. Returns a detailed response based on the research findings. Rate limit: 20 requests per minute.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  ]
+}

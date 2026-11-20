@@ -1,0 +1,15 @@
+{
+  "name": "brave-search",
+  "display_name": "Brave Search MCP",
+  "category": "search",
+  "repo_url": "https://github.com/brave/brave-search-mcp-server",
+  "package": "@brave/brave-search-mcp-server",
+  "source_ref": "2.2.0",
+  "captured_at": "2026-11-20T13:46:32Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 9,
+  "write_count": 0,
+  "has_output_schema_count": 0,
+  "tools_sha256": "2af810ea5c6476e7279d8b97031aeb711ab35227e021b78fb81f1aa4c6623e90",
+  "notes": "Official Brave Search MCP server; dummy BRAVE_API_KEY used for tools/list only."
+}

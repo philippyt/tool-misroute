@@ -1,0 +1,1278 @@
+{
+  "tools": [
+    {
+      "name": "jira_get_user_profile",
+      "description": "Retrieve profile information for a Jira user.\n\nUse ``user_identifier=\"me\"`` to return the account authenticated for the\ncurrent request directly from Jira's ``/myself`` endpoint. This path does\nnot require Browse Users permission.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get User Profile",
+      "annotations": {
+        "title": "Get User Profile",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_search_assignable_users",
+      "description": "Search Jira users assignable in a given project or issue.\n\nUse this when you have a display name / partial name / email fragment\nand need a concrete identifier (``name`` / ``key`` for Server/DC,\n``accountId`` for Cloud) to feed into assignee, reporter, watcher, etc.\n\nReturns the full result set so the caller can disambiguate when several\nusers match — ``get_user_profile`` only resolves one identifier and is\nnot designed for human-name search.\n\nExactly one of ``project_key`` or ``issue_key`` must be provided — the\nunderlying API (``/user/assignable/search``) requires a project or issue\ncontext and works without the global \"Browse Users\" permission that bot\naccounts in locked-down DC instances often lack.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search Assignable Users",
+      "annotations": {
+        "title": "Search Assignable Users",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_issue_watchers",
+      "description": "Get the list of watchers for a Jira issue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Issue Watchers",
+      "annotations": {
+        "title": "Get Issue Watchers",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_add_watcher",
+      "description": "Add a user as a watcher to a Jira issue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Add Issue Watcher",
+      "annotations": {
+        "title": "Add Issue Watcher",
+        "destructive_hint": false
+      }
+    },
+    {
+      "name": "jira_remove_watcher",
+      "description": "Remove a user from watching a Jira issue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Remove Issue Watcher",
+      "annotations": {
+        "title": "Remove Issue Watcher",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "jira_get_issue",
+      "description": "Get details of a specific Jira issue.\n\nIncludes Epic links and relationship information. Use the\n``include`` parameter to inline enrichments (remote_links,\ntransitions, watchers, changelog, comments, worklogs, epic_summary)\nso that separate tool calls are not needed. The ``epic_summary``\nsection only applies when the issue is an Epic and adds child-issue\naggregations (counts by status, assignee, and type, plus a\ncompletion percentage); it is aggregate-only unless\n``epic_summary_children`` is set.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Issue",
+      "annotations": {
+        "title": "Get Issue",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_search",
+      "description": "Search Jira issues using JQL (Jira Query Language).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search Issues",
+      "annotations": {
+        "title": "Search Issues",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_search_fields",
+      "description": "Search Jira fields by keyword with fuzzy match.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search Fields",
+      "annotations": {
+        "title": "Search Fields",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_field_options",
+      "description": "Get allowed option values for a custom field.\n\nReturns the list of valid options for select, multi-select, radio,\ncheckbox, and cascading select custom fields.\n\nCloud: Uses the Field Context Option API. If context_id is not provided,\nautomatically resolves to the global context.\n\nServer/DC: Uses createmeta to get allowedValues. Requires project_key\nand issue_type parameters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Field Options",
+      "annotations": {
+        "title": "Get Field Options",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_project_issues",
+      "description": "Get all issues for a specific Jira project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Project Issues",
+      "annotations": {
+        "title": "Get Project Issues",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_transitions",
+      "description": "Get available status transitions for a Jira issue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Transitions",
+      "annotations": {
+        "title": "Get Transitions",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_worklog",
+      "description": "Get worklog entries for a Jira issue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Worklog",
+      "annotations": {
+        "title": "Get Worklog",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_download_attachments",
+      "description": "Download attachments from a Jira issue.\n\nReturns attachment contents as base64-encoded content so that they are\navailable over the MCP protocol without requiring filesystem access on\nthe server. Image attachments are returned as ``EmbeddedResource`` blobs;\nall other attachments (documents, archives, etc.) are returned as\n``TextContent`` carrying a base64 payload, since many MCP clients only\nforward ``EmbeddedResource`` blobs for recognized image MIME types and\notherwise drop the attachment (#1419).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Download Attachments",
+      "annotations": {
+        "title": "Download Attachments",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_issue_images",
+      "description": "Get all images attached to a Jira issue as inline image content.\n\nFilters attachments to images only (PNG, JPEG, GIF, WebP, SVG, BMP)\nand returns them as base64-encoded ImageContent that clients can\nrender directly. Non-image attachments are excluded.\n\nFiles with ambiguous MIME types (application/octet-stream) are\ndetected by filename extension as a fallback. Images larger than\n50 MB are skipped with an error entry in the summary.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Issue Images",
+      "annotations": {
+        "title": "Get Issue Images",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_agile_boards",
+      "description": "Get jira agile boards by name, project key, or type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Agile Boards",
+      "annotations": {
+        "title": "Get Agile Boards",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_board_issues",
+      "description": "Get all issues linked to a specific board filtered by JQL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Board Issues",
+      "annotations": {
+        "title": "Get Board Issues",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_sprints_from_board",
+      "description": "Get jira sprints from board by state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Sprints from Board",
+      "annotations": {
+        "title": "Get Sprints from Board",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_sprint_issues",
+      "description": "Get jira issues from sprint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Sprint Issues",
+      "annotations": {
+        "title": "Get Sprint Issues",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_link_types",
+      "description": "Get all available issue link types.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Link Types",
+      "annotations": {
+        "title": "Get Link Types",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_create_issue",
+      "description": "Create a new Jira issue with optional Epic link or parent for subtasks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Create Issue",
+      "annotations": {
+        "title": "Create Issue",
+        "destructive_hint": false
+      }
+    },
+    {
+      "name": "jira_batch_create_issues",
+      "description": "Create multiple Jira issues in a batch.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Batch Create Issues",
+      "annotations": {
+        "title": "Batch Create Issues",
+        "destructive_hint": false
+      }
+    },
+    {
+      "name": "jira_batch_get_changelogs",
+      "description": "Get changelogs for multiple Jira issues (Cloud only).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Batch Get Changelogs",
+      "annotations": {
+        "title": "Batch Get Changelogs",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_update_issue",
+      "description": "Update an issue and optionally transition, comment, and log work.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Update Issue",
+      "annotations": {
+        "title": "Update Issue",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "jira_assign_issue",
+      "description": "Assign a Jira issue to a user using the dedicated assignment endpoint.\n\nThis is more reliable than setting assignee via update_issue, which is\nsilently ignored by some Jira configurations. Uses PUT /issue/{key}/assignee.\n\nOn Jira Server/DC the following identifier forms are all accepted:\nlogin name, email address, display name, or JIRAUSER key. The resolution\norder is: key lookup → email search (with email-as-username fallback) →\ntext search → assignable-user search scoped to the issue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Assign Issue",
+      "annotations": {
+        "title": "Assign Issue",
+        "read_only_hint": false
+      }
+    },
+    {
+      "name": "jira_delete_issue",
+      "description": "Delete an existing Jira issue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Delete Issue",
+      "annotations": {
+        "title": "Delete Issue",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "jira_move_issue",
+      "description": "Move a Jira issue to a different project (Jira Cloud only).\n\nUses Jira Cloud's bulk move API to perform a cross-project move.\nThe issue keeps its current issue type and may be assigned a new key in the\ntarget project (e.g., OLDPROJ-123 becomes NEWPROJ-456).\n\nThe move is processed asynchronously on Jira's side; this tool polls\nuntil confirmed or times out after 30 seconds.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Move Issue to Project",
+      "annotations": {
+        "title": "Move Issue to Project",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "jira_add_comment",
+      "description": "Add a comment to a Jira issue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Add Comment",
+      "annotations": {
+        "title": "Add Comment",
+        "destructive_hint": false
+      }
+    },
+    {
+      "name": "jira_edit_comment",
+      "description": "Edit an existing comment on a Jira issue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Edit Comment",
+      "annotations": {
+        "title": "Edit Comment",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "jira_add_worklog",
+      "description": "Add a worklog entry to a Jira issue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Add Worklog",
+      "annotations": {
+        "title": "Add Worklog",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "jira_link_to_epic",
+      "description": "Link an existing issue to an epic.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Link to Epic",
+      "annotations": {
+        "title": "Link to Epic",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "jira_create_issue_link",
+      "description": "Create a link between two Jira issues.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Create Issue Link",
+      "annotations": {
+        "title": "Create Issue Link",
+        "destructive_hint": false
+      }
+    },
+    {
+      "name": "jira_create_remote_issue_link",
+      "description": "Create a remote issue link (web link or Confluence link) for a Jira issue.\n\nThis tool allows you to add web links and Confluence links to Jira issues.\nThe links will appear in the issue's \"Links\" section and can be clicked to navigate to external resources.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Create Remote Issue Link",
+      "annotations": {
+        "title": "Create Remote Issue Link",
+        "destructive_hint": false
+      }
+    },
+    {
+      "name": "jira_remove_issue_link",
+      "description": "Remove a link between two Jira issues.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Remove Issue Link",
+      "annotations": {
+        "title": "Remove Issue Link",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "jira_transition_issue",
+      "description": "Transition a Jira issue to a new status.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Transition Issue",
+      "annotations": {
+        "title": "Transition Issue",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "jira_create_sprint",
+      "description": "Create Jira sprint for a board.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Create Sprint",
+      "annotations": {
+        "title": "Create Sprint",
+        "destructive_hint": false
+      }
+    },
+    {
+      "name": "jira_update_sprint",
+      "description": "Update jira sprint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Update Sprint",
+      "annotations": {
+        "title": "Update Sprint",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "jira_add_issues_to_sprint",
+      "description": "Add issues to a Jira sprint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Add Issues to Sprint",
+      "annotations": {
+        "title": "Add Issues to Sprint",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "jira_move_issues_to_backlog",
+      "description": "Move issues to the backlog, removing them from any sprint.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Move Issues to Backlog",
+      "annotations": {
+        "title": "Move Issues to Backlog",
+        "read_only_hint": false
+      }
+    },
+    {
+      "name": "jira_get_project_issue_types",
+      "description": "Get available issue types for a Jira project.\n\nReturns the list of issue types (Bug, Task, Story, Epic, etc.) that can\nbe created in the specified project. Use the returned issue type IDs with\nget_create_fields to discover what fields each type requires.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Project Issue Types",
+      "annotations": {
+        "title": "Get Project Issue Types",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_create_fields",
+      "description": "Get fields available for creating an issue of a specific type.\n\nReturns all fields (required and optional) for the given project and\nissue type, including field names, IDs, whether they're required, and\ntheir schema. Use jira_get_field_options when a returned field needs its\nallowed values.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Create Fields",
+      "annotations": {
+        "title": "Get Create Fields",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_project_versions",
+      "description": "Get all fix versions for a specific Jira project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Project Versions",
+      "annotations": {
+        "title": "Get Project Versions",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_project_components",
+      "description": "Get all components for a specific Jira project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Project Components",
+      "annotations": {
+        "title": "Get Project Components",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_all_projects",
+      "description": "Get all Jira projects accessible to the current user.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get All Projects",
+      "annotations": {
+        "title": "Get All Projects",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_search_projects",
+      "description": "Search for Jira projects by name or key prefix.\n\nUses the projects picker endpoint to return a ranked list of matching\nprojects without fetching every visible project on the instance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search Projects",
+      "annotations": {
+        "title": "Search Projects",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_project_fields",
+      "description": "Get the fields available on issues of a project (the create schema),\ndeduplicated across the project's issue types — i.e. which fields tickets in\nthis project have, regardless of whether they are filled.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Project Fields",
+      "annotations": {
+        "title": "Get Project Fields",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_service_desk_for_project",
+      "description": "Get the Jira Service Desk associated with a project key.\n\nServer/Data Center only. Not available on Jira Cloud.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Service Desk For Project",
+      "annotations": {
+        "title": "Get Service Desk For Project",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_service_desk_queues",
+      "description": "Get queues for a Jira Service Desk.\n\nServer/Data Center only. Not available on Jira Cloud.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Service Desk Queues",
+      "annotations": {
+        "title": "Get Service Desk Queues",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_queue_issues",
+      "description": "Get issues from a Jira Service Desk queue.\n\nServer/Data Center only. Not available on Jira Cloud.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Queue Issues",
+      "annotations": {
+        "title": "Get Queue Issues",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_request_types",
+      "description": "Get request types for a Jira Service Management service desk.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Request Types",
+      "annotations": {
+        "title": "Get Request Types",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_request_type_fields",
+      "description": "Get field definitions for a Jira Service Management request type.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Request Type Fields",
+      "annotations": {
+        "title": "Get Request Type Fields",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_create_customer_request",
+      "description": "Create a Jira Service Management customer request.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Create Customer Request",
+      "annotations": {
+        "title": "Create Customer Request",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "jira_create_version",
+      "description": "Create a new fix version in a Jira project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Create Version",
+      "annotations": {
+        "title": "Create Version",
+        "destructive_hint": false
+      }
+    },
+    {
+      "name": "jira_batch_create_versions",
+      "description": "Batch create multiple versions in a Jira project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Batch Create Versions",
+      "annotations": {
+        "title": "Batch Create Versions",
+        "destructive_hint": false
+      }
+    },
+    {
+      "name": "jira_update_version",
+      "description": "Update an existing fix version in a Jira project.\n\nOnly fields explicitly provided are modified; other attributes of the\nversion are left untouched. Useful for archiving/unarchiving versions,\nrenaming, or shifting release dates without recreating them.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Update Version",
+      "annotations": {
+        "title": "Update Version",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "jira_get_issue_proforma_forms",
+      "description": "Get all ProForma forms associated with a Jira issue.\n\nUses the new Jira Forms REST API. Form IDs are returned as UUIDs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Issue Forms",
+      "annotations": {
+        "title": "Get Issue Forms",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_proforma_form_details",
+      "description": "Get detailed information about a specific ProForma form.\n\nUses the new Jira Forms REST API. Returns form details including ADF design structure.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Form Details",
+      "annotations": {
+        "title": "Get Form Details",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_update_proforma_form_answers",
+      "description": "Update form field answers using the Jira Forms REST API.\n\nThis is the primary method for updating form data. Each answer object\nmust specify the question ID, answer type, and value.\n\n**⚠️ KNOWN LIMITATION - DATETIME fields:**\nThe Jira Forms API does NOT properly preserve time components in DATETIME fields.\nOnly the date portion is stored; times are reset to midnight (00:00:00).\n\n**Workaround for DATETIME fields:**\nUse jira_update_issue to directly update the underlying custom fields instead:\n1. Get the custom field ID from the form details (question's \"jiraField\" property)\n2. Use jira_update_issue with fields like: {\"customfield_XXXXX\": \"2026-01-09T11:50:00-08:00\"}\n\nExample:\n```python\n# Instead of updating via form (loses time):\n# jira_update_proforma_form_answers(issue_key, form_id, [{\"questionId\": \"91\", \"type\": \"DATETIME\", \"value\": \"...\"}])\n\n# Use direct field update (preserves time):\njira_update_issue(issue_key, {\"customfield_10542\": \"2026-01-09T11:50:00-08:00\"})\n```\n\n**Automatic DateTime Conversion:**\nFor DATE and DATETIME fields, you can provide values as:\n- ISO 8601 strings (e.g., \"2024-12-17T19:00:00Z\", \"2024-12-17\")\n- Unix timestamps in milliseconds (e.g., 1734465600000)\n\nThe tool automatically converts ISO 8601 strings to Unix timestamps.\n\nExample answers:\n[\n    {\"questionId\": \"q1\", \"type\": \"TEXT\", \"value\": \"Updated description\"},\n    {\"questionId\": \"q2\", \"type\": \"SELECT\", \"value\": \"Product A\"},\n    {\"questionId\": \"q3\", \"type\": \"NUMBER\", \"value\": 42},\n    {\"questionId\": \"q4\", \"type\": \"DATE\", \"value\": \"2024-12-17\"}\n]\n\nCommon answer types:\n- TEXT: String values\n- NUMBER: Numeric values\n- DATE: Date values (ISO 8601 string or Unix timestamp in ms)\n- DATETIME: DateTime values - ⚠️ USE WORKAROUND ABOVE\n- SELECT: Single selection from options\n- MULTI_SELECT: Multiple selections (value as list)\n- CHECKBOX: Boolean values",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Update Form Answers",
+      "annotations": {
+        "title": "Update Form Answers",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "jira_get_issue_dates",
+      "description": "Get date information and status transition history for a Jira issue.\n\nReturns dates (created, updated, due date, resolution date) and optionally\nstatus change history with time tracking for workflow analysis.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Issue Dates",
+      "annotations": {
+        "title": "Get Issue Dates",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_issue_sla",
+      "description": "Calculate SLA metrics for a Jira issue.\n\nComputes various time-based metrics including cycle time, lead time,\ntime spent in each status, due date compliance, and more.\n\nWorking hours can be configured via environment variables:\n- JIRA_SLA_WORKING_HOURS_ONLY: Enable working hours filtering (true/false)\n- JIRA_SLA_WORKING_HOURS_START: Start time (e.g., \"09:00\")\n- JIRA_SLA_WORKING_HOURS_END: End time (e.g., \"17:00\")\n- JIRA_SLA_WORKING_DAYS: Working days (e.g., \"1,2,3,4,5\" for Mon-Fri)\n- JIRA_SLA_TIMEZONE: Timezone for calculations (e.g., \"America/New_York\")",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Issue SLA",
+      "annotations": {
+        "title": "Get Issue SLA",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_issue_development_info",
+      "description": "Get development information (PRs, commits, branches) linked to a Jira issue.\n\nThis retrieves the development panel information that shows linked\npull requests, branches, and commits from connected source control systems\nlike Bitbucket, GitHub, or GitLab.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Issue Development Info",
+      "annotations": {
+        "title": "Get Issue Development Info",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_issues_development_info",
+      "description": "Get development information for multiple Jira issues.\n\nBatch retrieves development panel information (PRs, commits, branches)\nfor multiple issues at once.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Issues Development Info",
+      "annotations": {
+        "title": "Get Issues Development Info",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_project_epic_hierarchy",
+      "description": "Group a project's epics under their cross-project parent issues.\n\nFetches all epics in the project, detects their parent issue via\nthe parent field or inward issue links, then groups them by parent.\nEpics with no detected parent appear under \"Unlinked\". Useful for\nunderstanding how a project's epics roll up to initiatives in\nanother project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Project Epic Hierarchy",
+      "annotations": {
+        "title": "Get Project Epic Hierarchy",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "jira_get_cross_project_dependencies",
+      "description": "Find all cross-project issue links for a project.\n\nScans issues in the project, extracts every issue link whose\ntarget belongs to a different project, and groups them by target\nproject and link type. Useful for dependency analysis across\nmulti-project Jira setups.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Cross-Project Dependencies",
+      "annotations": {
+        "title": "Get Cross-Project Dependencies",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_search",
+      "description": "Search Confluence content using simple terms or CQL.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search Content",
+      "annotations": {
+        "title": "Search Content",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_get_page",
+      "description": "Get content of a specific Confluence page by its ID, or by its title and space key.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Page",
+      "annotations": {
+        "title": "Get Page",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_get_page_children",
+      "description": "Get child pages and folders of a specific Confluence page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Page Children",
+      "annotations": {
+        "title": "Get Page Children",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_get_space_page_tree",
+      "description": "Get page hierarchy for a Confluence space as a flat list.\n\nReturns pages with parent_id and depth attributes for token-efficient\nprocessing. Filter by depth to focus on relevant sections, or find\npages by title. Much more efficient than rendering full ASCII trees.\n\nUse this to understand space organization before creating/moving pages.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Space Page Tree",
+      "annotations": {
+        "title": "Get Space Page Tree",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_get_comments",
+      "description": "Get comments for a specific Confluence page.\n\nReplies include their parent comment ID when available. Inline comments also\ninclude anchor selection, marker reference, and resolution status metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Comments",
+      "annotations": {
+        "title": "Get Comments",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_get_labels",
+      "description": "Get labels for Confluence content (pages, blog posts, or attachments).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Labels",
+      "annotations": {
+        "title": "Get Labels",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_add_label",
+      "description": "Add label to Confluence content (pages, blog posts, or attachments).\n\nUseful for:\n- Categorizing attachments (e.g., 'screenshot', 'diagram', 'legal-doc')\n- Tracking status (e.g., 'approved', 'needs-review', 'archived')\n- Filtering content by topic or version",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Add Label",
+      "annotations": {
+        "title": "Add Label",
+        "destructive_hint": false
+      }
+    },
+    {
+      "name": "confluence_create_page",
+      "description": "Create a new Confluence page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Create Page",
+      "annotations": {
+        "title": "Create Page",
+        "destructive_hint": false
+      }
+    },
+    {
+      "name": "confluence_update_page",
+      "description": "Update an existing Confluence page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Update Page",
+      "annotations": {
+        "title": "Update Page",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "confluence_update_page_section",
+      "description": "Update a single section of a Confluence page without affecting the rest.\n\nReplaces only the content beneath a named heading, leaving all other\nsections, macros, layouts, and Confluence-specific elements completely\nintact. A following excerpt, expand, or layout that contains a heading of\nthe same or higher level ends the section — that wrapper is not replaced.\nThis avoids the data loss that occurs when a full page is downloaded as\nMarkdown, edited, and re-uploaded.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Update Page Section",
+      "annotations": {
+        "title": "Update Page Section",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "confluence_delete_page",
+      "description": "Delete an existing Confluence page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Delete Page",
+      "annotations": {
+        "title": "Delete Page",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "confluence_move_page",
+      "description": "Move a Confluence page to a new parent or space.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Move Page",
+      "annotations": {
+        "title": "Move Page",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "confluence_add_comment",
+      "description": "Add a comment to a Confluence page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Add Comment",
+      "annotations": {
+        "title": "Add Comment",
+        "destructive_hint": false
+      }
+    },
+    {
+      "name": "confluence_reply_to_comment",
+      "description": "Reply to an existing comment thread on a Confluence page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Reply to Comment",
+      "annotations": {
+        "title": "Reply to Comment",
+        "destructive_hint": false
+      }
+    },
+    {
+      "name": "confluence_get_inline_comments",
+      "description": "Get all inline comments for a Confluence page.\n\nResults include parent comment IDs plus anchor selection, marker reference,\nand resolution status metadata when Confluence provides those fields.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Inline Comments",
+      "annotations": {
+        "title": "Get Inline Comments",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_add_inline_comment",
+      "description": "Add an inline comment anchored to a text selection on a page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Add Inline Comment",
+      "annotations": {
+        "title": "Add Inline Comment",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "confluence_search_user",
+      "description": "Search Confluence users using CQL (Cloud) or group member API (Server/DC).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Search User",
+      "annotations": {
+        "title": "Search User",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_get_page_history",
+      "description": "Get a historical version of a specific Confluence page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Page History",
+      "annotations": {
+        "title": "Get Page History",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_get_page_diff",
+      "description": "Get a unified diff between two versions of a Confluence page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Page Version Diff",
+      "annotations": {
+        "title": "Get Page Version Diff",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_get_page_views",
+      "description": "Get view statistics for a Confluence page.\n\nNote: This tool is only available for Confluence Cloud. Server/Data Center\ninstances do not support the Analytics API.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Page Views",
+      "annotations": {
+        "title": "Get Page Views",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_upload_attachment",
+      "description": "Upload an attachment to Confluence content (page or blog post).\n\nProvide the file either as a server-readable path ('file_path') or as\nbase64-encoded content ('content_base64' together with 'filename'). The\nbase64 form is intended for remote or containerized servers that cannot\nread host file paths. Exactly one of the two must be supplied.\n\nIf the attachment already exists (same filename), a new version is created.\nThis is useful for:\n- Attaching documents, images, or files to a page\n- Updating existing attachments with new versions\n- Adding supporting materials to documentation",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Upload Attachment",
+      "annotations": {
+        "title": "Upload Attachment",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "confluence_upload_attachments",
+      "description": "Upload multiple attachments to Confluence content in a single operation.\n\nMore efficient than calling upload_attachment multiple times. If files with the\nsame names exist, new versions are created automatically.\n\nUseful for:\n- Bulk uploading documentation assets (diagrams, screenshots, etc.)\n- Adding multiple related files to a page at once\n- Batch updating existing attachments with new versions",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Upload Multiple Attachments",
+      "annotations": {
+        "title": "Upload Multiple Attachments",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "confluence_get_attachments",
+      "description": "List all attachments for a Confluence content item (page or blog post).\n\nReturns metadata about attachments including:\n- Attachment ID, title, and file type\n- File size and download URL\n- Creation/modification dates\n- Version information\n\n**Important**: Confluence API returns 'application/octet-stream' as the media type\nfor most binary files (PNG, JPG, PDF) instead of specific types like 'image/png'.\nFor filtering by file type, using the 'filename' parameter is more reliable\n(e.g., filename='*.png' pattern matching if supported, or exact filename).\n\nUseful for:\n- Discovering what files are attached to a page\n- Getting attachment IDs for download operations\n- Checking if a specific file exists\n- Listing images/documents for processing",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Content Attachments",
+      "annotations": {
+        "title": "Get Content Attachments",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_download_attachment",
+      "description": "Download an attachment from Confluence as an embedded resource.\n\nReturns the attachment content as a base64-encoded embedded resource so\nthat it is available over the MCP protocol without requiring filesystem\naccess on the server. Files larger than 50 MB are not downloaded inline;\na descriptive error message is returned instead.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Download Attachment",
+      "annotations": {
+        "title": "Download Attachment",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_download_content_attachments",
+      "description": "Download all attachments for a Confluence content item as embedded resources.\n\nReturns attachment contents as base64-encoded embedded resources so that\nthey are available over the MCP protocol without requiring filesystem\naccess on the server. Files larger than 50 MB are skipped with an error\nentry in the summary.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Download All Content Attachments",
+      "annotations": {
+        "title": "Download All Content Attachments",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_delete_attachment",
+      "description": "Permanently delete an attachment from Confluence.\n\n**Warning**: This action cannot be undone! The attachment and ALL its versions will be\npermanently deleted.\n\nUse this tool to:\n- Remove outdated or incorrect attachments\n- Clean up duplicate files\n- Delete sensitive information that was accidentally uploaded\n\nBest practices:\n- Verify the attachment ID before deletion using get_attachments\n- Consider downloading the attachment first as a backup\n- Check with content owners before deleting shared attachments",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Delete Attachment",
+      "annotations": {
+        "title": "Delete Attachment",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "confluence_get_page_images",
+      "description": "Get all images attached to a Confluence page as inline image content.\n\nFilters attachments to images only (PNG, JPEG, GIF, WebP, SVG, BMP)\nand returns them as base64-encoded ImageContent that clients can\nrender directly. Non-image attachments are excluded.\n\nFiles with ambiguous MIME types (application/octet-stream) are\ndetected by filename extension as a fallback. Images larger than\n50 MB are skipped with an error entry in the summary.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Page Images",
+      "annotations": {
+        "title": "Get Page Images",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_list_page_templates",
+      "description": "List Confluence page content templates.\n\nThis operation is only available for Confluence Cloud.\nReturns template metadata (ID, name, description, type) without the\nfull body.  Use confluence_get_page_template to fetch a template's body.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "List Page Templates",
+      "annotations": {
+        "title": "List Page Templates",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_get_page_template",
+      "description": "Get a Cloud page template by ID, including its storage-format body.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Page Template",
+      "annotations": {
+        "title": "Get Page Template",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_create_page_from_template",
+      "description": "Create a new Cloud page pre-populated with a template's body.\n\nThis operation is only available for Confluence Cloud.\nFetches the named template and creates a page with its storage-format\ncontent.  The page can be edited afterwards via confluence_update_page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Create Page from Template",
+      "annotations": {
+        "title": "Create Page from Template",
+        "destructive_hint": false
+      }
+    },
+    {
+      "name": "confluence_get_page_restrictions",
+      "description": "Get view and edit restrictions for a Confluence page.\n\nReturns the current restriction lists for the read (view) and update (edit)\noperations.  An empty list means the page is unrestricted for that operation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Page Restrictions",
+      "annotations": {
+        "title": "Get Page Restrictions",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_set_page_restrictions",
+      "description": "Set view and edit restrictions on a Confluence page.\n\nReplaces all existing restrictions with the provided lists.  Omitting all\nparameters (or passing empty lists) removes all restrictions.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Set Page Restrictions",
+      "annotations": {
+        "title": "Set Page Restrictions",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "confluence_copy_page",
+      "description": "Copy a Confluence page to a new location.\n\nOn Confluence Cloud the native copy endpoint is used.  On Server/Data Center\nthe page body is fetched and a new page is created manually (attachments are\nnot copied in the Server/DC path).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Copy Page",
+      "annotations": {
+        "title": "Copy Page",
+        "destructive_hint": true
+      }
+    },
+    {
+      "name": "confluence_check_content_permissions",
+      "description": "Check whether a user or group can perform an operation on specific content.\n\nWraps POST /wiki/rest/api/content/{id}/permission/check.\n\nNote: This tool is only available for Confluence Cloud. Server/Data Center\ninstances use different permission APIs.\n\nReturns a JSON object with a 'hasPermission' boolean indicating whether\nthe subject has the requested permission on the content.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Check Content Permissions",
+      "annotations": {
+        "title": "Check Content Permissions",
+        "read_only_hint": true
+      }
+    },
+    {
+      "name": "confluence_get_space_permissions",
+      "description": "List all permission assignments for a Confluence space.\n\nWraps GET /wiki/api/v2/spaces/{id}/permissions.\n\nNote: This tool is only available for Confluence Cloud. Server/Data Center\ninstances use different permission APIs.\n\nReturns a JSON object with a 'results' list of permission assignment objects.\nEach entry contains the principal (user or group), the operation permitted,\nand the target. Use this to audit who has access to a space.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Get Space Permissions",
+      "annotations": {
+        "title": "Get Space Permissions",
+        "read_only_hint": true
+      }
+    }
+  ]
+}

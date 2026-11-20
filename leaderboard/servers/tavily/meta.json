@@ -1,0 +1,15 @@
+{
+  "name": "tavily",
+  "display_name": "Tavily MCP",
+  "category": "search",
+  "repo_url": "https://github.com/tavily-ai/tavily-mcp",
+  "package": "tavily-mcp",
+  "source_ref": "0.2.22",
+  "captured_at": "2026-11-20T13:46:20Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 5,
+  "write_count": 0,
+  "has_output_schema_count": 0,
+  "tools_sha256": "2e22c42d56ce83775bc321e3c497fa15733838f3356b599d46f69e4611772950",
+  "notes": "Official Tavily MCP server; dummy TAVILY_API_KEY used for tools/list only."
+}

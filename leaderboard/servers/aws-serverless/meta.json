@@ -1,0 +1,15 @@
+{
+  "name": "aws-serverless",
+  "display_name": "AWS Serverless MCP",
+  "category": "cloud",
+  "repo_url": "https://github.com/awslabs/mcp",
+  "package": "awslabs.aws-serverless-mcp-server",
+  "source_ref": "0.2.2",
+  "captured_at": "2026-11-20T13:50:31Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 25,
+  "write_count": 5,
+  "has_output_schema_count": 0,
+  "tools_sha256": "987290c4f6174f5a5fa16cbb51b61f6b726e8d36587f8da4b41b5ef31e5efac1",
+  "notes": "Official AWS Labs Serverless MCP server."
+}

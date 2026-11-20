@@ -1,0 +1,15 @@
+{
+  "name": "grafana",
+  "display_name": "Grafana MCP",
+  "category": "observability",
+  "repo_url": "https://github.com/grafana/mcp-grafana",
+  "package": "mcp-grafana",
+  "source_ref": "2.2.0",
+  "captured_at": "2026-11-20T13:50:15Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 80,
+  "write_count": 13,
+  "has_output_schema_count": 0,
+  "tools_sha256": "693b473247adbfa6690f854b456f7b498e3757df249a20bd4a1b164d7d5ef5f8",
+  "notes": "Official Grafana MCP server; dummy URL and service account token used for tools/list only."
+}

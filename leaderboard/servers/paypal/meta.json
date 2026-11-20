@@ -1,0 +1,15 @@
+{
+  "name": "paypal",
+  "display_name": "PayPal MCP",
+  "category": "payments",
+  "repo_url": "https://github.com/paypal/agent-toolkit",
+  "package": "@paypal/mcp",
+  "source_ref": "1.8.1",
+  "captured_at": "2026-11-20T13:50:01Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 28,
+  "write_count": 12,
+  "has_output_schema_count": 0,
+  "tools_sha256": "38b6c8798b68ba0923fd9661713d8024759162e3648b8514ab0601b42436b32e",
+  "notes": "Official PayPal MCP server (--tools=all); dummy sandbox token used for tools/list only."
+}

@@ -1,0 +1,15 @@
+{
+  "name": "azure",
+  "display_name": "Microsoft Azure MCP",
+  "category": "cloud",
+  "repo_url": "https://github.com/microsoft/mcp",
+  "package": "@azure/mcp",
+  "source_ref": "4.0.0-beta.9",
+  "captured_at": "2026-11-20T13:50:24Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 74,
+  "write_count": 1,
+  "has_output_schema_count": 0,
+  "tools_sha256": "efc5b53e21ff0d6bf8a7e851c9a89a14f0ad14e1f45200b95013f437b10edd2a",
+  "notes": "Official Microsoft Azure MCP server; large cloud management tool surface."
+}

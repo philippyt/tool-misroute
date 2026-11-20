@@ -1,0 +1,15 @@
+{
+  "name": "everything",
+  "display_name": "MCP Everything (Reference)",
+  "category": "control",
+  "repo_url": "https://github.com/modelcontextprotocol/servers",
+  "package": "@modelcontextprotocol/server-everything",
+  "source_ref": "2.3.1",
+  "captured_at": "2026-11-20T13:45:49Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 16,
+  "write_count": 0,
+  "has_output_schema_count": 0,
+  "tools_sha256": "aa95f558254048abfe038e46a6ea180e7ef2d6a557dbef9f833b286b71829867",
+  "notes": "Official MCP reference test server exercising protocol features."
+}

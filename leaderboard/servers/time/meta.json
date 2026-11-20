@@ -1,0 +1,15 @@
+{
+  "name": "time",
+  "display_name": "MCP Time (Reference Control)",
+  "category": "control",
+  "repo_url": "https://github.com/modelcontextprotocol/servers",
+  "package": "mcp-server-time",
+  "source_ref": "2026.11.18",
+  "captured_at": "2026-11-20T13:45:36Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 3,
+  "write_count": 0,
+  "has_output_schema_count": 0,
+  "tools_sha256": "d1fe3786162594990c5e78add9cb45bdd2a4e2dd2fba3033c9f64c8b7f0db499",
+  "notes": "Official MCP reference server (control: 2 distinct time tools)."
+}

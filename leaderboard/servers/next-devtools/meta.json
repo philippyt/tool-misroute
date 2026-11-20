@@ -1,0 +1,15 @@
+{
+  "name": "next-devtools",
+  "display_name": "Next.js DevTools MCP",
+  "category": "code",
+  "repo_url": "https://github.com/vercel/next-devtools-mcp",
+  "package": "next-devtools-mcp",
+  "source_ref": "0.4.0",
+  "captured_at": "2026-11-20T13:46:04Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 4,
+  "write_count": 0,
+  "has_output_schema_count": 0,
+  "tools_sha256": "83d2a7c12ed39aeb2474aa14c81feac66f44b9705b10b76d026d6f87fc860a9e",
+  "notes": "Official Vercel Next.js DevTools MCP server."
+}

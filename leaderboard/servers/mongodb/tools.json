@@ -1,0 +1,438 @@
+{
+  "tools": [
+    {
+      "name": "aggregate-db",
+      "description": "Run an aggregation against a MongoDB database",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "aggregate-db",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "aggregate",
+      "description": "Run an aggregation against a MongoDB collection",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "aggregate",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "collection-indexes",
+      "description": "Describe the indexes for a collection",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "collection-indexes",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "collection-schema",
+      "description": "Describe the schema for a collection",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "collection-schema",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "collection-storage-size",
+      "description": "Gets the size of the collection",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "collection-storage-size",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "connect",
+      "description": "Connect to a MongoDB instance and get back a connectionId to pass to the other MongoDB tools. Each call establishes a new, independent connection — multiple connections can be active at the same time. A connection with the id \"preconfigured\" already exists for the connection string the server was configured with — there is no need to call this tool to use it.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "connect",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "count",
+      "description": "Gets the number of documents in a MongoDB collection using db.collection.count() and query as an optional filter parameter",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "count",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "create-collection",
+      "description": "Creates a new collection in a database. If the database doesn't exist, it will be created automatically.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "create-collection",
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "create-index",
+      "description": "Create an index for a collection",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "create-index",
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "db-stats",
+      "description": "Returns statistics that reflect the use state of a single database",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "db-stats",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "delete-many",
+      "description": "Removes all documents that match the filter from a MongoDB collection",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "delete-many",
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "disconnect",
+      "description": "Close a MongoDB connection and revoke its connectionId. Disconnecting a connection the server configuration declares (\"preconfigured\" or a named connection) only closes it — it reconnects automatically on next use.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "disconnect",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "drop-collection",
+      "description": "Removes a collection or view from the database. The method also removes any indexes associated with the dropped collection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "drop-collection",
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "drop-database",
+      "description": "Removes the specified database, deleting the associated data files",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "drop-database",
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "drop-index",
+      "description": "Drop an index for the provided database and collection.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "drop-index",
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "explain",
+      "description": "Returns statistics describing the execution of the winning plan chosen by the query optimizer for the evaluated method",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "explain",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "export",
+      "description": "Export a query or aggregation results in the specified EJSON format.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "export",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "find",
+      "description": "Run a find query against a MongoDB collection",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "find",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "insert-many",
+      "description": "Insert an array of documents into a MongoDB collection. If the list of documents is above com.mongodb/maxRequestPayloadBytes, consider inserting them in batches.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "insert-many",
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "list-collections",
+      "description": "List all collections for a given database",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "list-collections",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "list-connections",
+      "description": "List the active MongoDB connections and their connectionIds. Use this to discover the connections the server was configured with (\"preconfigured\" or named ones) or to find a connectionId established earlier.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "list-connections",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "list-databases",
+      "description": "List all databases for a MongoDB connection",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "list-databases",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "mongodb-logs",
+      "description": "Returns the most recent logged mongod events",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "mongodb-logs",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "rename-collection",
+      "description": "Renames a collection in a MongoDB database",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "rename-collection",
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "update-many",
+      "description": "Updates all documents that match the specified filter for a collection. If the list of documents is above com.mongodb/maxRequestPayloadBytes, consider updating them in batches.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "update-many",
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "atlas-local-create-deployment",
+      "description": "Create a MongoDB Atlas local deployment. Default image is preview. When the user does not specify an image tag, inform them that preview is used by default and provide this link for more information: https://hub.docker.com/r/mongodb/mongodb-atlas-local",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "atlas-local-create-deployment",
+        "read_only_hint": false,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "atlas-local-list-deployments",
+      "description": "List MongoDB Atlas local deployments",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "atlas-local-list-deployments",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "atlas-local-delete-deployment",
+      "description": "Delete a MongoDB Atlas local deployment",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "atlas-local-delete-deployment",
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "atlas-local-connect-deployment",
+      "description": "Connect to a MongoDB Atlas Local deployment and get back a connectionId to pass to the other MongoDB tools",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "atlas-local-connect-deployment",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "search-knowledge",
+      "description": "Search for information in the MongoDB Assistant knowledge base. This includes official documentation, curated expert guidance, and other resources provided by MongoDB. Supports filtering by data source and version.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "search-knowledge",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    },
+    {
+      "name": "list-knowledge-sources",
+      "description": "List available data sources in the MongoDB Assistant knowledge base. Use this to explore available data sources or to find search filter parameters to use in search-knowledge.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "annotations": {
+        "title": "list-knowledge-sources",
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": true
+      }
+    }
+  ]
+}

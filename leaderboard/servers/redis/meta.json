@@ -1,0 +1,15 @@
+{
+  "name": "redis",
+  "display_name": "Redis MCP",
+  "category": "database",
+  "repo_url": "https://github.com/redis/mcp-redis",
+  "package": "redis-mcp-server",
+  "source_ref": "0.5.1",
+  "captured_at": "2026-11-20T13:47:39Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 53,
+  "write_count": 7,
+  "has_output_schema_count": 0,
+  "tools_sha256": "7c2ed72baa8b7b6f8bb5260840230bf42c909aeac71f643e3f4c0e1cdd4b949b",
+  "notes": "Official Redis MCP server; high sibling risk across string/hash/list/set/zset/stream/json tools."
+}

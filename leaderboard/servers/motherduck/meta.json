@@ -1,0 +1,15 @@
+{
+  "name": "motherduck",
+  "display_name": "MotherDuck / DuckDB MCP",
+  "category": "database",
+  "repo_url": "https://github.com/motherduckdb/mcp-server-motherduck",
+  "package": "mcp-server-motherduck",
+  "source_ref": "1.1.1",
+  "captured_at": "2026-11-20T13:48:10Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 4,
+  "write_count": 1,
+  "has_output_schema_count": 0,
+  "tools_sha256": "503fe5d5cf3da69c3264ee69b0622193bb3e6978b57b670a739e2610942ef6e6",
+  "notes": "Official MotherDuck/DuckDB MCP server; in-memory DuckDB used for tools/list."
+}

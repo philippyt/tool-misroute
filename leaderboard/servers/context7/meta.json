@@ -1,0 +1,15 @@
+{
+  "name": "context7",
+  "display_name": "Context7 MCP",
+  "category": "docs",
+  "repo_url": "https://github.com/upstash/context7",
+  "package": "@upstash/context7-mcp",
+  "source_ref": "4.7.3",
+  "captured_at": "2026-11-20T13:46:10Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 2,
+  "write_count": 0,
+  "has_output_schema_count": 0,
+  "tools_sha256": "b8c7ad941ac5b35f669e2102edf2294b98ac9a2adfe98add253c5e802ba7f83d",
+  "notes": "Official Upstash Context7 documentation MCP server."
+}

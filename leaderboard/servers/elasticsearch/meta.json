@@ -1,0 +1,15 @@
+{
+  "name": "elasticsearch",
+  "display_name": "Elasticsearch MCP",
+  "category": "database",
+  "repo_url": "https://github.com/elastic/mcp-server-elasticsearch",
+  "package": "@elastic/mcp-server-elasticsearch",
+  "source_ref": "0.3.1",
+  "captured_at": "2026-11-20T13:48:26Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 4,
+  "write_count": 0,
+  "has_output_schema_count": 0,
+  "tools_sha256": "0ee0e24d31413215847ef7ee10f9e36126d66ac7b5352af5311a7100659c0241",
+  "notes": "Official Elastic MCP server; dummy ES_URL/ES_API_KEY used for tools/list only."
+}

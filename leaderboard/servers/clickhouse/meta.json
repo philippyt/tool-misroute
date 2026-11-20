@@ -1,0 +1,15 @@
+{
+  "name": "clickhouse",
+  "display_name": "ClickHouse MCP",
+  "category": "database",
+  "repo_url": "https://github.com/ClickHouse/mcp-clickhouse",
+  "package": "mcp-clickhouse",
+  "source_ref": "0.7.0",
+  "captured_at": "2026-11-20T13:47:46Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 3,
+  "write_count": 1,
+  "has_output_schema_count": 0,
+  "tools_sha256": "79ab164bf9af300f12597e68731290bf9e335f8fe46c5d09b6b2f660d3ef307a",
+  "notes": "Official ClickHouse MCP server; dummy localhost env vars used for tools/list only."
+}

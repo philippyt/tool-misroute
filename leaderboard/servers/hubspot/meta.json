@@ -1,0 +1,15 @@
+{
+  "name": "hubspot",
+  "display_name": "HubSpot MCP",
+  "category": "crm",
+  "repo_url": "https://github.com/HubSpot/mcp-server",
+  "package": "@hubspot/mcp-server",
+  "source_ref": "0.4.0",
+  "captured_at": "2026-11-20T13:48:47Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 21,
+  "write_count": 4,
+  "has_output_schema_count": 0,
+  "tools_sha256": "4a6d25051098b83ba146caa1088de7f61956513484c995bacf2a7e82a0c728f1",
+  "notes": "Official HubSpot CRM MCP server; dummy HUBSPOT_ACCESS_TOKEN used for tools/list only."
+}

@@ -1,0 +1,15 @@
+{
+  "name": "exa",
+  "display_name": "Exa MCP",
+  "category": "search",
+  "repo_url": "https://github.com/exa-labs/exa-mcp-server",
+  "package": "exa-mcp-server",
+  "source_ref": "3.5.1",
+  "captured_at": "2026-11-20T13:46:28Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 3,
+  "write_count": 1,
+  "has_output_schema_count": 0,
+  "tools_sha256": "153ec3f9c3ef04f17d02d4b1f6de47a50c28d995b3fd063b121aedd9d758759b",
+  "notes": "Official Exa MCP server; dummy EXA_API_KEY used for tools/list only."
+}

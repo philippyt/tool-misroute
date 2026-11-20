@@ -1,0 +1,15 @@
+{
+  "name": "git",
+  "display_name": "MCP Git (Reference)",
+  "category": "code",
+  "repo_url": "https://github.com/modelcontextprotocol/servers",
+  "package": "mcp-server-git",
+  "source_ref": "2026.11.18",
+  "captured_at": "2026-11-20T13:45:52Z",
+  "capture_method": "mcp_stdio_tools_list",
+  "tool_count": 14,
+  "write_count": 4,
+  "has_output_schema_count": 0,
+  "tools_sha256": "6387bf7834ddc2dba4e5be1569e5b41bb3f0b556da0e388fb35daabc00bd05f5",
+  "notes": "Official MCP reference Git server; sibling risk across diff/show/log/status/branch tools."
+}

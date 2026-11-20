@@ -1,0 +1,60 @@
+{
+  "tools": [
+    {
+      "name": "execute_query",
+      "description": "Execute a SQL query on the DuckDB or MotherDuck database. Unqualified table names resolve to current_database() and current_schema() automatically. Fully qualified names (database.schema.table) are only needed when multiple DuckDB databases are attached or when connected to MotherDuck.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "Execute Query",
+      "annotations": {
+        "read_only_hint": false,
+        "destructive_hint": true,
+        "open_world_hint": false
+      }
+    },
+    {
+      "name": "list_databases",
+      "description": "List all databases available in the connection. Useful when multiple DuckDB databases are attached or when connected to MotherDuck.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "List Databases",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": false
+      }
+    },
+    {
+      "name": "list_tables",
+      "description": "List all tables and views in a database with their comments. If database is not specified, uses the current database.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "List Tables",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": false
+      }
+    },
+    {
+      "name": "list_columns",
+      "description": "List all columns of a table or view with their types and comments. If database/schema are not specified, uses the current database/schema.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {}
+      },
+      "title": "List Columns",
+      "annotations": {
+        "read_only_hint": true,
+        "destructive_hint": false,
+        "open_world_hint": false
+      }
+    }
+  ]
+}
