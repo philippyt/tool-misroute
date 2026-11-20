@@ -1,6 +1,6 @@
 {
   "name": "misroute",
-  "owner": {"name": "philippyt", "email": "philipaha@proton.me"},
+  "owner": {"name": "philippyt"},
   "plugins": [
     {
       "name": "misroute",
