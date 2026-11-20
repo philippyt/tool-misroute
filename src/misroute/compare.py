@@ -4,7 +4,9 @@ from misroute.check import decide
 from misroute.config import Config, family
 from misroute.detectors import confusion, hedge, rank
 from misroute.fix import logit
+from misroute.requests import validate
 from misroute.server import merge
+from misroute.store.manifest import build_manifest
 from misroute.trial import Trial
 
 ORDER = ("worse", "insufficient_data", "no_difference", "better")
@@ -96,7 +98,9 @@ async def compare(proj, old: str, new: str, modes: list[str] | None = None) -> d
         )
     cat = await proj.catalog()
     run = proj.store.run_id("compare", cat)
+    manifest = build_manifest(proj.cfg, tools, cat, validate.recipe(proj.domain(), proj.cfg.slots), run, "compare")
     proj.store.save(run, "compare", cat, trials, {"from": old, "to": new, "modes": modes})
+    proj.store.write("manifest", manifest)
     result = {
         "from": old,
         "to": new,
@@ -107,6 +111,7 @@ async def compare(proj, old: str, new: str, modes: list[str] | None = None) -> d
         "roles_warning": proj.cfg.role_warnings(),
         "logit": logit.decompose_errors(trials, {m.name: family(m) for m in proj.cfg.models}),
         "run": run,
+        "manifest": manifest,
         "cost_usd": round(proj.budget.spent - start, 4),
         "usage": proj.usage(),
     }

@@ -18,6 +18,7 @@ from misroute.server import merge, openapi, static
 from misroute.server.catalog import Tool, catalog_hash, effect_unknown, replace_descriptions
 from misroute.server.connect import connect, keep, list_tools
 from misroute.store.cache import Metered, fill_price
+from misroute.store.manifest import build_manifest, load_requests
 from misroute.store.runs import Store
 from misroute.trial import Request, Trial
 
@@ -286,10 +287,16 @@ class Project:
         operation, against the one tool per operation catalog, so every catalog design is tested on the same
         requests. A merged tool gets the requests of each operation it reaches, each carrying the selector value
         that is right for it."""
-        cached = self.store.read("requests") or {}
-        cached.pop("schema_version", None)
         out: dict[str, list[Request]] = {}
         wanted = only or tools
+        if self.cfg.frozen_requests:
+            loaded = load_requests(self.cfg.frozen_requests, {t.name for t in wanted})
+            for t in wanted:
+                out[t.name] = loaded.get(t.name, [])
+            self.request_use["reused"] += sum(1 for v in out.values() if v)
+            return out
+        cached = self.store.read("requests") or {}
+        cached.pop("schema_version", None)
         key = self.request_key
         full = self.cfg.requests_per_tool * len(self.cfg.request_languages or ["en"])
         planned = bool(self.cfg.server.catalog)
@@ -554,8 +561,12 @@ class Project:
             usage=self.usage(),
         )
         run = self.store.run_id("discover", result["catalog"])
+        recipe_digest = validate.recipe(self.domain(), self.cfg.slots)
+        manifest = build_manifest(self.cfg, tools, result["catalog"], recipe_digest, run, "discover")
         self.store.save(run, "discover", result["catalog"], trials + removed, {"models": models_, "modes": modes})
+        self.store.write("manifest", manifest)
         result["run"] = run
+        result["manifest"] = manifest
         self.store.write("discover", result)
         return result
 
