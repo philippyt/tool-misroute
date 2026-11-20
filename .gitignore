@@ -14,3 +14,5 @@ wheels/
 report.html
 
 *.local.md
+leaderboard/results/*/runs/
+leaderboard/results/mock_test/
