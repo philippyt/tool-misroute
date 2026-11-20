@@ -5,9 +5,9 @@ from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 from misroute import models
-from misroute.config import Config, ServerConfig, load
+from misroute.config import Config, ServerConfig, family, load
 from misroute.detectors import codemode, confusion, hedge, nearmiss, rank, removal
-from misroute.fix import clause, stats
+from misroute.fix import clause, logit, stats
 from misroute.lint import descriptions
 from misroute.models.base import Budget, BudgetExceeded, ProviderRefused
 from misroute.modes import code_mode, json_mode
@@ -487,6 +487,7 @@ class Project:
             lookup_tools=sorted(self.lookups(tools)),
             lookup_candidates=rank.lookup_candidates(trials, self.lookups(tools)),
             max_turns=self.cfg.max_turns,
+            logit=logit.decompose_errors(trials, {m.name: family(m) for m in self.cfg.models}),
             catalog=catalog_hash(tools),
             spent=self.budget.spent,
             usage=self.usage(),

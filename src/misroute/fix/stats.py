@@ -3,6 +3,7 @@ import math
 from collections import defaultdict
 import numpy as np
 from scipy import stats
+from misroute.fix.logit import paired_logit_test
 
 ALPHA = 0.05
 FLAG_MIN_ERRORS = 6
@@ -141,4 +142,5 @@ def template_test(base: dict, treat: dict, seed: int = 0) -> dict:
         "broke": broke,
         "diff": diff,
         "ci": ci,
+        "logit": paired_logit_test(base, treat),
     }

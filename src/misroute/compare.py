@@ -1,8 +1,9 @@
 from collections import defaultdict
 from typing import Any
 from misroute.check import decide
-from misroute.config import Config
+from misroute.config import Config, family
 from misroute.detectors import confusion, hedge, rank
+from misroute.fix import logit
 from misroute.server import merge
 from misroute.trial import Trial
 
@@ -104,6 +105,7 @@ async def compare(proj, old: str, new: str, modes: list[str] | None = None) -> d
         "templates": sum(len(v) for v in reqs.values()),
         "by_kind": sorted({r.kind for rs in reqs.values() for r in rs}),
         "roles_warning": proj.cfg.role_warnings(),
+        "logit": logit.decompose_errors(trials, {m.name: family(m) for m in proj.cfg.models}),
         "run": run,
         "cost_usd": round(proj.budget.spent - start, 4),
         "usage": proj.usage(),
@@ -194,6 +196,7 @@ async def designs(proj, models_: list[str], modes: list[str] | None = None) -> d
         "coverage": merge.coverage(source, plan),
         "tools": {"mirror": len(mirror), "merged": len(merged)},
         "roles_warning": proj.cfg.role_warnings(),
+        "logit": logit.decompose_errors(before + after, {m.name: family(m) for m in proj.cfg.models}),
         "run": run,
         "cost_usd": round(proj.budget.spent - start, 4),
         "usage": proj.usage(),
