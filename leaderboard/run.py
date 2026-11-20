@@ -47,7 +47,7 @@ SURFACE_MODELS = [
     "openrouter:openai/gpt-5.6-luna",
     "openrouter:google/gemini-4-hydrogen",
     "openrouter:google/gemini-3.8-flash",
-    "openrouter:qwen/qwen3.8-27b",
+    "openrouter:qwen/qwen3.8-flash",
     "openrouter:meta-llama/llama-4-maverick",
     "openrouter:mistralai/mistral-large-2512",
 ]

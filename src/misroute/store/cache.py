@@ -132,7 +132,16 @@ class Metered:
             room = self.room(held, *parts)
             token = OUTPUT_ROOM.set(room)
             try:
-                out, cost = await run()
+                for attempt in range(4):
+                    try:
+                        out, cost = await run()
+                        break
+                    except Exception as e:
+                        code = getattr(e, "status_code", None)
+                        if code in (429, 500, 502, 503, 504) and attempt < 3:
+                            await asyncio.sleep(2.0 * (2**attempt))
+                            continue
+                        raise
             except Exception as e:
                 self.budget.settle(held)
                 if getattr(e, "status_code", None) in (401, 402, 403):
