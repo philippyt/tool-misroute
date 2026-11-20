@@ -131,8 +131,8 @@ def sample_for_audit(
     for t in trials:
         by_tpl[(t.target, t.request_id)].append(t)
 
-    confused_rows = []
-    clean_rows = []
+    confused_rows: list[dict[str, Any]] = []
+    clean_rows: list[dict[str, Any]] = []
     for (target, req_id), ts in sorted(by_tpl.items()):
         n = len(ts)
         errs = sum(1 for t in ts if t.error)
