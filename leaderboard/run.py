@@ -148,11 +148,14 @@ def aggregate_leaderboard(
     models = sorted({t.model for t in flat_trials})
     families_all = sorted({model_families.get(m, m) for m in models})
 
-    # Tag each trial with server-scoped target for global cross-server logit decomposition
+    # Tag each trial with server-scoped tool names for global cross-server logit decomposition
     scoped_trials: list[Trial] = []
     for srv, t in all_trials:
         copy = Trial(**t.to_json())
         copy.target = f"{srv}:{t.target}"
+        copy.calls = [f"{srv}:{c}" for c in t.calls]
+        if t.decisive is not None:
+            copy.decisive = [f"{srv}:{c}" for c in t.decisive]
         scoped_trials.append(copy)
 
     global_logit = decompose_errors(scoped_trials, model_families=model_families, max_tools=250)

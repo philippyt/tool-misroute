@@ -1,0 +1,6898 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-20T14:39:45.774094+00:00",
+  "misroute_version": "0.4.0",
+  "total_spent_usd": 3.4154,
+  "modes": [
+    "json",
+    "code"
+  ],
+  "families": [
+    "anthropic",
+    "google",
+    "meta",
+    "mistral",
+    "openai",
+    "qwen"
+  ],
+  "servers": [
+    {
+      "server": "fetch",
+      "display_name": "MCP Fetch (Reference Control)",
+      "category": "control",
+      "package": "mcp-server-fetch",
+      "source_ref": "2026.11.18",
+      "tool_count": 1,
+      "write_count": 0,
+      "run": "discover-20261120-153056-ca9bbbab",
+      "validator_agreement": {},
+      "manifest": {
+        "misroute_version": "0.4.0",
+        "date_utc": "2026-11-20T14:30:56.767035+00:00",
+        "run_id": "discover-20261120-153056-ca9bbbab",
+        "phase": "discover",
+        "catalog_hash": "ca9bbbab5497c19d",
+        "request_recipe": "861e0645",
+        "server": {
+          "label": "tools",
+          "url": null,
+          "command": null,
+          "openapi": null,
+          "tools": "C:\\Users\\philip\\Documents\\misroute\\leaderboard\\servers\\fetch\\tools.json",
+          "catalog": null,
+          "tools_sha256": "2352f8d2430b84876baa666563d3d7efc4aa68f39e816cac16bb84d5b1697e72",
+          "meta": {
+            "name": "fetch",
+            "display_name": "MCP Fetch (Reference Control)",
+            "category": "control",
+            "repo_url": "https://github.com/modelcontextprotocol/servers",
+            "package": "mcp-server-fetch",
+            "source_ref": "2026.11.18",
+            "captured_at": "2026-11-20T13:45:35Z",
+            "capture_method": "mcp_stdio_tools_list",
+            "tool_count": 1,
+            "write_count": 0,
+            "has_output_schema_count": 0,
+            "tools_sha256": "2352f8d2430b84876baa666563d3d7efc4aa68f39e816cac16bb84d5b1697e72",
+            "notes": "Official MCP reference server (control: minimal single-tool surface)."
+          },
+          "frozen_requests": "leaderboard\\results\\surface\\requests\\fetch.jsonl",
+          "frozen_requests_sha256": "fbaeb208018eee39c166fb99dd574e1cf3eff0c0b500d70cea5b02d1d9cb12e4"
+        },
+        "tool_count": 1,
+        "write_count": 0,
+        "has_output_schema_count": 0,
+        "models": [
+          {
+            "name": "anthropic-claude-sonnet-5.5",
+            "provider": "openai-compatible",
+            "model_id": "anthropic/claude-sonnet-5.5",
+            "family": "anthropic",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "anthropic-claude-haiku-5.5",
+            "provider": "openai-compatible",
+            "model_id": "anthropic/claude-haiku-5.5",
+            "family": "anthropic",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "openai-gpt-5.6-terra",
+            "provider": "openai-compatible",
+            "model_id": "openai/gpt-5.6-terra",
+            "family": "openai",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "openai-gpt-5.6-luna",
+            "provider": "openai-compatible",
+            "model_id": "openai/gpt-5.6-luna",
+            "family": "openai",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "google-gemini-4-hydrogen",
+            "provider": "openai-compatible",
+            "model_id": "google/gemini-4-hydrogen",
+            "family": "google",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "google-gemini-3.8-flash",
+            "provider": "openai-compatible",
+            "model_id": "google/gemini-3.8-flash",
+            "family": "google",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "qwen-qwen3.8-flash",
+            "provider": "openai-compatible",
+            "model_id": "qwen/qwen3.8-flash",
+            "family": "qwen",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "meta-llama-llama-4-maverick",
+            "provider": "openai-compatible",
+            "model_id": "meta-llama/llama-4-maverick",
+            "family": "meta",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "mistralai-mistral-large-2512",
+            "provider": "openai-compatible",
+            "model_id": "mistralai/mistral-large-2512",
+            "family": "mistral",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          }
+        ],
+        "tested": [
+          "anthropic-claude-sonnet-5.5",
+          "openai-gpt-5.6-terra",
+          "google-gemini-4-hydrogen",
+          "qwen-qwen3.8-flash",
+          "meta-llama-llama-4-maverick",
+          "mistralai-mistral-large-2512"
+        ],
+        "generators": [
+          "anthropic-claude-haiku-5.5",
+          "openai-gpt-5.6-luna",
+          "google-gemini-3.8-flash"
+        ],
+        "validators": [
+          "anthropic-claude-haiku-5.5",
+          "openai-gpt-5.6-luna",
+          "google-gemini-3.8-flash"
+        ],
+        "modes": [
+          "json",
+          "code"
+        ],
+        "request_source": "description",
+        "request_languages": [
+          "en"
+        ],
+        "requests_per_tool": 3,
+        "slots": 4,
+        "rotations": 2,
+        "repeats": 1,
+        "max_turns": 1
+      },
+      "spent_usd": 0.0015
+    },
+    {
+      "server": "time",
+      "display_name": "MCP Time (Reference Control)",
+      "category": "control",
+      "package": "mcp-server-time",
+      "source_ref": "2026.11.18",
+      "tool_count": 3,
+      "write_count": 0,
+      "run": "discover-20261120-153142-15384610",
+      "validator_agreement": {},
+      "manifest": {
+        "misroute_version": "0.4.0",
+        "date_utc": "2026-11-20T14:31:42.447475+00:00",
+        "run_id": "discover-20261120-153142-15384610",
+        "phase": "discover",
+        "catalog_hash": "153846109dc5d776",
+        "request_recipe": "861e0645",
+        "server": {
+          "label": "tools",
+          "url": null,
+          "command": null,
+          "openapi": null,
+          "tools": "C:\\Users\\philip\\Documents\\misroute\\leaderboard\\servers\\time\\tools.json",
+          "catalog": null,
+          "tools_sha256": "d1fe3786162594990c5e78add9cb45bdd2a4e2dd2fba3033c9f64c8b7f0db499",
+          "meta": {
+            "name": "time",
+            "display_name": "MCP Time (Reference Control)",
+            "category": "control",
+            "repo_url": "https://github.com/modelcontextprotocol/servers",
+            "package": "mcp-server-time",
+            "source_ref": "2026.11.18",
+            "captured_at": "2026-11-20T13:45:36Z",
+            "capture_method": "mcp_stdio_tools_list",
+            "tool_count": 3,
+            "write_count": 0,
+            "has_output_schema_count": 0,
+            "tools_sha256": "d1fe3786162594990c5e78add9cb45bdd2a4e2dd2fba3033c9f64c8b7f0db499",
+            "notes": "Official MCP reference server (control: 2 distinct time tools)."
+          },
+          "frozen_requests": "leaderboard\\results\\surface\\requests\\time.jsonl",
+          "frozen_requests_sha256": "00d7510476e30e061eb0e5b290a945fb87370f7e955244b69ff30b9e58be2a3a"
+        },
+        "tool_count": 3,
+        "write_count": 0,
+        "has_output_schema_count": 0,
+        "models": [
+          {
+            "name": "anthropic-claude-sonnet-5.5",
+            "provider": "openai-compatible",
+            "model_id": "anthropic/claude-sonnet-5.5",
+            "family": "anthropic",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "anthropic-claude-haiku-5.5",
+            "provider": "openai-compatible",
+            "model_id": "anthropic/claude-haiku-5.5",
+            "family": "anthropic",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "openai-gpt-5.6-terra",
+            "provider": "openai-compatible",
+            "model_id": "openai/gpt-5.6-terra",
+            "family": "openai",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "openai-gpt-5.6-luna",
+            "provider": "openai-compatible",
+            "model_id": "openai/gpt-5.6-luna",
+            "family": "openai",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "google-gemini-4-hydrogen",
+            "provider": "openai-compatible",
+            "model_id": "google/gemini-4-hydrogen",
+            "family": "google",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "google-gemini-3.8-flash",
+            "provider": "openai-compatible",
+            "model_id": "google/gemini-3.8-flash",
+            "family": "google",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "qwen-qwen3.8-flash",
+            "provider": "openai-compatible",
+            "model_id": "qwen/qwen3.8-flash",
+            "family": "qwen",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "meta-llama-llama-4-maverick",
+            "provider": "openai-compatible",
+            "model_id": "meta-llama/llama-4-maverick",
+            "family": "meta",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "mistralai-mistral-large-2512",
+            "provider": "openai-compatible",
+            "model_id": "mistralai/mistral-large-2512",
+            "family": "mistral",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          }
+        ],
+        "tested": [
+          "anthropic-claude-sonnet-5.5",
+          "openai-gpt-5.6-terra",
+          "google-gemini-4-hydrogen",
+          "qwen-qwen3.8-flash",
+          "meta-llama-llama-4-maverick",
+          "mistralai-mistral-large-2512"
+        ],
+        "generators": [
+          "anthropic-claude-haiku-5.5",
+          "openai-gpt-5.6-luna",
+          "google-gemini-3.8-flash"
+        ],
+        "validators": [
+          "anthropic-claude-haiku-5.5",
+          "openai-gpt-5.6-luna",
+          "google-gemini-3.8-flash"
+        ],
+        "modes": [
+          "json",
+          "code"
+        ],
+        "request_source": "description",
+        "request_languages": [
+          "en"
+        ],
+        "requests_per_tool": 3,
+        "slots": 4,
+        "rotations": 2,
+        "repeats": 1,
+        "max_turns": 1
+      },
+      "spent_usd": 0.0082
+    },
+    {
+      "server": "entur",
+      "display_name": "Entur Journey Planner MCP",
+      "category": "transport",
+      "package": "https://api.entur.io/journey-planner-mcp/v1/mcp",
+      "source_ref": "v1",
+      "tool_count": 8,
+      "write_count": 0,
+      "run": "discover-20261120-153320-ee100f99",
+      "validator_agreement": {},
+      "manifest": {
+        "misroute_version": "0.4.0",
+        "date_utc": "2026-11-20T14:33:20.982682+00:00",
+        "run_id": "discover-20261120-153320-ee100f99",
+        "phase": "discover",
+        "catalog_hash": "ee100f992517e3d9",
+        "request_recipe": "861e0645",
+        "server": {
+          "label": "tools",
+          "url": null,
+          "command": null,
+          "openapi": null,
+          "tools": "C:\\Users\\philip\\Documents\\misroute\\leaderboard\\servers\\entur\\tools.json",
+          "catalog": null,
+          "tools_sha256": "c7494aa7504fb83d8f420acab60e9e82ffdb171cceb2b410e40fc7b9a5b9f4e0",
+          "meta": {
+            "name": "entur",
+            "display_name": "Entur Journey Planner MCP",
+            "category": "transport",
+            "repo_url": "https://developer.entur.org/",
+            "package": "https://api.entur.io/journey-planner-mcp/v1/mcp",
+            "source_ref": "v1",
+            "captured_at": "2026-11-20T14:21:03Z",
+            "capture_method": "mcp_http_tools_list",
+            "tool_count": 8,
+            "write_count": 0,
+            "has_output_schema_count": 0,
+            "tools_sha256": "c7494aa7504fb83d8f420acab60e9e82ffdb171cceb2b410e40fc7b9a5b9f4e0",
+            "notes": "Official Norwegian national public transport MCP server (Entur)."
+          },
+          "frozen_requests": "leaderboard\\results\\surface\\requests\\entur.jsonl",
+          "frozen_requests_sha256": "3fe319ab65b6146f9bbcab9bcf45bba3f6510880d0be76113edb9db8d1ce2d34"
+        },
+        "tool_count": 8,
+        "write_count": 0,
+        "has_output_schema_count": 0,
+        "models": [
+          {
+            "name": "anthropic-claude-sonnet-5.5",
+            "provider": "openai-compatible",
+            "model_id": "anthropic/claude-sonnet-5.5",
+            "family": "anthropic",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "anthropic-claude-haiku-5.5",
+            "provider": "openai-compatible",
+            "model_id": "anthropic/claude-haiku-5.5",
+            "family": "anthropic",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "openai-gpt-5.6-terra",
+            "provider": "openai-compatible",
+            "model_id": "openai/gpt-5.6-terra",
+            "family": "openai",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "openai-gpt-5.6-luna",
+            "provider": "openai-compatible",
+            "model_id": "openai/gpt-5.6-luna",
+            "family": "openai",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "google-gemini-4-hydrogen",
+            "provider": "openai-compatible",
+            "model_id": "google/gemini-4-hydrogen",
+            "family": "google",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "google-gemini-3.8-flash",
+            "provider": "openai-compatible",
+            "model_id": "google/gemini-3.8-flash",
+            "family": "google",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "qwen-qwen3.8-flash",
+            "provider": "openai-compatible",
+            "model_id": "qwen/qwen3.8-flash",
+            "family": "qwen",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "meta-llama-llama-4-maverick",
+            "provider": "openai-compatible",
+            "model_id": "meta-llama/llama-4-maverick",
+            "family": "meta",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "mistralai-mistral-large-2512",
+            "provider": "openai-compatible",
+            "model_id": "mistralai/mistral-large-2512",
+            "family": "mistral",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          }
+        ],
+        "tested": [
+          "anthropic-claude-sonnet-5.5",
+          "openai-gpt-5.6-terra",
+          "google-gemini-4-hydrogen",
+          "qwen-qwen3.8-flash",
+          "meta-llama-llama-4-maverick",
+          "mistralai-mistral-large-2512"
+        ],
+        "generators": [
+          "anthropic-claude-haiku-5.5",
+          "openai-gpt-5.6-luna",
+          "google-gemini-3.8-flash"
+        ],
+        "validators": [
+          "anthropic-claude-haiku-5.5",
+          "openai-gpt-5.6-luna",
+          "google-gemini-3.8-flash"
+        ],
+        "modes": [
+          "json",
+          "code"
+        ],
+        "request_source": "description",
+        "request_languages": [
+          "en"
+        ],
+        "requests_per_tool": 3,
+        "slots": 4,
+        "rotations": 2,
+        "repeats": 1,
+        "max_turns": 1
+      },
+      "spent_usd": 0.7187
+    },
+    {
+      "server": "memory",
+      "display_name": "MCP Memory (Reference)",
+      "category": "database",
+      "package": "@modelcontextprotocol/server-memory",
+      "source_ref": "2.2.1",
+      "tool_count": 9,
+      "write_count": 6,
+      "run": "discover-20261120-153550-52fa20bb",
+      "validator_agreement": {
+        "requests_judged": 28,
+        "unanimous_rate": 1.0,
+        "pairwise_agreement": 1.0,
+        "fleiss_kappa": 1.0
+      },
+      "manifest": {
+        "misroute_version": "0.4.0",
+        "date_utc": "2026-11-20T14:35:50.573094+00:00",
+        "run_id": "discover-20261120-153550-52fa20bb",
+        "phase": "discover",
+        "catalog_hash": "52fa20bb869d7905",
+        "request_recipe": "861e0645",
+        "server": {
+          "label": "tools",
+          "url": null,
+          "command": null,
+          "openapi": null,
+          "tools": "C:\\Users\\philip\\Documents\\misroute\\leaderboard\\servers\\memory\\tools.json",
+          "catalog": null,
+          "tools_sha256": "cc7f27d41daefad466dd964046e2cf24a16183710824b06720f2df2df9991550",
+          "meta": {
+            "name": "memory",
+            "display_name": "MCP Memory (Reference)",
+            "category": "database",
+            "repo_url": "https://github.com/modelcontextprotocol/servers",
+            "package": "@modelcontextprotocol/server-memory",
+            "source_ref": "2.2.1",
+            "captured_at": "2026-11-20T13:45:54Z",
+            "capture_method": "mcp_stdio_tools_list",
+            "tool_count": 9,
+            "write_count": 6,
+            "has_output_schema_count": 0,
+            "tools_sha256": "cc7f27d41daefad466dd964046e2cf24a16183710824b06720f2df2df9991550",
+            "notes": "Official MCP reference knowledge-graph memory server; sibling risk across entities/relations/observations."
+          },
+          "frozen_requests": "leaderboard\\results\\surface\\requests\\memory.jsonl",
+          "frozen_requests_sha256": "a22df58e2b1869203a1757fe08637096d698d2fca79ebb73a26faca7cb3146f4"
+        },
+        "tool_count": 9,
+        "write_count": 6,
+        "has_output_schema_count": 0,
+        "models": [
+          {
+            "name": "anthropic-claude-sonnet-5.5",
+            "provider": "openai-compatible",
+            "model_id": "anthropic/claude-sonnet-5.5",
+            "family": "anthropic",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "anthropic-claude-haiku-5.5",
+            "provider": "openai-compatible",
+            "model_id": "anthropic/claude-haiku-5.5",
+            "family": "anthropic",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "openai-gpt-5.6-terra",
+            "provider": "openai-compatible",
+            "model_id": "openai/gpt-5.6-terra",
+            "family": "openai",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "openai-gpt-5.6-luna",
+            "provider": "openai-compatible",
+            "model_id": "openai/gpt-5.6-luna",
+            "family": "openai",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "google-gemini-4-hydrogen",
+            "provider": "openai-compatible",
+            "model_id": "google/gemini-4-hydrogen",
+            "family": "google",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "google-gemini-3.8-flash",
+            "provider": "openai-compatible",
+            "model_id": "google/gemini-3.8-flash",
+            "family": "google",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "qwen-qwen3.8-flash",
+            "provider": "openai-compatible",
+            "model_id": "qwen/qwen3.8-flash",
+            "family": "qwen",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "meta-llama-llama-4-maverick",
+            "provider": "openai-compatible",
+            "model_id": "meta-llama/llama-4-maverick",
+            "family": "meta",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          },
+          {
+            "name": "mistralai-mistral-large-2512",
+            "provider": "openai-compatible",
+            "model_id": "mistralai/mistral-large-2512",
+            "family": "mistral",
+            "options": {
+              "extra": {
+                "usage": {
+                  "include": true
+                }
+              }
+            }
+          }
+        ],
+        "tested": [
+          "anthropic-claude-sonnet-5.5",
+          "openai-gpt-5.6-terra",
+          "google-gemini-4-hydrogen",
+          "qwen-qwen3.8-flash",
+          "meta-llama-llama-4-maverick",
+          "mistralai-mistral-large-2512"
+        ],
+        "generators": [
+          "anthropic-claude-haiku-5.5",
+          "openai-gpt-5.6-luna",
+          "google-gemini-3.8-flash"
+        ],
+        "validators": [
+          "anthropic-claude-haiku-5.5",
+          "openai-gpt-5.6-luna",
+          "google-gemini-3.8-flash"
+        ],
+        "modes": [
+          "json",
+          "code"
+        ],
+        "request_source": "description",
+        "request_languages": [
+          "en"
+        ],
+        "requests_per_tool": 3,
+        "slots": 4,
+        "rotations": 2,
+        "repeats": 1,
+        "max_turns": 1
+      },
+      "spent_usd": 2.0016
+    }
+  ],
+  "models": [
+    {
+      "model": "meta-llama-llama-4-maverick",
+      "family": "meta",
+      "other_family": {
+        "trials": 228,
+        "templates": 57,
+        "accuracy": 0.4122807017543859,
+        "error_rate": 0.5877192982456141,
+        "error_ci95": [
+          0.4583659143494656,
+          0.7059953121797513
+        ],
+        "wrong_rate": 0.0043859649122807015,
+        "wrong_ci95": [
+          0.0002534548678195317,
+          0.07110561524210526
+        ],
+        "hedge_rate": 0.017543859649122806,
+        "hedge_ci95": [
+          0.003103584706680096,
+          0.09290966938262721
+        ],
+        "write_hedge_rate": 0.041666666666666664,
+        "write_hedge_ci95": [
+          0.00599738118946519,
+          0.2385634568443785
+        ],
+        "bad_args_rate": 0.0,
+        "decided": 99,
+        "accuracy_decided": 0.9494949494949495
+      },
+      "own_family": {
+        "trials": 0,
+        "templates": 0
+      },
+      "overall": {
+        "trials": 228,
+        "templates": 57,
+        "accuracy": 0.4122807017543859,
+        "error_rate": 0.5877192982456141,
+        "error_ci95": [
+          0.4583659143494656,
+          0.7059953121797513
+        ],
+        "wrong_rate": 0.0043859649122807015,
+        "wrong_ci95": [
+          0.0002534548678195317,
+          0.07110561524210526
+        ],
+        "hedge_rate": 0.017543859649122806,
+        "hedge_ci95": [
+          0.003103584706680096,
+          0.09290966938262721
+        ],
+        "write_hedge_rate": 0.041666666666666664,
+        "write_hedge_ci95": [
+          0.00599738118946519,
+          0.2385634568443785
+        ],
+        "bad_args_rate": 0.0,
+        "decided": 99,
+        "accuracy_decided": 0.9494949494949495
+      },
+      "by_mode": {
+        "json": {
+          "other_family": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.39473684210526316,
+            "error_rate": 0.6052631578947368,
+            "error_ci95": [
+              0.47561346866440657,
+              0.7216200031706536
+            ],
+            "wrong_rate": 0.0,
+            "wrong_ci95": [
+              0.0,
+              0.06314100878346394
+            ],
+            "hedge_rate": 0.008771929824561403,
+            "hedge_ci95": [
+              0.0009164458292378053,
+              0.07866068560714783
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 46,
+            "accuracy_decided": 0.9782608695652174
+          },
+          "own_family": {
+            "trials": 0,
+            "templates": 0
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.39473684210526316,
+            "error_rate": 0.6052631578947368,
+            "error_ci95": [
+              0.47561346866440657,
+              0.7216200031706536
+            ],
+            "wrong_rate": 0.0,
+            "wrong_ci95": [
+              0.0,
+              0.06314100878346394
+            ],
+            "hedge_rate": 0.008771929824561403,
+            "hedge_ci95": [
+              0.0009164458292378053,
+              0.07866068560714783
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 46,
+            "accuracy_decided": 0.9782608695652174
+          }
+        },
+        "code": {
+          "other_family": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.4298245614035088,
+            "error_rate": 0.5701754385964912,
+            "error_ci95": [
+              0.4412698274160061,
+              0.6902191538073674
+            ],
+            "wrong_rate": 0.008771929824561403,
+            "wrong_ci95": [
+              0.0009164458292378053,
+              0.07866068560714783
+            ],
+            "hedge_rate": 0.02631578947368421,
+            "hedge_ci95": [
+              0.006100629605068533,
+              0.10634874713716046
+            ],
+            "write_hedge_rate": 0.08333333333333333,
+            "write_hedge_ci95": [
+              0.019482315742505724,
+              0.29375480974280666
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 53,
+            "accuracy_decided": 0.9245283018867925
+          },
+          "own_family": {
+            "trials": 0,
+            "templates": 0
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.4298245614035088,
+            "error_rate": 0.5701754385964912,
+            "error_ci95": [
+              0.4412698274160061,
+              0.6902191538073674
+            ],
+            "wrong_rate": 0.008771929824561403,
+            "wrong_ci95": [
+              0.0009164458292378053,
+              0.07866068560714783
+            ],
+            "hedge_rate": 0.02631578947368421,
+            "hedge_ci95": [
+              0.006100629605068533,
+              0.10634874713716046
+            ],
+            "write_hedge_rate": 0.08333333333333333,
+            "write_hedge_ci95": [
+              0.019482315742505724,
+              0.29375480974280666
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 53,
+            "accuracy_decided": 0.9245283018867925
+          }
+        }
+      },
+      "logit_term": {
+        "coef": 2.065140212351524,
+        "se": 0.5383486379678293,
+        "z": 3.836064711052418,
+        "p": 0.0003196509328607776,
+        "odds_ratio": 7.886403591329741,
+        "or_ci": [
+          2.68236347580023,
+          23.186776201828465
+        ],
+        "ame": 0.2643457324583323,
+        "ame_se": 0.05984880707453058,
+        "ame_ci": [
+          0.14445416515216208,
+          0.38423729976450255
+        ]
+      }
+    },
+    {
+      "model": "openai-gpt-5.6-luna",
+      "family": "openai",
+      "other_family": {
+        "trials": 152,
+        "templates": 38,
+        "accuracy": 0.5723684210526316,
+        "error_rate": 0.4276315789473684,
+        "error_ci95": [
+          0.2842208160277728,
+          0.5843310557935724
+        ],
+        "wrong_rate": 0.006578947368421052,
+        "wrong_ci95": [
+          0.00038022524738541563,
+          0.10338253717087773
+        ],
+        "hedge_rate": 0.0,
+        "hedge_ci95": [
+          0.0,
+          0.09181293258383999
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.2425007574992425
+        ],
+        "bad_args_rate": 0.02631578947368421,
+        "decided": 88,
+        "accuracy_decided": 0.9886363636363636
+      },
+      "own_family": {
+        "trials": 76,
+        "templates": 19,
+        "accuracy": 0.6710526315789473,
+        "error_rate": 0.32894736842105265,
+        "error_ci95": [
+          0.16290095230251175,
+          0.5525305411130108
+        ],
+        "wrong_rate": 0.0,
+        "wrong_ci95": [
+          0.0,
+          0.16818436536845052
+        ],
+        "hedge_rate": 0.0,
+        "hedge_ci95": [
+          0.0,
+          0.16818436536845052
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "bad_args_rate": 0.013157894736842105,
+        "decided": 51,
+        "accuracy_decided": 1.0
+      },
+      "overall": {
+        "trials": 228,
+        "templates": 57,
+        "accuracy": 0.6052631578947368,
+        "error_rate": 0.39473684210526316,
+        "error_ci95": [
+          0.27837999682934644,
+          0.5243865313355933
+        ],
+        "wrong_rate": 0.0043859649122807015,
+        "wrong_ci95": [
+          0.0002534548678195317,
+          0.07110561524210526
+        ],
+        "hedge_rate": 0.0,
+        "hedge_ci95": [
+          0.0,
+          0.06314100878346394
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.1758845505823749
+        ],
+        "bad_args_rate": 0.021929824561403508,
+        "decided": 139,
+        "accuracy_decided": 0.9928057553956835
+      },
+      "by_mode": {
+        "json": {
+          "other_family": {
+            "trials": 76,
+            "templates": 38,
+            "accuracy": 0.7105263157894737,
+            "error_rate": 0.2894736842105263,
+            "error_ci95": [
+              0.17003106263656131,
+              0.44757438266189764
+            ],
+            "wrong_rate": 0.013157894736842105,
+            "wrong_ci95": [
+              0.0013751807126529403,
+              0.11433741154003338
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.09181293258383999
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.2425007574992425
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 55,
+            "accuracy_decided": 0.9818181818181818
+          },
+          "own_family": {
+            "trials": 38,
+            "templates": 19,
+            "accuracy": 0.8421052631578947,
+            "error_rate": 0.15789473684210525,
+            "error_ci95": [
+              0.055203710399278266,
+              0.3756592764317668
+            ],
+            "wrong_rate": 0.0,
+            "wrong_ci95": [
+              0.0,
+              0.16818436536845052
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.16818436536845052
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.3903430336530645
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 32,
+            "accuracy_decided": 1.0
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.7543859649122807,
+            "error_rate": 0.24561403508771928,
+            "error_ci95": [
+              0.1523270046544784,
+              0.3710254384107928
+            ],
+            "wrong_rate": 0.008771929824561403,
+            "wrong_ci95": [
+              0.0009164458292378053,
+              0.07866068560714783
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.06314100878346394
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 87,
+            "accuracy_decided": 0.9885057471264368
+          }
+        },
+        "code": {
+          "other_family": {
+            "trials": 76,
+            "templates": 38,
+            "accuracy": 0.4342105263157895,
+            "error_rate": 0.5657894736842105,
+            "error_ci95": [
+              0.40944170126736673,
+              0.7100565970768649
+            ],
+            "wrong_rate": 0.0,
+            "wrong_ci95": [
+              0.0,
+              0.09181293258383999
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.09181293258383999
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.2425007574992425
+            ],
+            "bad_args_rate": 0.05263157894736842,
+            "decided": 33,
+            "accuracy_decided": 1.0
+          },
+          "own_family": {
+            "trials": 38,
+            "templates": 19,
+            "accuracy": 0.5,
+            "error_rate": 0.5,
+            "error_ci95": [
+              0.2949485641549598,
+              0.7050514358450402
+            ],
+            "wrong_rate": 0.0,
+            "wrong_ci95": [
+              0.0,
+              0.16818436536845052
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.16818436536845052
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.3903430336530645
+            ],
+            "bad_args_rate": 0.02631578947368421,
+            "decided": 19,
+            "accuracy_decided": 1.0
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.45614035087719296,
+            "error_rate": 0.543859649122807,
+            "error_ci95": [
+              0.41590460831272247,
+              0.6662760049518861
+            ],
+            "wrong_rate": 0.0,
+            "wrong_ci95": [
+              0.0,
+              0.06314100878346394
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.06314100878346394
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.043859649122807015,
+            "decided": 52,
+            "accuracy_decided": 1.0
+          }
+        }
+      },
+      "logit_term": {
+        "coef": 0.6222367838158541,
+        "se": 0.20957591989661106,
+        "z": 2.969028045411032,
+        "p": 0.004390976556573151,
+        "odds_ratio": 1.8630907157704555,
+        "or_ci": [
+          1.2243447064872834,
+          2.8350733227318607
+        ],
+        "ame": 0.08047592642062036,
+        "ame_se": 0.026605572868917533,
+        "ame_ci": [
+          0.027178559501330565,
+          0.13377329333991017
+        ]
+      }
+    },
+    {
+      "model": "anthropic-claude-haiku-5.5",
+      "family": "anthropic",
+      "other_family": {
+        "trials": 152,
+        "templates": 38,
+        "accuracy": 0.7105263157894737,
+        "error_rate": 0.2894736842105263,
+        "error_ci95": [
+          0.17003106263656131,
+          0.44757438266189764
+        ],
+        "wrong_rate": 0.019736842105263157,
+        "wrong_ci95": [
+          0.002834115650850455,
+          0.124828306436259
+        ],
+        "hedge_rate": 0.0,
+        "hedge_ci95": [
+          0.0,
+          0.09181293258383999
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.2425007574992425
+        ],
+        "bad_args_rate": 0.0,
+        "decided": 111,
+        "accuracy_decided": 0.972972972972973
+      },
+      "own_family": {
+        "trials": 76,
+        "templates": 19,
+        "accuracy": 0.631578947368421,
+        "error_rate": 0.3684210526315789,
+        "error_ci95": [
+          0.19149272376273843,
+          0.5896084250184328
+        ],
+        "wrong_rate": 0.013157894736842105,
+        "wrong_ci95": [
+          0.0007607084022051153,
+          0.18931354208812828
+        ],
+        "hedge_rate": 0.0,
+        "hedge_ci95": [
+          0.0,
+          0.16818436536845052
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "bad_args_rate": 0.0,
+        "decided": 49,
+        "accuracy_decided": 0.9795918367346939
+      },
+      "overall": {
+        "trials": 228,
+        "templates": 57,
+        "accuracy": 0.6842105263157895,
+        "error_rate": 0.3157894736842105,
+        "error_ci95": [
+          0.2100412363168152,
+          0.44480018797182935
+        ],
+        "wrong_rate": 0.017543859649122806,
+        "wrong_ci95": [
+          0.003103584706680096,
+          0.09290966938262721
+        ],
+        "hedge_rate": 0.0,
+        "hedge_ci95": [
+          0.0,
+          0.06314100878346394
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.1758845505823749
+        ],
+        "bad_args_rate": 0.0,
+        "decided": 160,
+        "accuracy_decided": 0.975
+      },
+      "by_mode": {
+        "json": {
+          "other_family": {
+            "trials": 76,
+            "templates": 38,
+            "accuracy": 0.8289473684210527,
+            "error_rate": 0.17105263157894737,
+            "error_ci95": [
+              0.08322617744606979,
+              0.31928233083277224
+            ],
+            "wrong_rate": 0.0,
+            "wrong_ci95": [
+              0.0,
+              0.09181293258383999
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.09181293258383999
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.2425007574992425
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 63,
+            "accuracy_decided": 1.0
+          },
+          "own_family": {
+            "trials": 38,
+            "templates": 19,
+            "accuracy": 0.736842105263158,
+            "error_rate": 0.2631578947368421,
+            "error_ci95": [
+              0.11806238339540162,
+              0.48791968441070643
+            ],
+            "wrong_rate": 0.0,
+            "wrong_ci95": [
+              0.0,
+              0.16818436536845052
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.16818436536845052
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.3903430336530645
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 28,
+            "accuracy_decided": 1.0
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.7982456140350878,
+            "error_rate": 0.20175438596491227,
+            "error_ci95": [
+              0.11800200891431457,
+              0.3231698208863481
+            ],
+            "wrong_rate": 0.0,
+            "wrong_ci95": [
+              0.0,
+              0.06314100878346394
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.06314100878346394
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 91,
+            "accuracy_decided": 1.0
+          }
+        },
+        "code": {
+          "other_family": {
+            "trials": 76,
+            "templates": 38,
+            "accuracy": 0.5921052631578947,
+            "error_rate": 0.40789473684210525,
+            "error_ci95": [
+              0.26720072748114454,
+              0.5655016548369312
+            ],
+            "wrong_rate": 0.039473684210526314,
+            "wrong_ci95": [
+              0.00916859546142107,
+              0.15434331612895788
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.09181293258383999
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.2425007574992425
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 48,
+            "accuracy_decided": 0.9375
+          },
+          "own_family": {
+            "trials": 38,
+            "templates": 19,
+            "accuracy": 0.5263157894736843,
+            "error_rate": 0.47368421052631576,
+            "error_ci95": [
+              0.27329505487448547,
+              0.6829251748817489
+            ],
+            "wrong_rate": 0.02631578947368421,
+            "wrong_ci95": [
+              0.002753442473849163,
+              0.20921069313836715
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.16818436536845052
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.3903430336530645
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 21,
+            "accuracy_decided": 0.9523809523809523
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.5701754385964912,
+            "error_rate": 0.4298245614035088,
+            "error_ci95": [
+              0.30978084619263263,
+              0.5587301725839939
+            ],
+            "wrong_rate": 0.03508771929824561,
+            "wrong_ci95": [
+              0.009675461353255768,
+              0.11921003804189491
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.06314100878346394
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 69,
+            "accuracy_decided": 0.9420289855072463
+          }
+        }
+      },
+      "logit_term": null
+    },
+    {
+      "model": "openai-gpt-5.6-terra",
+      "family": "openai",
+      "other_family": {
+        "trials": 152,
+        "templates": 38,
+        "accuracy": 0.5328947368421053,
+        "error_rate": 0.46710526315789475,
+        "error_ci95": [
+          0.3189202433487109,
+          0.6213306074791733
+        ],
+        "wrong_rate": 0.02631578947368421,
+        "wrong_ci95": [
+          0.004660467553530057,
+          0.13495178436800254
+        ],
+        "hedge_rate": 0.0,
+        "hedge_ci95": [
+          0.0,
+          0.09181293258383999
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.2425007574992425
+        ],
+        "bad_args_rate": 0.013157894736842105,
+        "decided": 85,
+        "accuracy_decided": 0.9529411764705882
+      },
+      "own_family": {
+        "trials": 76,
+        "templates": 19,
+        "accuracy": 0.6447368421052632,
+        "error_rate": 0.35526315789473684,
+        "error_ci95": [
+          0.18182950947657517,
+          0.5773817541827131
+        ],
+        "wrong_rate": 0.013157894736842105,
+        "wrong_ci95": [
+          0.0007607084022051153,
+          0.18931354208812828
+        ],
+        "hedge_rate": 0.0,
+        "hedge_ci95": [
+          0.0,
+          0.16818436536845052
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "bad_args_rate": 0.013157894736842105,
+        "decided": 50,
+        "accuracy_decided": 0.98
+      },
+      "overall": {
+        "trials": 228,
+        "templates": 57,
+        "accuracy": 0.5701754385964912,
+        "error_rate": 0.4298245614035088,
+        "error_ci95": [
+          0.30978084619263263,
+          0.5587301725839939
+        ],
+        "wrong_rate": 0.021929824561403508,
+        "wrong_ci95": [
+          0.004518492135604624,
+          0.09971282328016352
+        ],
+        "hedge_rate": 0.0,
+        "hedge_ci95": [
+          0.0,
+          0.06314100878346394
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.1758845505823749
+        ],
+        "bad_args_rate": 0.013157894736842105,
+        "decided": 135,
+        "accuracy_decided": 0.9629629629629629
+      },
+      "by_mode": {
+        "json": {
+          "other_family": {
+            "trials": 76,
+            "templates": 38,
+            "accuracy": 0.7105263157894737,
+            "error_rate": 0.2894736842105263,
+            "error_ci95": [
+              0.17003106263656131,
+              0.44757438266189764
+            ],
+            "wrong_rate": 0.013157894736842105,
+            "wrong_ci95": [
+              0.0013751807126529403,
+              0.11433741154003338
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.09181293258383999
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.2425007574992425
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 55,
+            "accuracy_decided": 0.9818181818181818
+          },
+          "own_family": {
+            "trials": 38,
+            "templates": 19,
+            "accuracy": 0.8157894736842105,
+            "error_rate": 0.18421052631578946,
+            "error_ci95": [
+              0.06970572922077695,
+              0.4049370278540339
+            ],
+            "wrong_rate": 0.0,
+            "wrong_ci95": [
+              0.0,
+              0.16818436536845052
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.16818436536845052
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.3903430336530645
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 31,
+            "accuracy_decided": 1.0
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.7456140350877193,
+            "error_rate": 0.2543859649122807,
+            "error_ci95": [
+              0.15936510312331442,
+              0.38042346259487847
+            ],
+            "wrong_rate": 0.008771929824561403,
+            "wrong_ci95": [
+              0.0009164458292378053,
+              0.07866068560714783
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.06314100878346394
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 86,
+            "accuracy_decided": 0.9883720930232558
+          }
+        },
+        "code": {
+          "other_family": {
+            "trials": 76,
+            "templates": 38,
+            "accuracy": 0.35526315789473684,
+            "error_rate": 0.6447368421052632,
+            "error_ci95": [
+              0.48582376011339684,
+              0.7770724962439126
+            ],
+            "wrong_rate": 0.039473684210526314,
+            "wrong_ci95": [
+              0.00916859546142107,
+              0.15434331612895788
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.09181293258383999
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.2425007574992425
+            ],
+            "bad_args_rate": 0.02631578947368421,
+            "decided": 30,
+            "accuracy_decided": 0.9
+          },
+          "own_family": {
+            "trials": 38,
+            "templates": 19,
+            "accuracy": 0.4736842105263158,
+            "error_rate": 0.5263157894736842,
+            "error_ci95": [
+              0.31707482511825114,
+              0.7267049451255145
+            ],
+            "wrong_rate": 0.02631578947368421,
+            "wrong_ci95": [
+              0.002753442473849163,
+              0.20921069313836715
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.16818436536845052
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.3903430336530645
+            ],
+            "bad_args_rate": 0.02631578947368421,
+            "decided": 19,
+            "accuracy_decided": 0.9473684210526315
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.39473684210526316,
+            "error_rate": 0.6052631578947368,
+            "error_ci95": [
+              0.47561346866440657,
+              0.7216200031706536
+            ],
+            "wrong_rate": 0.03508771929824561,
+            "wrong_ci95": [
+              0.009675461353255768,
+              0.11921003804189491
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.06314100878346394
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.02631578947368421,
+            "decided": 49,
+            "accuracy_decided": 0.9183673469387755
+          }
+        }
+      },
+      "logit_term": {
+        "coef": 0.8896488955210867,
+        "se": 0.22791061828620043,
+        "z": 3.903499109479417,
+        "p": 0.00025706785488734634,
+        "odds_ratio": 2.434274816439526,
+        "or_ci": [
+          1.5420135535784139,
+          3.842828662692658
+        ],
+        "ame": 0.11502148344846762,
+        "ame_se": 0.028687252996820265,
+        "ame_ci": [
+          0.05755401013334663,
+          0.1724889567635886
+        ]
+      }
+    },
+    {
+      "model": "anthropic-claude-sonnet-5.5",
+      "family": "anthropic",
+      "other_family": {
+        "trials": 152,
+        "templates": 38,
+        "accuracy": 0.6578947368421053,
+        "error_rate": 0.34210526315789475,
+        "error_ci95": [
+          0.21212220026458956,
+          0.5010818837092545
+        ],
+        "wrong_rate": 0.03289473684210526,
+        "wrong_ci95": [
+          0.006787926096345251,
+          0.1447741556596105
+        ],
+        "hedge_rate": 0.0,
+        "hedge_ci95": [
+          0.0,
+          0.09181293258383999
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.2425007574992425
+        ],
+        "bad_args_rate": 0.0,
+        "decided": 105,
+        "accuracy_decided": 0.9523809523809523
+      },
+      "own_family": {
+        "trials": 76,
+        "templates": 19,
+        "accuracy": 0.5657894736842105,
+        "error_rate": 0.4342105263157895,
+        "error_ci95": [
+          0.24170570331614583,
+          0.6488448710744398
+        ],
+        "wrong_rate": 0.06578947368421052,
+        "wrong_ci95": [
+          0.013637742191572544,
+          0.2639960487862924
+        ],
+        "hedge_rate": 0.02631578947368421,
+        "hedge_ci95": [
+          0.002753442473849163,
+          0.20921069313836715
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "bad_args_rate": 0.0,
+        "decided": 50,
+        "accuracy_decided": 0.86
+      },
+      "overall": {
+        "trials": 228,
+        "templates": 57,
+        "accuracy": 0.6271929824561404,
+        "error_rate": 0.37280701754385964,
+        "error_ci95": [
+          0.25906680070164756,
+          0.5026094208309879
+        ],
+        "wrong_rate": 0.043859649122807015,
+        "wrong_ci95": [
+          0.013691437384584275,
+          0.13163018466348808
+        ],
+        "hedge_rate": 0.008771929824561403,
+        "hedge_ci95": [
+          0.0009164458292378053,
+          0.07866068560714783
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.1758845505823749
+        ],
+        "bad_args_rate": 0.0,
+        "decided": 155,
+        "accuracy_decided": 0.9225806451612903
+      },
+      "by_mode": {
+        "json": {
+          "other_family": {
+            "trials": 76,
+            "templates": 38,
+            "accuracy": 0.7894736842105263,
+            "error_rate": 0.21052631578947367,
+            "error_ci95": [
+              0.1107466035209593,
+              0.36346088376442165
+            ],
+            "wrong_rate": 0.0,
+            "wrong_ci95": [
+              0.0,
+              0.09181293258383999
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.09181293258383999
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.2425007574992425
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 60,
+            "accuracy_decided": 1.0
+          },
+          "own_family": {
+            "trials": 38,
+            "templates": 19,
+            "accuracy": 0.6842105263157895,
+            "error_rate": 0.3157894736842105,
+            "error_ci95": [
+              0.15364171004428598,
+              0.5398998982493537
+            ],
+            "wrong_rate": 0.02631578947368421,
+            "wrong_ci95": [
+              0.002753442473849163,
+              0.20921069313836715
+            ],
+            "hedge_rate": 0.02631578947368421,
+            "hedge_ci95": [
+              0.002753442473849163,
+              0.20921069313836715
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.3903430336530645
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 28,
+            "accuracy_decided": 0.9285714285714286
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.7543859649122807,
+            "error_rate": 0.24561403508771928,
+            "error_ci95": [
+              0.1523270046544784,
+              0.3710254384107928
+            ],
+            "wrong_rate": 0.008771929824561403,
+            "wrong_ci95": [
+              0.0009164458292378053,
+              0.07866068560714783
+            ],
+            "hedge_rate": 0.008771929824561403,
+            "hedge_ci95": [
+              0.0009164458292378053,
+              0.07866068560714783
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 88,
+            "accuracy_decided": 0.9772727272727273
+          }
+        },
+        "code": {
+          "other_family": {
+            "trials": 76,
+            "templates": 38,
+            "accuracy": 0.5263157894736843,
+            "error_rate": 0.47368421052631576,
+            "error_ci95": [
+              0.3247877880894159,
+              0.6274128925728913
+            ],
+            "wrong_rate": 0.06578947368421052,
+            "wrong_ci95": [
+              0.02061301436334438,
+              0.19069821656472719
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.09181293258383999
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.2425007574992425
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 45,
+            "accuracy_decided": 0.8888888888888888
+          },
+          "own_family": {
+            "trials": 38,
+            "templates": 19,
+            "accuracy": 0.4473684210526315,
+            "error_rate": 0.5526315789473685,
+            "error_ci95": [
+              0.3396754802574278,
+              0.7478840602301038
+            ],
+            "wrong_rate": 0.10526315789473684,
+            "wrong_ci95": [
+              0.029357941395096593,
+              0.313945504948417
+            ],
+            "hedge_rate": 0.02631578947368421,
+            "hedge_ci95": [
+              0.002753442473849163,
+              0.20921069313836715
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.3903430336530645
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 22,
+            "accuracy_decided": 0.7727272727272727
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.5,
+            "error_rate": 0.5,
+            "error_ci95": [
+              0.3743606264108819,
+              0.6256393735891181
+            ],
+            "wrong_rate": 0.07894736842105263,
+            "wrong_ci95": [
+              0.032745164884232125,
+              0.17832094777552696
+            ],
+            "hedge_rate": 0.008771929824561403,
+            "hedge_ci95": [
+              0.0009164458292378053,
+              0.07866068560714783
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 67,
+            "accuracy_decided": 0.8507462686567164
+          }
+        }
+      },
+      "logit_term": {
+        "coef": 0.45288405872450077,
+        "se": 0.17591427311403762,
+        "z": 2.5744588583264965,
+        "p": 0.012710939857787953,
+        "odds_ratio": 1.5728418186557849,
+        "or_ci": [
+          1.1057075245681003,
+          2.2373288881060462
+        ],
+        "ame": 0.05856294541730677,
+        "ame_se": 0.02383464643494872,
+        "ame_ci": [
+          0.01081641115947523,
+          0.10630947967513832
+        ]
+      }
+    },
+    {
+      "model": "google-gemini-4-hydrogen",
+      "family": "google",
+      "other_family": {
+        "trials": 152,
+        "templates": 38,
+        "accuracy": 0.48026315789473684,
+        "error_rate": 0.5197368421052632,
+        "error_ci95": [
+          0.36652873501745753,
+          0.669320754485812
+        ],
+        "wrong_rate": 0.046052631578947366,
+        "wrong_ci95": [
+          0.011766525206297215,
+          0.16369521621850486
+        ],
+        "hedge_rate": 0.019736842105263157,
+        "hedge_ci95": [
+          0.002834115650850455,
+          0.124828306436259
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.2425007574992425
+        ],
+        "bad_args_rate": 0.0,
+        "decided": 83,
+        "accuracy_decided": 0.8795180722891566
+      },
+      "own_family": {
+        "trials": 76,
+        "templates": 19,
+        "accuracy": 0.4605263157894737,
+        "error_rate": 0.5394736842105263,
+        "error_ci95": [
+          0.3283156216604691,
+          0.7373540337051795
+        ],
+        "wrong_rate": 0.05263157894736842,
+        "wrong_ci95": [
+          0.009351752490529969,
+          0.2463921533654521
+        ],
+        "hedge_rate": 0.039473684210526314,
+        "hedge_ci95": [
+          0.005680373859165588,
+          0.22817364687493358
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "bad_args_rate": 0.0,
+        "decided": 42,
+        "accuracy_decided": 0.8333333333333334
+      },
+      "overall": {
+        "trials": 228,
+        "templates": 57,
+        "accuracy": 0.4736842105263158,
+        "error_rate": 0.5263157894736842,
+        "error_ci95": [
+          0.3991779445222314,
+          0.6501304234365335
+        ],
+        "wrong_rate": 0.04824561403508772,
+        "wrong_ci95": [
+          0.015835952833149723,
+          0.13770373054138346
+        ],
+        "hedge_rate": 0.02631578947368421,
+        "hedge_ci95": [
+          0.006100629605068533,
+          0.10634874713716046
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.1758845505823749
+        ],
+        "bad_args_rate": 0.0,
+        "decided": 125,
+        "accuracy_decided": 0.864
+      },
+      "by_mode": {
+        "json": {
+          "other_family": {
+            "trials": 76,
+            "templates": 38,
+            "accuracy": 0.6710526315789473,
+            "error_rate": 0.32894736842105265,
+            "error_ci95": [
+              0.20142679396917113,
+              0.4878776303358267
+            ],
+            "wrong_rate": 0.05263157894736842,
+            "wrong_ci95": [
+              0.014553902448536798,
+              0.17285766881068843
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.09181293258383999
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.2425007574992425
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 55,
+            "accuracy_decided": 0.9272727272727272
+          },
+          "own_family": {
+            "trials": 38,
+            "templates": 19,
+            "accuracy": 0.6578947368421053,
+            "error_rate": 0.34210526315789475,
+            "error_ci95": [
+              0.17229796373113224,
+              0.5650234148062732
+            ],
+            "wrong_rate": 0.02631578947368421,
+            "wrong_ci95": [
+              0.002753442473849163,
+              0.20921069313836715
+            ],
+            "hedge_rate": 0.05263157894736842,
+            "hedge_ci95": [
+              0.009351752490529969,
+              0.2463921533654521
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.3903430336530645
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 28,
+            "accuracy_decided": 0.8928571428571429
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.6666666666666667,
+            "error_rate": 0.3333333333333333,
+            "error_ci95": [
+              0.2249363598222627,
+              0.4627773097722252
+            ],
+            "wrong_rate": 0.043859649122807015,
+            "wrong_ci95": [
+              0.013691437384584275,
+              0.13163018466348808
+            ],
+            "hedge_rate": 0.017543859649122806,
+            "hedge_ci95": [
+              0.003103584706680096,
+              0.09290966938262721
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 83,
+            "accuracy_decided": 0.9156626506024096
+          }
+        },
+        "code": {
+          "other_family": {
+            "trials": 76,
+            "templates": 38,
+            "accuracy": 0.2894736842105263,
+            "error_rate": 0.7105263157894737,
+            "error_ci95": [
+              0.5524256173381024,
+              0.8299689373634387
+            ],
+            "wrong_rate": 0.039473684210526314,
+            "wrong_ci95": [
+              0.00916859546142107,
+              0.15434331612895788
+            ],
+            "hedge_rate": 0.039473684210526314,
+            "hedge_ci95": [
+              0.00916859546142107,
+              0.15434331612895788
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.2425007574992425
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 28,
+            "accuracy_decided": 0.7857142857142857
+          },
+          "own_family": {
+            "trials": 38,
+            "templates": 19,
+            "accuracy": 0.26315789473684215,
+            "error_rate": 0.7368421052631579,
+            "error_ci95": [
+              0.5120803155892935,
+              0.8819376166045982
+            ],
+            "wrong_rate": 0.07894736842105263,
+            "wrong_ci95": [
+              0.01844481074632412,
+              0.28107886535342375
+            ],
+            "hedge_rate": 0.02631578947368421,
+            "hedge_ci95": [
+              0.002753442473849163,
+              0.20921069313836715
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.3903430336530645
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 14,
+            "accuracy_decided": 0.7142857142857143
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.2807017543859649,
+            "error_rate": 0.7192982456140351,
+            "error_ci95": [
+              0.5916955491727645,
+              0.8192075171502777
+            ],
+            "wrong_rate": 0.05263157894736842,
+            "wrong_ci95": [
+              0.01805996809628102,
+              0.14369777660471303
+            ],
+            "hedge_rate": 0.03508771929824561,
+            "hedge_ci95": [
+              0.009675461353255768,
+              0.11921003804189491
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 42,
+            "accuracy_decided": 0.7619047619047619
+          }
+        }
+      },
+      "logit_term": {
+        "coef": 1.616343356469775,
+        "se": 0.2501081193128937,
+        "z": 6.462578507688009,
+        "p": 2.6619371194634828e-08,
+        "odds_ratio": 5.034646707952064,
+        "or_ci": [
+          3.0505337879459495,
+          8.309256423925788
+        ],
+        "ame": 0.20803587057241102,
+        "ame_se": 0.0330680220298772,
+        "ame_ci": [
+          0.14179266235040255,
+          0.2742790787944195
+        ]
+      }
+    },
+    {
+      "model": "google-gemini-3.8-flash",
+      "family": "google",
+      "other_family": {
+        "trials": 152,
+        "templates": 38,
+        "accuracy": 0.5,
+        "error_rate": 0.5,
+        "error_ci95": [
+          0.3484967553286069,
+          0.6515032446713931
+        ],
+        "wrong_rate": 0.05263157894736842,
+        "wrong_ci95": [
+          0.014553902448536798,
+          0.17285766881068843
+        ],
+        "hedge_rate": 0.0,
+        "hedge_ci95": [
+          0.0,
+          0.09181293258383999
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.2425007574992425
+        ],
+        "bad_args_rate": 0.0,
+        "decided": 84,
+        "accuracy_decided": 0.9047619047619048
+      },
+      "own_family": {
+        "trials": 76,
+        "templates": 19,
+        "accuracy": 0.5263157894736843,
+        "error_rate": 0.47368421052631576,
+        "error_ci95": [
+          0.27329505487448547,
+          0.6829251748817489
+        ],
+        "wrong_rate": 0.013157894736842105,
+        "wrong_ci95": [
+          0.0007607084022051153,
+          0.18931354208812828
+        ],
+        "hedge_rate": 0.013157894736842105,
+        "hedge_ci95": [
+          0.0007607084022051153,
+          0.18931354208812828
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.3903430336530645
+        ],
+        "bad_args_rate": 0.0,
+        "decided": 42,
+        "accuracy_decided": 0.9523809523809523
+      },
+      "overall": {
+        "trials": 228,
+        "templates": 57,
+        "accuracy": 0.5087719298245614,
+        "error_rate": 0.49122807017543857,
+        "error_ci95": [
+          0.3661606806374018,
+          0.6174031967096765
+        ],
+        "wrong_rate": 0.039473684210526314,
+        "wrong_ci95": [
+          0.011634653049858223,
+          0.12546890767175328
+        ],
+        "hedge_rate": 0.0043859649122807015,
+        "hedge_ci95": [
+          0.0002534548678195317,
+          0.07110561524210526
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.1758845505823749
+        ],
+        "bad_args_rate": 0.0,
+        "decided": 126,
+        "accuracy_decided": 0.9206349206349206
+      },
+      "by_mode": {
+        "json": {
+          "other_family": {
+            "trials": 76,
+            "templates": 38,
+            "accuracy": 0.6710526315789473,
+            "error_rate": 0.32894736842105265,
+            "error_ci95": [
+              0.20142679396917113,
+              0.4878776303358267
+            ],
+            "wrong_rate": 0.05263157894736842,
+            "wrong_ci95": [
+              0.014553902448536798,
+              0.17285766881068843
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.09181293258383999
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.2425007574992425
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 55,
+            "accuracy_decided": 0.9272727272727272
+          },
+          "own_family": {
+            "trials": 38,
+            "templates": 19,
+            "accuracy": 0.7105263157894737,
+            "error_rate": 0.2894736842105263,
+            "error_ci95": [
+              0.1355515527830758,
+              0.514210285266798
+            ],
+            "wrong_rate": 0.02631578947368421,
+            "wrong_ci95": [
+              0.002753442473849163,
+              0.20921069313836715
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.16818436536845052
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.3903430336530645
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 28,
+            "accuracy_decided": 0.9642857142857143
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.6842105263157895,
+            "error_rate": 0.3157894736842105,
+            "error_ci95": [
+              0.2100412363168152,
+              0.44480018797182935
+            ],
+            "wrong_rate": 0.043859649122807015,
+            "wrong_ci95": [
+              0.013691437384584275,
+              0.13163018466348808
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.06314100878346394
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 83,
+            "accuracy_decided": 0.9397590361445783
+          }
+        },
+        "code": {
+          "other_family": {
+            "trials": 76,
+            "templates": 38,
+            "accuracy": 0.32894736842105265,
+            "error_rate": 0.6710526315789473,
+            "error_ci95": [
+              0.5121223696641732,
+              0.7985732060308288
+            ],
+            "wrong_rate": 0.05263157894736842,
+            "wrong_ci95": [
+              0.014553902448536798,
+              0.17285766881068843
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.09181293258383999
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.2425007574992425
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 29,
+            "accuracy_decided": 0.8620689655172413
+          },
+          "own_family": {
+            "trials": 38,
+            "templates": 19,
+            "accuracy": 0.3421052631578947,
+            "error_rate": 0.6578947368421053,
+            "error_ci95": [
+              0.43497658519372684,
+              0.8277020362688678
+            ],
+            "wrong_rate": 0.0,
+            "wrong_ci95": [
+              0.0,
+              0.16818436536845052
+            ],
+            "hedge_rate": 0.02631578947368421,
+            "hedge_ci95": [
+              0.002753442473849163,
+              0.20921069313836715
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.3903430336530645
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 14,
+            "accuracy_decided": 0.9285714285714286
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.33333333333333337,
+            "error_rate": 0.6666666666666666,
+            "error_ci95": [
+              0.5372226902277747,
+              0.7750636401777372
+            ],
+            "wrong_rate": 0.03508771929824561,
+            "wrong_ci95": [
+              0.009675461353255768,
+              0.11921003804189491
+            ],
+            "hedge_rate": 0.008771929824561403,
+            "hedge_ci95": [
+              0.0009164458292378053,
+              0.07866068560714783
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 43,
+            "accuracy_decided": 0.8837209302325582
+          }
+        }
+      },
+      "logit_term": {
+        "coef": 1.352189335187488,
+        "se": 0.2671474989410805,
+        "z": 5.061583359557164,
+        "p": 4.802195825275207e-06,
+        "odds_ratio": 3.8658799795786774,
+        "or_ci": [
+          2.263763259173147,
+          6.6018511237637085
+        ],
+        "ame": 0.17442599032009548,
+        "ame_se": 0.035317931460550164,
+        "ame_ci": [
+          0.1036756719128431,
+          0.24517630872734786
+        ]
+      }
+    },
+    {
+      "model": "qwen-qwen3.8-flash",
+      "family": "qwen",
+      "other_family": {
+        "trials": 228,
+        "templates": 57,
+        "accuracy": 0.5964912280701755,
+        "error_rate": 0.40350877192982454,
+        "error_ci95": [
+          0.28617323526539984,
+          0.5330294155524615
+        ],
+        "wrong_rate": 0.07894736842105263,
+        "wrong_ci95": [
+          0.032745164884232125,
+          0.17832094777552696
+        ],
+        "hedge_rate": 0.043859649122807015,
+        "hedge_ci95": [
+          0.013691437384584275,
+          0.13163018466348808
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.1758845505823749
+        ],
+        "bad_args_rate": 0.0043859649122807015,
+        "decided": 164,
+        "accuracy_decided": 0.8292682926829268
+      },
+      "own_family": {
+        "trials": 0,
+        "templates": 0
+      },
+      "overall": {
+        "trials": 228,
+        "templates": 57,
+        "accuracy": 0.5964912280701755,
+        "error_rate": 0.40350877192982454,
+        "error_ci95": [
+          0.28617323526539984,
+          0.5330294155524615
+        ],
+        "wrong_rate": 0.07894736842105263,
+        "wrong_ci95": [
+          0.032745164884232125,
+          0.17832094777552696
+        ],
+        "hedge_rate": 0.043859649122807015,
+        "hedge_ci95": [
+          0.013691437384584275,
+          0.13163018466348808
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.1758845505823749
+        ],
+        "bad_args_rate": 0.0043859649122807015,
+        "decided": 164,
+        "accuracy_decided": 0.8292682926829268
+      },
+      "by_mode": {
+        "json": {
+          "other_family": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.6578947368421053,
+            "error_rate": 0.34210526315789475,
+            "error_ci95": [
+              0.23244842244922925,
+              0.47170136979818034
+            ],
+            "wrong_rate": 0.03508771929824561,
+            "wrong_ci95": [
+              0.009675461353255768,
+              0.11921003804189491
+            ],
+            "hedge_rate": 0.05263157894736842,
+            "hedge_ci95": [
+              0.01805996809628102,
+              0.14369777660471303
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.008771929824561403,
+            "decided": 85,
+            "accuracy_decided": 0.8823529411764706
+          },
+          "own_family": {
+            "trials": 0,
+            "templates": 0
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.6578947368421053,
+            "error_rate": 0.34210526315789475,
+            "error_ci95": [
+              0.23244842244922925,
+              0.47170136979818034
+            ],
+            "wrong_rate": 0.03508771929824561,
+            "wrong_ci95": [
+              0.009675461353255768,
+              0.11921003804189491
+            ],
+            "hedge_rate": 0.05263157894736842,
+            "hedge_ci95": [
+              0.01805996809628102,
+              0.14369777660471303
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.008771929824561403,
+            "decided": 85,
+            "accuracy_decided": 0.8823529411764706
+          }
+        },
+        "code": {
+          "other_family": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.5350877192982456,
+            "error_rate": 0.4649122807017544,
+            "error_ci95": [
+              0.34177854412097824,
+              0.592476965267335
+            ],
+            "wrong_rate": 0.12280701754385964,
+            "wrong_ci95": [
+              0.060779830035075005,
+              0.2324668958892925
+            ],
+            "hedge_rate": 0.03508771929824561,
+            "hedge_ci95": [
+              0.009675461353255768,
+              0.11921003804189491
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 79,
+            "accuracy_decided": 0.7721518987341772
+          },
+          "own_family": {
+            "trials": 0,
+            "templates": 0
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.5350877192982456,
+            "error_rate": 0.4649122807017544,
+            "error_ci95": [
+              0.34177854412097824,
+              0.592476965267335
+            ],
+            "wrong_rate": 0.12280701754385964,
+            "wrong_ci95": [
+              0.060779830035075005,
+              0.2324668958892925
+            ],
+            "hedge_rate": 0.03508771929824561,
+            "hedge_ci95": [
+              0.009675461353255768,
+              0.11921003804189491
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 79,
+            "accuracy_decided": 0.7721518987341772
+          }
+        }
+      },
+      "logit_term": {
+        "coef": 0.6696506802505573,
+        "se": 0.239874427702804,
+        "z": 2.7916718203919215,
+        "p": 0.007159266540592706,
+        "odds_ratio": 1.9535547861630693,
+        "or_ci": [
+          1.208191313729841,
+          3.158751647335549
+        ],
+        "ame": 0.08661987516449103,
+        "ame_se": 0.031775108175211335,
+        "ame_ci": [
+          0.022966684622111794,
+          0.15027306570687027
+        ]
+      }
+    },
+    {
+      "model": "mistralai-mistral-large-2512",
+      "family": "mistral",
+      "other_family": {
+        "trials": 228,
+        "templates": 57,
+        "accuracy": 0.6666666666666667,
+        "error_rate": 0.3333333333333333,
+        "error_ci95": [
+          0.2249363598222627,
+          0.4627773097722252
+        ],
+        "wrong_rate": 0.09210526315789473,
+        "wrong_ci95": [
+          0.040767449572305506,
+          0.19495284706683608
+        ],
+        "hedge_rate": 0.008771929824561403,
+        "hedge_ci95": [
+          0.0009164458292378053,
+          0.07866068560714783
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.1758845505823749
+        ],
+        "bad_args_rate": 0.017543859649122806,
+        "decided": 175,
+        "accuracy_decided": 0.8685714285714285
+      },
+      "own_family": {
+        "trials": 0,
+        "templates": 0
+      },
+      "overall": {
+        "trials": 228,
+        "templates": 57,
+        "accuracy": 0.6666666666666667,
+        "error_rate": 0.3333333333333333,
+        "error_ci95": [
+          0.2249363598222627,
+          0.4627773097722252
+        ],
+        "wrong_rate": 0.09210526315789473,
+        "wrong_ci95": [
+          0.040767449572305506,
+          0.19495284706683608
+        ],
+        "hedge_rate": 0.008771929824561403,
+        "hedge_ci95": [
+          0.0009164458292378053,
+          0.07866068560714783
+        ],
+        "write_hedge_rate": 0.0,
+        "write_hedge_ci95": [
+          0.0,
+          0.1758845505823749
+        ],
+        "bad_args_rate": 0.017543859649122806,
+        "decided": 175,
+        "accuracy_decided": 0.8685714285714285
+      },
+      "by_mode": {
+        "json": {
+          "other_family": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.8771929824561404,
+            "error_rate": 0.12280701754385964,
+            "error_ci95": [
+              0.060779830035075005,
+              0.2324668958892925
+            ],
+            "wrong_rate": 0.017543859649122806,
+            "wrong_ci95": [
+              0.003103584706680096,
+              0.09290966938262721
+            ],
+            "hedge_rate": 0.017543859649122806,
+            "hedge_ci95": [
+              0.003103584706680096,
+              0.09290966938262721
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 104,
+            "accuracy_decided": 0.9615384615384616
+          },
+          "own_family": {
+            "trials": 0,
+            "templates": 0
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.8771929824561404,
+            "error_rate": 0.12280701754385964,
+            "error_ci95": [
+              0.060779830035075005,
+              0.2324668958892925
+            ],
+            "wrong_rate": 0.017543859649122806,
+            "wrong_ci95": [
+              0.003103584706680096,
+              0.09290966938262721
+            ],
+            "hedge_rate": 0.017543859649122806,
+            "hedge_ci95": [
+              0.003103584706680096,
+              0.09290966938262721
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.0,
+            "decided": 104,
+            "accuracy_decided": 0.9615384615384616
+          }
+        },
+        "code": {
+          "other_family": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.45614035087719296,
+            "error_rate": 0.543859649122807,
+            "error_ci95": [
+              0.41590460831272247,
+              0.6662760049518861
+            ],
+            "wrong_rate": 0.16666666666666666,
+            "wrong_ci95": [
+              0.09173158332052431,
+              0.28369575586845164
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.06314100878346394
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.03508771929824561,
+            "decided": 71,
+            "accuracy_decided": 0.7323943661971831
+          },
+          "own_family": {
+            "trials": 0,
+            "templates": 0
+          },
+          "overall": {
+            "trials": 114,
+            "templates": 57,
+            "accuracy": 0.45614035087719296,
+            "error_rate": 0.543859649122807,
+            "error_ci95": [
+              0.41590460831272247,
+              0.6662760049518861
+            ],
+            "wrong_rate": 0.16666666666666666,
+            "wrong_ci95": [
+              0.09173158332052431,
+              0.28369575586845164
+            ],
+            "hedge_rate": 0.0,
+            "hedge_ci95": [
+              0.0,
+              0.06314100878346394
+            ],
+            "write_hedge_rate": 0.0,
+            "write_hedge_ci95": [
+              0.0,
+              0.1758845505823749
+            ],
+            "bad_args_rate": 0.03508771929824561,
+            "decided": 71,
+            "accuracy_decided": 0.7323943661971831
+          }
+        }
+      },
+      "logit_term": {
+        "coef": 0.12178654735139552,
+        "se": 0.42555474817126376,
+        "z": 0.2861830302088011,
+        "p": 0.775793992913061,
+        "odds_ratio": 1.1295129785101377,
+        "or_ci": [
+          0.48157078351610966,
+          2.649246200751222
+        ],
+        "ame": 0.015729503276348252,
+        "ame_se": 0.05484495288781382,
+        "ame_ci": [
+          -0.09413813957181356,
+          0.12559714612451006
+        ]
+      }
+    }
+  ],
+  "matrix": {
+    "fetch": {
+      "anthropic-claude-haiku-5.5": {
+        "json": {
+          "trials": 4,
+          "templates": 2,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 4,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 4,
+          "templates": 2,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 4,
+          "accuracy_decided": 1.0
+        }
+      },
+      "anthropic-claude-sonnet-5.5": {
+        "json": {
+          "trials": 4,
+          "templates": 2,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 4,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 4,
+          "templates": 2,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 4,
+          "accuracy_decided": 1.0
+        }
+      },
+      "google-gemini-3.8-flash": {
+        "json": {
+          "trials": 4,
+          "templates": 2,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 4,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 4,
+          "templates": 2,
+          "accuracy": 0.0,
+          "error_rate": 1.0,
+          "error_ci95": [
+            0.34237195288961925,
+            1.0
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 0,
+          "accuracy_decided": 0.0
+        }
+      },
+      "google-gemini-4-hydrogen": {
+        "json": {
+          "trials": 4,
+          "templates": 2,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 4,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 4,
+          "templates": 2,
+          "accuracy": 0.0,
+          "error_rate": 1.0,
+          "error_ci95": [
+            0.34237195288961925,
+            1.0
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 0,
+          "accuracy_decided": 0.0
+        }
+      },
+      "meta-llama-llama-4-maverick": {
+        "json": {
+          "trials": 6,
+          "templates": 3,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.5615060804490177
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.5615060804490177
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.5615060804490177
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 6,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 6,
+          "templates": 3,
+          "accuracy": 0.33333333333333337,
+          "error_rate": 0.6666666666666666,
+          "error_ci95": [
+            0.2076549551264879,
+            0.9385096847238394
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.5615060804490177
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.5615060804490177
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 2,
+          "accuracy_decided": 1.0
+        }
+      },
+      "mistralai-mistral-large-2512": {
+        "json": {
+          "trials": 6,
+          "templates": 3,
+          "accuracy": 0.6666666666666667,
+          "error_rate": 0.3333333333333333,
+          "error_ci95": [
+            0.0614903152761605,
+            0.7923450448735121
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.5615060804490177
+          ],
+          "hedge_rate": 0.3333333333333333,
+          "hedge_ci95": [
+            0.0614903152761605,
+            0.7923450448735121
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 6,
+          "accuracy_decided": 0.6666666666666666
+        },
+        "code": {
+          "trials": 6,
+          "templates": 3,
+          "accuracy": 0.0,
+          "error_rate": 1.0,
+          "error_ci95": [
+            0.43849391955098227,
+            1.0
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.5615060804490177
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.5615060804490177
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 0,
+          "accuracy_decided": 0.0
+        }
+      },
+      "openai-gpt-5.6-luna": {
+        "json": {
+          "trials": 4,
+          "templates": 2,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 4,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 4,
+          "templates": 2,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 4,
+          "accuracy_decided": 1.0
+        }
+      },
+      "openai-gpt-5.6-terra": {
+        "json": {
+          "trials": 4,
+          "templates": 2,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 4,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 4,
+          "templates": 2,
+          "accuracy": 0.0,
+          "error_rate": 1.0,
+          "error_ci95": [
+            0.34237195288961925,
+            1.0
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.6576280471103807
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 0,
+          "accuracy_decided": 0.0
+        }
+      },
+      "qwen-qwen3.8-flash": {
+        "json": {
+          "trials": 6,
+          "templates": 3,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.5615060804490177
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.5615060804490177
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.5615060804490177
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 6,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 6,
+          "templates": 3,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.5615060804490177
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.5615060804490177
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.5615060804490177
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 6,
+          "accuracy_decided": 1.0
+        }
+      }
+    },
+    "time": {
+      "anthropic-claude-haiku-5.5": {
+        "json": {
+          "trials": 12,
+          "templates": 6,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 12,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 12,
+          "templates": 6,
+          "accuracy": 0.6666666666666667,
+          "error_rate": 0.3333333333333333,
+          "error_ci95": [
+            0.09676933255921683,
+            0.7000116786584712
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 8,
+          "accuracy_decided": 1.0
+        }
+      },
+      "anthropic-claude-sonnet-5.5": {
+        "json": {
+          "trials": 12,
+          "templates": 6,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 12,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 12,
+          "templates": 6,
+          "accuracy": 0.6666666666666667,
+          "error_rate": 0.3333333333333333,
+          "error_ci95": [
+            0.09676933255921683,
+            0.7000116786584712
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 8,
+          "accuracy_decided": 1.0
+        }
+      },
+      "google-gemini-3.8-flash": {
+        "json": {
+          "trials": 12,
+          "templates": 6,
+          "accuracy": 0.8333333333333334,
+          "error_rate": 0.16666666666666666,
+          "error_ci95": [
+            0.03005258587173032,
+            0.563509436563646
+          ],
+          "wrong_rate": 0.16666666666666666,
+          "wrong_ci95": [
+            0.03005258587173032,
+            0.563509436563646
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 12,
+          "accuracy_decided": 0.8333333333333334
+        },
+        "code": {
+          "trials": 12,
+          "templates": 6,
+          "accuracy": 0.0,
+          "error_rate": 1.0,
+          "error_ci95": [
+            0.6096569663469354,
+            0.9999999999999999
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 0,
+          "accuracy_decided": 0.0
+        }
+      },
+      "google-gemini-4-hydrogen": {
+        "json": {
+          "trials": 12,
+          "templates": 6,
+          "accuracy": 0.8333333333333334,
+          "error_rate": 0.16666666666666666,
+          "error_ci95": [
+            0.03005258587173032,
+            0.563509436563646
+          ],
+          "wrong_rate": 0.16666666666666666,
+          "wrong_ci95": [
+            0.03005258587173032,
+            0.563509436563646
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 12,
+          "accuracy_decided": 0.8333333333333334
+        },
+        "code": {
+          "trials": 12,
+          "templates": 6,
+          "accuracy": 0.0,
+          "error_rate": 1.0,
+          "error_ci95": [
+            0.6096569663469354,
+            0.9999999999999999
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 0,
+          "accuracy_decided": 0.0
+        }
+      },
+      "meta-llama-llama-4-maverick": {
+        "json": {
+          "trials": 18,
+          "templates": 9,
+          "accuracy": 0.0,
+          "error_rate": 1.0,
+          "error_ci95": [
+            0.7008472464490407,
+            1.0
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.2991527535509594
+          ],
+          "hedge_rate": 0.05555555555555555,
+          "hedge_ci95": [
+            0.005827383072413289,
+            0.37119728675066177
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 1,
+          "accuracy_decided": 0.0
+        },
+        "code": {
+          "trials": 18,
+          "templates": 9,
+          "accuracy": 0.05555555555555558,
+          "error_rate": 0.9444444444444444,
+          "error_ci95": [
+            0.6288027132493382,
+            0.9941726169275867
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.2991527535509594
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.2991527535509594
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 1,
+          "accuracy_decided": 1.0
+        }
+      },
+      "mistralai-mistral-large-2512": {
+        "json": {
+          "trials": 18,
+          "templates": 9,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.2991527535509594
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.2991527535509594
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.2991527535509594
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 18,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 18,
+          "templates": 9,
+          "accuracy": 0.0,
+          "error_rate": 1.0,
+          "error_ci95": [
+            0.7008472464490407,
+            1.0
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.2991527535509594
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.2991527535509594
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 0,
+          "accuracy_decided": 0.0
+        }
+      },
+      "openai-gpt-5.6-luna": {
+        "json": {
+          "trials": 12,
+          "templates": 6,
+          "accuracy": 0.9166666666666666,
+          "error_rate": 0.08333333333333333,
+          "error_ci95": [
+            0.008762028510600428,
+            0.48319049953362
+          ],
+          "wrong_rate": 0.08333333333333333,
+          "wrong_ci95": [
+            0.008762028510600428,
+            0.48319049953362
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 12,
+          "accuracy_decided": 0.9166666666666666
+        },
+        "code": {
+          "trials": 12,
+          "templates": 6,
+          "accuracy": 0.08333333333333337,
+          "error_rate": 0.9166666666666666,
+          "error_ci95": [
+            0.5168095004663799,
+            0.9912379714893994
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 1,
+          "accuracy_decided": 1.0
+        }
+      },
+      "openai-gpt-5.6-terra": {
+        "json": {
+          "trials": 12,
+          "templates": 6,
+          "accuracy": 0.9166666666666666,
+          "error_rate": 0.08333333333333333,
+          "error_ci95": [
+            0.008762028510600428,
+            0.48319049953362
+          ],
+          "wrong_rate": 0.08333333333333333,
+          "wrong_ci95": [
+            0.008762028510600428,
+            0.48319049953362
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 12,
+          "accuracy_decided": 0.9166666666666666
+        },
+        "code": {
+          "trials": 12,
+          "templates": 6,
+          "accuracy": 0.08333333333333337,
+          "error_rate": 0.9166666666666666,
+          "error_ci95": [
+            0.5168095004663799,
+            0.9912379714893994
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.3903430336530645
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 1,
+          "accuracy_decided": 1.0
+        }
+      },
+      "qwen-qwen3.8-flash": {
+        "json": {
+          "trials": 18,
+          "templates": 9,
+          "accuracy": 0.6111111111111112,
+          "error_rate": 0.3888888888888889,
+          "error_ci95": [
+            0.15342790027002917,
+            0.6908282671857396
+          ],
+          "wrong_rate": 0.16666666666666666,
+          "wrong_ci95": [
+            0.039464463129268795,
+            0.49330403923803745
+          ],
+          "hedge_rate": 0.2222222222222222,
+          "hedge_ci95": [
+            0.06322376231222723,
+            0.5474166563271946
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 18,
+          "accuracy_decided": 0.6111111111111112
+        },
+        "code": {
+          "trials": 18,
+          "templates": 9,
+          "accuracy": 0.5555555555555556,
+          "error_rate": 0.4444444444444444,
+          "error_ci95": [
+            0.188775429471914,
+            0.7333526542559703
+          ],
+          "wrong_rate": 0.1111111111111111,
+          "wrong_ci95": [
+            0.019890371327130535,
+            0.4350062147680601
+          ],
+          "hedge_rate": 0.16666666666666666,
+          "hedge_ci95": [
+            0.039464463129268795,
+            0.49330403923803745
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 15,
+          "accuracy_decided": 0.6666666666666666
+        }
+      }
+    },
+    "entur": {
+      "anthropic-claude-haiku-5.5": {
+        "json": {
+          "trials": 24,
+          "templates": 12,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 24,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 24,
+          "templates": 12,
+          "accuracy": 0.5,
+          "error_rate": 0.5,
+          "error_ci95": [
+            0.2537781703934222,
+            0.7462218296065778
+          ],
+          "wrong_rate": 0.125,
+          "wrong_ci95": [
+            0.029408427333507237,
+            0.40246714079092466
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 15,
+          "accuracy_decided": 0.8
+        }
+      },
+      "anthropic-claude-sonnet-5.5": {
+        "json": {
+          "trials": 24,
+          "templates": 12,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 24,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 24,
+          "templates": 12,
+          "accuracy": 0.5,
+          "error_rate": 0.5,
+          "error_ci95": [
+            0.2537781703934222,
+            0.7462218296065778
+          ],
+          "wrong_rate": 0.20833333333333334,
+          "wrong_ci95": [
+            0.0669343849521441,
+            0.49119105692241405
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 17,
+          "accuracy_decided": 0.7058823529411765
+        }
+      },
+      "google-gemini-3.8-flash": {
+        "json": {
+          "trials": 24,
+          "templates": 12,
+          "accuracy": 0.9166666666666666,
+          "error_rate": 0.08333333333333333,
+          "error_ci95": [
+            0.014864709450773478,
+            0.35388592179859524
+          ],
+          "wrong_rate": 0.08333333333333333,
+          "wrong_ci95": [
+            0.014864709450773478,
+            0.35388592179859524
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 24,
+          "accuracy_decided": 0.9166666666666666
+        },
+        "code": {
+          "trials": 24,
+          "templates": 12,
+          "accuracy": 0.5416666666666667,
+          "error_rate": 0.4583333333333333,
+          "error_ci95": [
+            0.22286416994293728,
+            0.7140108931819995
+          ],
+          "wrong_rate": 0.16666666666666666,
+          "wrong_ci95": [
+            0.04696414761482223,
+            0.44803635738467273
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 17,
+          "accuracy_decided": 0.7647058823529411
+        }
+      },
+      "google-gemini-4-hydrogen": {
+        "json": {
+          "trials": 24,
+          "templates": 12,
+          "accuracy": 0.9166666666666666,
+          "error_rate": 0.08333333333333333,
+          "error_ci95": [
+            0.014864709450773478,
+            0.35388592179859524
+          ],
+          "wrong_rate": 0.08333333333333333,
+          "wrong_ci95": [
+            0.014864709450773478,
+            0.35388592179859524
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 24,
+          "accuracy_decided": 0.9166666666666666
+        },
+        "code": {
+          "trials": 24,
+          "templates": 12,
+          "accuracy": 0.375,
+          "error_rate": 0.625,
+          "error_ci95": [
+            0.354364771265013,
+            0.8350100393601764
+          ],
+          "wrong_rate": 0.125,
+          "wrong_ci95": [
+            0.029408427333507237,
+            0.40246714079092466
+          ],
+          "hedge_rate": 0.125,
+          "hedge_ci95": [
+            0.029408427333507237,
+            0.40246714079092466
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 15,
+          "accuracy_decided": 0.6
+        }
+      },
+      "meta-llama-llama-4-maverick": {
+        "json": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.33333333333333337,
+          "error_rate": 0.6666666666666666,
+          "error_ci95": [
+            0.4374906934425036,
+            0.8372144563633714
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 12,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.4722222222222222,
+          "error_rate": 0.5277777777777778,
+          "error_ci95": [
+            0.3134659891684888,
+            0.7323182024658237
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 17,
+          "accuracy_decided": 1.0
+        }
+      },
+      "mistralai-mistral-large-2512": {
+        "json": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 1.0,
+          "error_rate": 0.0,
+          "error_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 36,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.38888888888888884,
+          "error_rate": 0.6111111111111112,
+          "error_ci95": [
+            0.3861866858065617,
+            0.7969500807306884
+          ],
+          "wrong_rate": 0.4722222222222222,
+          "wrong_ci95": [
+            0.26768179753417626,
+            0.6865340108315112
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.1111111111111111,
+          "decided": 31,
+          "accuracy_decided": 0.45161290322580644
+        }
+      },
+      "openai-gpt-5.6-luna": {
+        "json": {
+          "trials": 24,
+          "templates": 12,
+          "accuracy": 0.9166666666666666,
+          "error_rate": 0.08333333333333333,
+          "error_ci95": [
+            0.014864709450773478,
+            0.35388592179859524
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 22,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 24,
+          "templates": 12,
+          "accuracy": 0.5416666666666667,
+          "error_rate": 0.4583333333333333,
+          "error_ci95": [
+            0.22286416994293728,
+            0.7140108931819995
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.16666666666666666,
+          "decided": 13,
+          "accuracy_decided": 1.0
+        }
+      },
+      "openai-gpt-5.6-terra": {
+        "json": {
+          "trials": 24,
+          "templates": 12,
+          "accuracy": 0.9166666666666666,
+          "error_rate": 0.08333333333333333,
+          "error_ci95": [
+            0.014864709450773478,
+            0.35388592179859524
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 22,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 24,
+          "templates": 12,
+          "accuracy": 0.5,
+          "error_rate": 0.5,
+          "error_ci95": [
+            0.2537781703934222,
+            0.7462218296065778
+          ],
+          "wrong_rate": 0.125,
+          "wrong_ci95": [
+            0.029408427333507237,
+            0.40246714079092466
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.08333333333333333,
+          "decided": 15,
+          "accuracy_decided": 0.8
+        }
+      },
+      "qwen-qwen3.8-flash": {
+        "json": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.9444444444444444,
+          "error_rate": 0.05555555555555555,
+          "error_ci95": [
+            0.009874935830924525,
+            0.2575779980200754
+          ],
+          "wrong_rate": 0.027777777777777776,
+          "wrong_ci95": [
+            0.002906773764080134,
+            0.21876196845260729
+          ],
+          "hedge_rate": 0.027777777777777776,
+          "hedge_ci95": [
+            0.002906773764080134,
+            0.21876196845260729
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.027777777777777776,
+          "decided": 36,
+          "accuracy_decided": 0.9444444444444444
+        },
+        "code": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.5277777777777778,
+          "error_rate": 0.4722222222222222,
+          "error_ci95": [
+            0.26768179753417626,
+            0.6865340108315112
+          ],
+          "wrong_rate": 0.08333333333333333,
+          "wrong_ci95": [
+            0.019482315742505724,
+            0.29375480974280666
+          ],
+          "hedge_rate": 0.027777777777777776,
+          "hedge_ci95": [
+            0.002906773764080134,
+            0.21876196845260729
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.0
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 23,
+          "accuracy_decided": 0.8260869565217391
+        }
+      }
+    },
+    "memory": {
+      "anthropic-claude-haiku-5.5": {
+        "json": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.6388888888888888,
+          "error_rate": 0.3611111111111111,
+          "error_ci95": [
+            0.18262315844872845,
+            0.588455883379709
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 23,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.5833333333333333,
+          "error_rate": 0.4166666666666667,
+          "error_ci95": [
+            0.2240448034684673,
+            0.6386026216285953
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 21,
+          "accuracy_decided": 1.0
+        }
+      },
+      "anthropic-claude-sonnet-5.5": {
+        "json": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.5555555555555556,
+          "error_rate": 0.4444444444444444,
+          "error_ci95": [
+            0.24559231101389126,
+            0.6628393057174837
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 20,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.4444444444444444,
+          "error_rate": 0.5555555555555556,
+          "error_ci95": [
+            0.3371606942825164,
+            0.7544076889861088
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 16,
+          "accuracy_decided": 1.0
+        }
+      },
+      "google-gemini-3.8-flash": {
+        "json": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.41666666666666663,
+          "error_rate": 0.5833333333333334,
+          "error_ci95": [
+            0.36139737837140484,
+            0.7759551965315328
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 15,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.33333333333333337,
+          "error_rate": 0.6666666666666666,
+          "error_ci95": [
+            0.4374906934425036,
+            0.8372144563633714
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 12,
+          "accuracy_decided": 1.0
+        }
+      },
+      "google-gemini-4-hydrogen": {
+        "json": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.41666666666666663,
+          "error_rate": 0.5833333333333334,
+          "error_ci95": [
+            0.36139737837140484,
+            0.7759551965315328
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 15,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.36111111111111116,
+          "error_rate": 0.6388888888888888,
+          "error_ci95": [
+            0.411544116620291,
+            0.8173768415512715
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 13,
+          "accuracy_decided": 1.0
+        }
+      },
+      "meta-llama-llama-4-maverick": {
+        "json": {
+          "trials": 54,
+          "templates": 27,
+          "accuracy": 0.5,
+          "error_rate": 0.5,
+          "error_ci95": [
+            0.3235353880060964,
+            0.6764646119939036
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            6.938893903907228e-18,
+            0.12455903714463581
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            6.938893903907228e-18,
+            0.12455903714463581
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 27,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 54,
+          "templates": 27,
+          "accuracy": 0.537037037037037,
+          "error_rate": 0.46296296296296297,
+          "error_ci95": [
+            0.2915359842070394,
+            0.6436165370629338
+          ],
+          "wrong_rate": 0.018518518518518517,
+          "wrong_ci95": [
+            0.0019363216606774342,
+            0.1550464548489719
+          ],
+          "hedge_rate": 0.05555555555555555,
+          "hedge_ci95": [
+            0.01293458233401526,
+            0.20889567290566105
+          ],
+          "write_hedge_rate": 0.08333333333333333,
+          "write_hedge_ci95": [
+            0.019482315742505724,
+            0.29375480974280666
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 33,
+          "accuracy_decided": 0.8787878787878788
+        }
+      },
+      "mistralai-mistral-large-2512": {
+        "json": {
+          "trials": 54,
+          "templates": 27,
+          "accuracy": 0.7777777777777778,
+          "error_rate": 0.2222222222222222,
+          "error_ci95": [
+            0.10607095489408958,
+            0.4075729546307081
+          ],
+          "wrong_rate": 0.037037037037037035,
+          "wrong_ci95": [
+            0.006567976533097597,
+            0.1828385393415652
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            6.938893903907228e-18,
+            0.12455903714463581
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 44,
+          "accuracy_decided": 0.9545454545454546
+        },
+        "code": {
+          "trials": 54,
+          "templates": 27,
+          "accuracy": 0.7037037037037037,
+          "error_rate": 0.2962962962962963,
+          "error_ci95": [
+            0.15852853317647564,
+            0.4848103338083759
+          ],
+          "wrong_rate": 0.037037037037037035,
+          "wrong_ci95": [
+            0.006567976533097597,
+            0.1828385393415652
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            6.938893903907228e-18,
+            0.12455903714463581
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 40,
+          "accuracy_decided": 0.95
+        }
+      },
+      "openai-gpt-5.6-luna": {
+        "json": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.4722222222222222,
+          "error_rate": 0.5277777777777778,
+          "error_ci95": [
+            0.3134659891684888,
+            0.7323182024658237
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 17,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.41666666666666663,
+          "error_rate": 0.5833333333333334,
+          "error_ci95": [
+            0.36139737837140484,
+            0.7759551965315328
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 15,
+          "accuracy_decided": 1.0
+        }
+      },
+      "openai-gpt-5.6-terra": {
+        "json": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.4722222222222222,
+          "error_rate": 0.5277777777777778,
+          "error_ci95": [
+            0.3134659891684888,
+            0.7323182024658237
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 17,
+          "accuracy_decided": 1.0
+        },
+        "code": {
+          "trials": 36,
+          "templates": 18,
+          "accuracy": 0.38888888888888884,
+          "error_rate": 0.6111111111111112,
+          "error_ci95": [
+            0.3861866858065617,
+            0.7969500807306884
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.2425007574992425
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 14,
+          "accuracy_decided": 1.0
+        }
+      },
+      "qwen-qwen3.8-flash": {
+        "json": {
+          "trials": 54,
+          "templates": 27,
+          "accuracy": 0.4444444444444444,
+          "error_rate": 0.5555555555555556,
+          "error_ci95": [
+            0.37312719479576884,
+            0.7241440232992717
+          ],
+          "wrong_rate": 0.0,
+          "wrong_ci95": [
+            6.938893903907228e-18,
+            0.12455903714463581
+          ],
+          "hedge_rate": 0.018518518518518517,
+          "hedge_ci95": [
+            0.0019363216606774342,
+            0.1550464548489719
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 25,
+          "accuracy_decided": 0.96
+        },
+        "code": {
+          "trials": 54,
+          "templates": 27,
+          "accuracy": 0.4814814814814815,
+          "error_rate": 0.5185185185185185,
+          "error_ci95": [
+            0.3398532458621043,
+            0.6925704935029092
+          ],
+          "wrong_rate": 0.16666666666666666,
+          "wrong_ci95": [
+            0.07025973472789454,
+            0.3461129567018627
+          ],
+          "hedge_rate": 0.0,
+          "hedge_ci95": [
+            6.938893903907228e-18,
+            0.12455903714463581
+          ],
+          "write_hedge_rate": 0.0,
+          "write_hedge_ci95": [
+            0.0,
+            0.1758845505823749
+          ],
+          "bad_args_rate": 0.0,
+          "decided": 35,
+          "accuracy_decided": 0.7428571428571429
+        }
+      }
+    }
+  },
+  "cross_family_pairs": [
+    {
+      "server": "entur",
+      "a": "departures",
+      "b": "geocode",
+      "write": false,
+      "errors": 24,
+      "wrong": 21,
+      "hedge": 3,
+      "error_rate": 0.14285714285714285,
+      "ci95": [
+        0.022974490565949357,
+        0.5415562477576681
+      ],
+      "templates_confused": 3,
+      "families_confused": 5,
+      "total_families": 6,
+      "families": [
+        "anthropic",
+        "google",
+        "mistral",
+        "openai",
+        "qwen"
+      ],
+      "models": [
+        "anthropic-claude-haiku-5.5",
+        "anthropic-claude-sonnet-5.5",
+        "google-gemini-3.8-flash",
+        "google-gemini-4-hydrogen",
+        "mistralai-mistral-large-2512",
+        "openai-gpt-5.6-terra",
+        "qwen-qwen3.8-flash"
+      ],
+      "modes": [
+        "code"
+      ],
+      "directions": {
+        "departures>geocode": 21
+      },
+      "examples": [
+        {
+          "model": "anthropic-claude-sonnet-5.5",
+          "mode": "code",
+          "target": "departures",
+          "called": [
+            "geocode"
+          ],
+          "text": "What is leaving soon from Oslo S?"
+        },
+        {
+          "model": "anthropic-claude-sonnet-5.5",
+          "mode": "code",
+          "target": "departures",
+          "called": [
+            "geocode"
+          ],
+          "text": "What is leaving soon from Bergen stasjon?"
+        },
+        {
+          "model": "anthropic-claude-sonnet-5.5",
+          "mode": "code",
+          "target": "departures",
+          "called": [
+            "geocode"
+          ],
+          "text": "Can you check the live board for Oslo S and tell me what is scheduled to head out next along with track numbers and any delays?"
+        },
+        {
+          "model": "anthropic-claude-sonnet-5.5",
+          "mode": "code",
+          "target": "departures",
+          "called": [
+            "geocode"
+          ],
+          "text": "Can you check the live board for Bergen stasjon and tell me what is scheduled to head out next along with track numbers and any delays?"
+        }
+      ]
+    },
+    {
+      "server": "time",
+      "a": "convert_time",
+      "b": "get_current_time",
+      "write": false,
+      "errors": 11,
+      "wrong": 11,
+      "hedge": 0,
+      "error_rate": 0.06547619047619048,
+      "ci95": [
+        0.005626226730919309,
+        0.464552838229482
+      ],
+      "templates_confused": 2,
+      "families_confused": 3,
+      "total_families": 6,
+      "families": [
+        "google",
+        "openai",
+        "qwen"
+      ],
+      "models": [
+        "google-gemini-3.8-flash",
+        "google-gemini-4-hydrogen",
+        "openai-gpt-5.6-luna",
+        "openai-gpt-5.6-terra",
+        "qwen-qwen3.8-flash"
+      ],
+      "modes": [
+        "code",
+        "json"
+      ],
+      "directions": {
+        "convert_time>get_current_time": 11
+      },
+      "examples": [
+        {
+          "model": "openai-gpt-5.6-terra",
+          "mode": "json",
+          "target": "convert_time",
+          "called": [
+            "get_current_time"
+          ],
+          "text": "If it's 3 PM in London tomorrow, what time will it be in Tokyo?"
+        },
+        {
+          "model": "openai-gpt-5.6-luna",
+          "mode": "json",
+          "target": "convert_time",
+          "called": [
+            "get_current_time"
+          ],
+          "text": "If it's 3 PM in London tomorrow, what time will it be in Tokyo?"
+        },
+        {
+          "model": "google-gemini-4-hydrogen",
+          "mode": "json",
+          "target": "convert_time",
+          "called": [
+            "get_current_time"
+          ],
+          "text": "If it's 3 PM in London tomorrow, what time will it be in Tokyo?"
+        },
+        {
+          "model": "google-gemini-4-hydrogen",
+          "mode": "json",
+          "target": "convert_time",
+          "called": [
+            "get_current_time"
+          ],
+          "text": "If it's 3 PM in London tomorrow, what time will it be in Tokyo?"
+        }
+      ]
+    },
+    {
+      "server": "entur",
+      "a": "geocode",
+      "b": "nearby-mobility",
+      "write": false,
+      "errors": 8,
+      "wrong": 8,
+      "hedge": 0,
+      "error_rate": 0.047619047619047616,
+      "ci95": [
+        0.003104510922255388,
+        0.4453010909543268
+      ],
+      "templates_confused": 3,
+      "families_confused": 3,
+      "total_families": 6,
+      "families": [
+        "anthropic",
+        "google",
+        "mistral"
+      ],
+      "models": [
+        "anthropic-claude-sonnet-5.5",
+        "google-gemini-3.8-flash",
+        "mistralai-mistral-large-2512"
+      ],
+      "modes": [
+        "code"
+      ],
+      "directions": {
+        "nearby-mobility>geocode": 8
+      },
+      "examples": [
+        {
+          "model": "anthropic-claude-sonnet-5.5",
+          "mode": "code",
+          "target": "nearby-mobility",
+          "called": [
+            "geocode"
+          ],
+          "text": "Are there any electric scooters or city bikes available to rent around Bryggen in Bergen?"
+        },
+        {
+          "model": "google-gemini-3.8-flash",
+          "mode": "code",
+          "target": "nearby-mobility",
+          "called": [
+            "geocode"
+          ],
+          "text": "Find the nearest electric scooters and rental stations near Oslo Central Station, Oslo within 500 metres."
+        },
+        {
+          "model": "mistralai-mistral-large-2512",
+          "mode": "code",
+          "target": "nearby-mobility",
+          "called": [
+            "geocode"
+          ],
+          "text": "I'm standing at Karl Johans gate 1, Oslo and need to get across town quickly. What bikes or powered kick-scooters can I grab right here?"
+        },
+        {
+          "model": "mistralai-mistral-large-2512",
+          "mode": "code",
+          "target": "nearby-mobility",
+          "called": [
+            "geocode"
+          ],
+          "text": "I'm standing at Bryggen, Bergen and need to get across town quickly. What bikes or powered kick-scooters can I grab right here?"
+        }
+      ]
+    },
+    {
+      "server": "entur",
+      "a": "geocode",
+      "b": "trip",
+      "write": false,
+      "errors": 4,
+      "wrong": 3,
+      "hedge": 1,
+      "error_rate": 0.023809523809523808,
+      "ci95": [
+        0.0008257357448734903,
+        0.4185485820199498
+      ],
+      "templates_confused": 3,
+      "families_confused": 3,
+      "total_families": 6,
+      "families": [
+        "google",
+        "mistral",
+        "qwen"
+      ],
+      "models": [
+        "google-gemini-4-hydrogen",
+        "mistralai-mistral-large-2512",
+        "qwen-qwen3.8-flash"
+      ],
+      "modes": [
+        "code",
+        "json"
+      ],
+      "directions": {
+        "trip>geocode": 3
+      },
+      "examples": [
+        {
+          "model": "google-gemini-4-hydrogen",
+          "mode": "code",
+          "target": "trip",
+          "called": [
+            "geocode",
+            "geocode"
+          ],
+          "text": "I'm staying in Oslo and need to get to Bergen tomorrow morning. What options are there, and how long does each one take?"
+        },
+        {
+          "model": "google-gemini-4-hydrogen",
+          "mode": "code",
+          "target": "trip",
+          "called": [
+            "geocode",
+            "geocode",
+            "trip"
+          ],
+          "text": "Plan a public transport journey from Trondheim to Oslo departing at 2025-06-15T08:00:00, and show up to three options with departure and arrival times, transfers, and duration."
+        },
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "json",
+          "target": "trip",
+          "called": [
+            "geocode",
+            "geocode"
+          ],
+          "text": "Could you find public transit connections from Oslo Central Station to Bergen leaving at 2024-10-15T09:00:00?"
+        },
+        {
+          "model": "mistralai-mistral-large-2512",
+          "mode": "code",
+          "target": "trip",
+          "called": [
+            "geocode",
+            "geocode"
+          ],
+          "text": "I'm staying in Oslo and need to get to Bergen tomorrow morning. What options are there, and how long does each one take?"
+        }
+      ]
+    },
+    {
+      "server": "entur",
+      "a": "geocode",
+      "b": "nearby-stops",
+      "write": false,
+      "errors": 7,
+      "wrong": 7,
+      "hedge": 0,
+      "error_rate": 0.041666666666666664,
+      "ci95": [
+        0.0024124618818787413,
+        0.43873531896676377
+      ],
+      "templates_confused": 3,
+      "families_confused": 2,
+      "total_families": 6,
+      "families": [
+        "anthropic",
+        "mistral"
+      ],
+      "models": [
+        "anthropic-claude-haiku-5.5",
+        "mistralai-mistral-large-2512"
+      ],
+      "modes": [
+        "code"
+      ],
+      "directions": {
+        "nearby-stops>geocode": 7
+      },
+      "examples": [
+        {
+          "model": "anthropic-claude-haiku-5.5",
+          "mode": "code",
+          "target": "nearby-stops",
+          "called": [
+            "geocode"
+          ],
+          "text": "Which public transit stops are closest to Fl\u00f8ibanen, Bergen?"
+        },
+        {
+          "model": "mistralai-mistral-large-2512",
+          "mode": "code",
+          "target": "nearby-stops",
+          "called": [
+            "geocode"
+          ],
+          "text": "I'm staying at R\u00e5dhusgata 5, Oslo for a week and want to know which buses or trams I could board within a short walk. Can you list them?"
+        },
+        {
+          "model": "mistralai-mistral-large-2512",
+          "mode": "code",
+          "target": "nearby-stops",
+          "called": [
+            "geocode"
+          ],
+          "text": "I'm staying at Aker brygge for a week and want to know which buses or trams I could board within a short walk. Can you list them?"
+        },
+        {
+          "model": "mistralai-mistral-large-2512",
+          "mode": "code",
+          "target": "nearby-stops",
+          "called": [
+            "geocode"
+          ],
+          "text": "What public transport stops are within 500 metres of Aker Brygge, Oslo?"
+        }
+      ]
+    },
+    {
+      "server": "memory",
+      "a": "delete_entities",
+      "b": "delete_observations",
+      "write": true,
+      "errors": 5,
+      "wrong": 4,
+      "hedge": 1,
+      "error_rate": 0.02976190476190476,
+      "ci95": [
+        0.001269543800722167,
+        0.4253625949920409
+      ],
+      "templates_confused": 3,
+      "families_confused": 2,
+      "total_families": 6,
+      "families": [
+        "meta",
+        "mistral"
+      ],
+      "models": [
+        "meta-llama-llama-4-maverick",
+        "mistralai-mistral-large-2512"
+      ],
+      "modes": [
+        "code",
+        "json"
+      ],
+      "directions": {
+        "delete_observations>delete_entities": 4
+      },
+      "examples": [
+        {
+          "model": "meta-llama-llama-4-maverick",
+          "mode": "code",
+          "target": "delete_entities",
+          "called": [
+            "delete_entities",
+            "delete_relations",
+            "delete_observations"
+          ],
+          "text": "Please clear out all recorded items along with their interconnected associations and notes from the system memory."
+        },
+        {
+          "model": "mistralai-mistral-large-2512",
+          "mode": "json",
+          "target": "delete_observations",
+          "called": [
+            "delete_entities"
+          ],
+          "text": "Clear out the outdated notes I stored about my former coworker Dan so they no longer show up in my records."
+        },
+        {
+          "model": "mistralai-mistral-large-2512",
+          "mode": "json",
+          "target": "delete_observations",
+          "called": [
+            "delete_entities"
+          ],
+          "text": "Clear out the outdated notes I stored about my former coworker Dan so they no longer show up in my records."
+        },
+        {
+          "model": "mistralai-mistral-large-2512",
+          "mode": "code",
+          "target": "delete_observations",
+          "called": [
+            "delete_entities"
+          ],
+          "text": "Clear out the outdated notes I stored about my former coworker Dan so they no longer show up in my records."
+        }
+      ]
+    },
+    {
+      "server": "memory",
+      "a": "add_observations",
+      "b": "open_nodes",
+      "write": true,
+      "errors": 2,
+      "wrong": 1,
+      "hedge": 1,
+      "error_rate": 0.011904761904761904,
+      "ci95": [
+        0.000213526917456075,
+        0.4046451487914879
+      ],
+      "templates_confused": 1,
+      "families_confused": 2,
+      "total_families": 6,
+      "families": [
+        "meta",
+        "qwen"
+      ],
+      "models": [
+        "meta-llama-llama-4-maverick",
+        "qwen-qwen3.8-flash"
+      ],
+      "modes": [
+        "code"
+      ],
+      "directions": {
+        "add_observations>open_nodes": 1
+      },
+      "examples": [
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "code",
+          "target": "add_observations",
+          "called": [
+            "open_nodes"
+          ],
+          "text": "Our team lead Priya Shah was just promoted to director of design, so please attach that to her existing profile in our company map."
+        },
+        {
+          "model": "meta-llama-llama-4-maverick",
+          "mode": "code",
+          "target": "add_observations",
+          "called": [
+            "open_nodes",
+            "add_observations"
+          ],
+          "text": "Our team lead Priya Shah was just promoted to director of design, so please attach that to her existing profile in our company map."
+        }
+      ]
+    },
+    {
+      "server": "time",
+      "a": "get_current_time",
+      "b": "get_time_ago",
+      "write": false,
+      "errors": 7,
+      "wrong": 0,
+      "hedge": 7,
+      "error_rate": 0.041666666666666664,
+      "ci95": [
+        0.0024124618818787413,
+        0.43873531896676377
+      ],
+      "templates_confused": 3,
+      "families_confused": 1,
+      "total_families": 6,
+      "families": [
+        "qwen"
+      ],
+      "models": [
+        "qwen-qwen3.8-flash"
+      ],
+      "modes": [
+        "code",
+        "json"
+      ],
+      "directions": {},
+      "examples": [
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "json",
+          "target": "get_time_ago",
+          "called": [
+            "get_current_time",
+            "get_time_ago"
+          ],
+          "text": "What was the clock reading in Lisbon exactly 36 hours back from now?"
+        },
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "json",
+          "target": "get_time_ago",
+          "called": [
+            "get_current_time",
+            "get_time_ago"
+          ],
+          "text": "What was the clock reading in Lisbon exactly 36 hours back from now?"
+        },
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "json",
+          "target": "get_time_ago",
+          "called": [
+            "get_current_time",
+            "get_time_ago"
+          ],
+          "text": "What time was it 3 days, 4 hours, 20 minutes, and 10 seconds ago in Tokyo?"
+        },
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "json",
+          "target": "get_time_ago",
+          "called": [
+            "get_current_time",
+            "get_time_ago"
+          ],
+          "text": "Could you tell me what the date and time was 3 days, 8 hours, and 15 minutes in the past in the America/Chicago timezone?"
+        }
+      ]
+    },
+    {
+      "server": "entur",
+      "a": "departures",
+      "b": "trip",
+      "write": false,
+      "errors": 4,
+      "wrong": 4,
+      "hedge": 0,
+      "error_rate": 0.023809523809523808,
+      "ci95": [
+        0.0008257357448734903,
+        0.4185485820199498
+      ],
+      "templates_confused": 1,
+      "families_confused": 1,
+      "total_families": 6,
+      "families": [
+        "google"
+      ],
+      "models": [
+        "google-gemini-3.8-flash",
+        "google-gemini-4-hydrogen"
+      ],
+      "modes": [
+        "json"
+      ],
+      "directions": {
+        "trip>departures": 4
+      },
+      "examples": [
+        {
+          "model": "google-gemini-4-hydrogen",
+          "mode": "json",
+          "target": "trip",
+          "called": [
+            "departures"
+          ],
+          "text": "I'm staying in Oslo and need to get to Bergen tomorrow morning. What options are there, and how long does each one take?"
+        },
+        {
+          "model": "google-gemini-4-hydrogen",
+          "mode": "json",
+          "target": "trip",
+          "called": [
+            "departures",
+            "geocode",
+            "geocode"
+          ],
+          "text": "I'm staying in Oslo and need to get to Trondheim tomorrow morning. What options are there, and how long does each one take?"
+        },
+        {
+          "model": "google-gemini-3.8-flash",
+          "mode": "json",
+          "target": "trip",
+          "called": [
+            "departures"
+          ],
+          "text": "I'm staying in Oslo and need to get to Bergen tomorrow morning. What options are there, and how long does each one take?"
+        },
+        {
+          "model": "google-gemini-3.8-flash",
+          "mode": "json",
+          "target": "trip",
+          "called": [
+            "departures"
+          ],
+          "text": "I'm staying in Oslo and need to get to Trondheim tomorrow morning. What options are there, and how long does each one take?"
+        }
+      ]
+    },
+    {
+      "server": "fetch",
+      "a": "fetch",
+      "b": "{} }```json\\n{\\n  \"url\": \"https://www.python.org/downloads/\"\\n}\\n```</function_call>ashiretriesleft: 2``` **\u00b7**(fetching url: https://www.python.org/downloads/)te\u0159\u00edfetch",
+      "write": false,
+      "errors": 2,
+      "wrong": 0,
+      "hedge": 2,
+      "error_rate": 0.023809523809523808,
+      "ci95": [
+        0.0004271418821413797,
+        0.5819596014026374
+      ],
+      "templates_confused": 1,
+      "families_confused": 1,
+      "total_families": 6,
+      "families": [
+        "mistral"
+      ],
+      "models": [
+        "mistralai-mistral-large-2512"
+      ],
+      "modes": [
+        "json"
+      ],
+      "directions": {},
+      "examples": [
+        {
+          "model": "mistralai-mistral-large-2512",
+          "mode": "json",
+          "target": "fetch",
+          "called": [
+            "fetch",
+            "{} }```json\\n{\\n  \"url\": \"https://www.python.org/downloads/\"\\n}\\n```</function_call>ashiretriesleft: 2``` **\u00b7**(fetching url: https://www.python.org/downloads/)te\u0159\u00edfetch"
+          ],
+          "text": "What does the current release notes page on the Python website say about the newest version?"
+        },
+        {
+          "model": "mistralai-mistral-large-2512",
+          "mode": "json",
+          "target": "fetch",
+          "called": [
+            "fetch",
+            "{} }```json\\n{\\n  \"url\": \"https://www.python.org/downloads/\"\\n}\\n```</function_call>ashiretriesleft: 2``` **\u00b7**(fetching url: https://www.python.org/downloads/)te\u0159\u00edfetch"
+          ],
+          "text": "What does the current release notes page on the Python website say about the newest version?"
+        }
+      ]
+    },
+    {
+      "server": "memory",
+      "a": "add_observations",
+      "b": "search_nodes",
+      "write": true,
+      "errors": 3,
+      "wrong": 3,
+      "hedge": 0,
+      "error_rate": 0.017857142857142856,
+      "ci95": [
+        0.00047226684178419687,
+        0.4116442298950994
+      ],
+      "templates_confused": 2,
+      "families_confused": 1,
+      "total_families": 6,
+      "families": [
+        "qwen"
+      ],
+      "models": [
+        "qwen-qwen3.8-flash"
+      ],
+      "modes": [
+        "code"
+      ],
+      "directions": {
+        "add_observations>search_nodes": 3
+      },
+      "examples": [
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "code",
+          "target": "add_observations",
+          "called": [
+            "search_nodes"
+          ],
+          "text": "Our team lead Priya Shah was just promoted to director of design, so please attach that to her existing profile in our company map."
+        },
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "code",
+          "target": "add_observations",
+          "called": [
+            "search_nodes"
+          ],
+          "text": "Please attach these recent updates to our profile on Marcus: he has transitioned to leading the infrastructure squad and successfully relocated to the Seattle branch."
+        },
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "code",
+          "target": "add_observations",
+          "called": [
+            "search_nodes"
+          ],
+          "text": "Please attach these recent updates to our profile on Marcus: he has transitioned to leading the infrastructure squad and successfully relocated to the Seattle branch."
+        }
+      ]
+    },
+    {
+      "server": "memory",
+      "a": "delete_entities",
+      "b": "read_graph",
+      "write": true,
+      "errors": 2,
+      "wrong": 2,
+      "hedge": 0,
+      "error_rate": 0.011904761904761904,
+      "ci95": [
+        0.000213526917456075,
+        0.4046451487914879
+      ],
+      "templates_confused": 2,
+      "families_confused": 1,
+      "total_families": 6,
+      "families": [
+        "qwen"
+      ],
+      "models": [
+        "qwen-qwen3.8-flash"
+      ],
+      "modes": [
+        "code"
+      ],
+      "directions": {
+        "delete_entities>read_graph": 2
+      },
+      "examples": [
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "code",
+          "target": "delete_entities",
+          "called": [
+            "read_graph"
+          ],
+          "text": "I want an outdated record removed from your memory completely, along with every note attached to it and every connection it has to other items. I understand it can't be restored afterward."
+        },
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "code",
+          "target": "delete_entities",
+          "called": [
+            "read_graph"
+          ],
+          "text": "Remove an entire entity from the knowledge graph, including all links connected to it and all stored observations."
+        }
+      ]
+    },
+    {
+      "server": "entur",
+      "a": "alerts",
+      "b": "trip",
+      "write": false,
+      "errors": 1,
+      "wrong": 0,
+      "hedge": 1,
+      "error_rate": 0.005952380952380952,
+      "ci95": [
+        5.433491867609663e-05,
+        0.39754651976232813
+      ],
+      "templates_confused": 1,
+      "families_confused": 1,
+      "total_families": 6,
+      "families": [
+        "qwen"
+      ],
+      "models": [
+        "qwen-qwen3.8-flash"
+      ],
+      "modes": [
+        "json"
+      ],
+      "directions": {},
+      "examples": [
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "json",
+          "target": "trip",
+          "called": [
+            "trip",
+            "alerts"
+          ],
+          "text": "I'm staying in Oslo and need to get to Trondheim tomorrow morning. What options are there, and how long does each one take?"
+        }
+      ]
+    },
+    {
+      "server": "memory",
+      "a": "add_observations",
+      "b": "create_relations",
+      "write": true,
+      "errors": 1,
+      "wrong": 1,
+      "hedge": 0,
+      "error_rate": 0.005952380952380952,
+      "ci95": [
+        5.433491867609663e-05,
+        0.39754651976232813
+      ],
+      "templates_confused": 1,
+      "families_confused": 1,
+      "total_families": 6,
+      "families": [
+        "meta"
+      ],
+      "models": [
+        "meta-llama-llama-4-maverick"
+      ],
+      "modes": [
+        "code"
+      ],
+      "directions": {
+        "add_observations>create_relations": 1
+      },
+      "examples": [
+        {
+          "model": "meta-llama-llama-4-maverick",
+          "mode": "code",
+          "target": "add_observations",
+          "called": [
+            "create_relations"
+          ],
+          "text": "Our team lead Priya Shah was just promoted to director of design, so please attach that to her existing profile in our company map."
+        }
+      ]
+    },
+    {
+      "server": "memory",
+      "a": "delete_entities",
+      "b": "delete_relations",
+      "write": true,
+      "errors": 1,
+      "wrong": 0,
+      "hedge": 1,
+      "error_rate": 0.005952380952380952,
+      "ci95": [
+        5.433491867609663e-05,
+        0.39754651976232813
+      ],
+      "templates_confused": 1,
+      "families_confused": 1,
+      "total_families": 6,
+      "families": [
+        "meta"
+      ],
+      "models": [
+        "meta-llama-llama-4-maverick"
+      ],
+      "modes": [
+        "code"
+      ],
+      "directions": {},
+      "examples": [
+        {
+          "model": "meta-llama-llama-4-maverick",
+          "mode": "code",
+          "target": "delete_entities",
+          "called": [
+            "delete_entities",
+            "delete_relations",
+            "delete_observations"
+          ],
+          "text": "Please clear out all recorded items along with their interconnected associations and notes from the system memory."
+        }
+      ]
+    },
+    {
+      "server": "memory",
+      "a": "delete_observations",
+      "b": "search_nodes",
+      "write": true,
+      "errors": 1,
+      "wrong": 1,
+      "hedge": 0,
+      "error_rate": 0.005952380952380952,
+      "ci95": [
+        5.433491867609663e-05,
+        0.39754651976232813
+      ],
+      "templates_confused": 1,
+      "families_confused": 1,
+      "total_families": 6,
+      "families": [
+        "qwen"
+      ],
+      "models": [
+        "qwen-qwen3.8-flash"
+      ],
+      "modes": [
+        "code"
+      ],
+      "directions": {
+        "delete_observations>search_nodes": 1
+      },
+      "examples": [
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "code",
+          "target": "delete_observations",
+          "called": [
+            "search_nodes"
+          ],
+          "text": "Clear out the outdated notes I stored about my former coworker Dan so they no longer show up in my records."
+        }
+      ]
+    },
+    {
+      "server": "memory",
+      "a": "delete_observations",
+      "b": "read_graph",
+      "write": true,
+      "errors": 1,
+      "wrong": 1,
+      "hedge": 0,
+      "error_rate": 0.005952380952380952,
+      "ci95": [
+        5.433491867609663e-05,
+        0.39754651976232813
+      ],
+      "templates_confused": 1,
+      "families_confused": 1,
+      "total_families": 6,
+      "families": [
+        "qwen"
+      ],
+      "models": [
+        "qwen-qwen3.8-flash"
+      ],
+      "modes": [
+        "code"
+      ],
+      "directions": {
+        "delete_observations>read_graph": 1
+      },
+      "examples": [
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "code",
+          "target": "delete_observations",
+          "called": [
+            "read_graph"
+          ],
+          "text": "Please clear out the recorded notes and remarks attached to the profiles in memory."
+        }
+      ]
+    },
+    {
+      "server": "memory",
+      "a": "delete_observations",
+      "b": "open_nodes",
+      "write": true,
+      "errors": 1,
+      "wrong": 0,
+      "hedge": 1,
+      "error_rate": 0.005952380952380952,
+      "ci95": [
+        5.433491867609663e-05,
+        0.39754651976232813
+      ],
+      "templates_confused": 1,
+      "families_confused": 1,
+      "total_families": 6,
+      "families": [
+        "meta"
+      ],
+      "models": [
+        "meta-llama-llama-4-maverick"
+      ],
+      "modes": [
+        "code"
+      ],
+      "directions": {},
+      "examples": [
+        {
+          "model": "meta-llama-llama-4-maverick",
+          "mode": "code",
+          "target": "delete_observations",
+          "called": [
+            "delete_observations",
+            "open_nodes"
+          ],
+          "text": "Clear out the outdated notes I stored about my former coworker Dan so they no longer show up in my records."
+        }
+      ]
+    },
+    {
+      "server": "memory",
+      "a": "delete_relations",
+      "b": "search_nodes",
+      "write": true,
+      "errors": 1,
+      "wrong": 1,
+      "hedge": 0,
+      "error_rate": 0.005952380952380952,
+      "ci95": [
+        5.433491867609663e-05,
+        0.39754651976232813
+      ],
+      "templates_confused": 1,
+      "families_confused": 1,
+      "total_families": 6,
+      "families": [
+        "qwen"
+      ],
+      "models": [
+        "qwen-qwen3.8-flash"
+      ],
+      "modes": [
+        "code"
+      ],
+      "directions": {
+        "delete_relations>search_nodes": 1
+      },
+      "examples": [
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "code",
+          "target": "delete_relations",
+          "called": [
+            "search_nodes"
+          ],
+          "text": "The memory store says Priya works for Alder Labs, but she left last month. Cut that connection so the record no longer claims it, and keep both Priya and Alder Labs stored as they are."
+        }
+      ]
+    },
+    {
+      "server": "memory",
+      "a": "open_nodes",
+      "b": "search_nodes",
+      "write": false,
+      "errors": 1,
+      "wrong": 0,
+      "hedge": 1,
+      "error_rate": 0.005952380952380952,
+      "ci95": [
+        5.433491867609663e-05,
+        0.39754651976232813
+      ],
+      "templates_confused": 1,
+      "families_confused": 1,
+      "total_families": 6,
+      "families": [
+        "qwen"
+      ],
+      "models": [
+        "qwen-qwen3.8-flash"
+      ],
+      "modes": [
+        "json"
+      ],
+      "directions": {},
+      "examples": [
+        {
+          "model": "qwen-qwen3.8-flash",
+          "mode": "json",
+          "target": "open_nodes",
+          "called": [
+            "open_nodes",
+            "search_nodes"
+          ],
+          "text": "Pull up the knowledge base records for 'Photosynthesis' and 'Chloroplast' along with every direct link connected to them."
+        }
+      ]
+    },
+    {
+      "server": "time",
+      "a": "convert_time",
+      "b": "get_time_ago",
+      "write": false,
+      "errors": 1,
+      "wrong": 0,
+      "hedge": 1,
+      "error_rate": 0.005952380952380952,
+      "ci95": [
+        5.433491867609663e-05,
+        0.39754651976232813
+      ],
+      "templates_confused": 1,
+      "families_confused": 1,
+      "total_families": 6,
+      "families": [
+        "meta"
+      ],
+      "models": [
+        "meta-llama-llama-4-maverick"
+      ],
+      "modes": [
+        "json"
+      ],
+      "directions": {},
+      "examples": [
+        {
+          "model": "meta-llama-llama-4-maverick",
+          "mode": "json",
+          "target": "get_time_ago",
+          "called": [
+            "convert_time",
+            "get_time_ago"
+          ],
+          "text": "What was the clock reading in Lisbon exactly 36 hours back from now?"
+        }
+      ]
+    }
+  ],
+  "logit": {
+    "n": 2052,
+    "clusters": 57,
+    "underpowered_clusters": false,
+    "converged": true,
+    "pseudo_r2": 0.42115796503696945,
+    "null_deviance": 2802.407911545274,
+    "residual_deviance": 1622.1514983153631,
+    "references": {
+      "model": "anthropic-claude-haiku-5.5",
+      "tool": "entur:alerts",
+      "mode": "code",
+      "order": "0"
+    },
+    "factors": {
+      "tool": {
+        "df": 18,
+        "deviance_drop": 965.2883664187241,
+        "marginal_deviance_drop": 828.5603265665022,
+        "marginal_pseudo_r2": 0.29566014396156415,
+        "share_of_full_deviance": 0.8178632673362041,
+        "share_of_unique_deviance": 0.7240124389301733
+      },
+      "model": {
+        "df": 8,
+        "deviance_drop": 112.05459567085677,
+        "marginal_deviance_drop": 61.14882321561254,
+        "marginal_pseudo_r2": 0.021820100836746015,
+        "share_of_full_deviance": 0.09494089116127413,
+        "share_of_unique_deviance": 0.084046305671314
+      },
+      "mode": {
+        "df": 1,
+        "deviance_drop": 254.41257861186318,
+        "marginal_deviance_drop": 148.10583614955158,
+        "marginal_pseudo_r2": 0.05284949258792404,
+        "share_of_full_deviance": 0.21555703977547822,
+        "share_of_unique_deviance": 0.19082160102962217
+      },
+      "order": {
+        "df": 1,
+        "deviance_drop": 1.3696759097558697,
+        "marginal_deviance_drop": 0.7184557756368122,
+        "marginal_pseudo_r2": 0.0002563708775860096,
+        "share_of_full_deviance": 0.0011604901226569826,
+        "share_of_unique_deviance": 0.001027322435932152
+      },
+      "same_gen_family": {
+        "df": 1,
+        "deviance_drop": 0.12310139431497191,
+        "marginal_deviance_drop": 0.32801124486741173,
+        "marginal_pseudo_r2": 0.00011704621711783325,
+        "share_of_full_deviance": 0.00010430055107948146,
+        "share_of_unique_deviance": 9.233193295839036e-05
+      }
+    },
+    "terms": {
+      "tool:entur:departures": {
+        "coef": 3.7345255072550265,
+        "se": 0.5861259448444419,
+        "z": 6.371541031588648,
+        "p": 3.755689750707572e-08,
+        "odds_ratio": 41.86815471353156,
+        "or_ci": [
+          12.940658133447243,
+          135.4600640121579
+        ],
+        "ame": 0.4037255151810489,
+        "ame_se": 0.03905274724570726,
+        "ame_ci": [
+          0.32549346171557403,
+          0.4819575686465237
+        ]
+      },
+      "tool:entur:geocode": {
+        "coef": 2.259259664714601,
+        "se": 0.5824534962625199,
+        "z": 3.878867032667482,
+        "p": 0.0002784224138212001,
+        "odds_ratio": 9.575997093291143,
+        "or_ci": [
+          2.981615012344009,
+          30.755050518286176
+        ],
+        "ame": 0.2697265783634255,
+        "ame_se": 0.057825243864606087,
+        "ame_ci": [
+          0.15388869527653853,
+          0.3855644614503125
+        ]
+      },
+      "tool:entur:nearby-mobility": {
+        "coef": 5.144193932300685,
+        "se": 0.6096690737812338,
+        "z": 8.437682266538198,
+        "p": 1.480343264464109e-11,
+        "odds_ratio": 171.43324216304072,
+        "or_ci": [
+          50.54580822474345,
+          581.440035301383
+        ],
+        "ame": 0.508962892913501,
+        "ame_se": 0.023039575887812698,
+        "ame_ci": [
+          0.46280907635004903,
+          0.555116709476953
+        ]
+      },
+      "tool:entur:nearby-stops": {
+        "coef": 5.095560151813117,
+        "se": 0.6044367982026091,
+        "z": 8.43026130600518,
+        "p": 1.522278796773167e-11,
+        "odds_ratio": 163.29528916288248,
+        "or_ci": [
+          48.65369447783254,
+          548.0642682733702
+        ],
+        "ame": 0.5059203339110102,
+        "ame_se": 0.0232452145726711,
+        "ame_ci": [
+          0.45935457356067955,
+          0.5524860942613409
+        ]
+      },
+      "tool:entur:trip": {
+        "coef": 4.5130567277393565,
+        "se": 0.7409598220012866,
+        "z": 6.090825161814941,
+        "p": 1.0813032254814924e-07,
+        "odds_ratio": 91.20016695626008,
+        "or_ci": [
+          20.671084533380018,
+          402.3722335138498
+        ],
+        "ame": 0.46584492271126404,
+        "ame_se": 0.04346771170282863,
+        "ame_ci": [
+          0.3787686326730176,
+          0.5529212127495106
+        ]
+      },
+      "tool:fetch:fetch": {
+        "coef": 3.677793873315809,
+        "se": 0.5836272898653722,
+        "z": 6.301613953254622,
+        "p": 4.890452020055707e-08,
+        "odds_ratio": 39.55902551316746,
+        "or_ci": [
+          12.2883040730421,
+          127.35007941287233
+        ],
+        "ame": 0.39893320843624624,
+        "ame_se": 0.03953454225454357,
+        "ame_ci": [
+          0.3197360035909328,
+          0.4781304132815597
+        ]
+      },
+      "tool:memory:add_observations": {
+        "coef": 5.958916160211831,
+        "se": 1.1225857293821706,
+        "z": 5.308205871716717,
+        "p": 1.9659896044697063e-06,
+        "odds_ratio": 387.1902445450989,
+        "or_ci": [
+          40.85816654369522,
+          3669.1877818493767
+        ],
+        "ame": 0.5526293205613375,
+        "ame_se": 0.03569685418835182,
+        "ame_ci": [
+          0.4811199287164559,
+          0.6241387124062191
+        ]
+      },
+      "tool:memory:create_entities": {
+        "coef": 2.9697250042400936,
+        "se": 0.6432461697008329,
+        "z": 4.616778372145273,
+        "p": 2.321416002723624e-05,
+        "odds_ratio": 19.4865601377377,
+        "or_ci": [
+          5.371719622177611,
+          70.68984472568822
+        ],
+        "ame": 0.33701071459526294,
+        "ame_se": 0.05408379263521634,
+        "ame_ci": [
+          0.22866785895867292,
+          0.44535357023185296
+        ]
+      },
+      "tool:memory:create_relations": {
+        "coef": 7.142827171320131,
+        "se": 0.6603826700796472,
+        "z": 10.816194147642685,
+        "p": 2.466042267842263e-15,
+        "odds_ratio": 1264.9997092505491,
+        "or_ci": [
+          336.945675342862,
+          4749.205529276048
+        ],
+        "ame": 0.5929622376036385,
+        "ame_se": 0.012990316715561634,
+        "ame_ci": [
+          0.5669395062082954,
+          0.6189849689989817
+        ]
+      },
+      "tool:memory:delete_entities": {
+        "coef": 7.420783530356839,
+        "se": 0.6499819290717578,
+        "z": 11.416907453034108,
+        "p": 3.024644146184988e-16,
+        "odds_ratio": 1670.3417586248606,
+        "or_ci": [
+          454.2797799021013,
+          6141.681215059263
+        ],
+        "ame": 0.5990212975713082,
+        "ame_se": 0.012323059776727105,
+        "ame_ci": [
+          0.574335242445772,
+          0.6237073526968443
+        ]
+      },
+      "tool:memory:delete_observations": {
+        "coef": 7.636107498404044,
+        "se": 0.8025778565975951,
+        "z": 9.514475680622617,
+        "p": 2.68952485353614e-13,
+        "odds_ratio": 2071.6641457136784,
+        "or_ci": [
+          415.0300204391921,
+          10340.92022570785
+        ],
+        "ame": 0.6029776370330642,
+        "ame_se": 0.013067958802863924,
+        "ame_ci": [
+          0.5767993698469407,
+          0.6291559042191877
+        ]
+      },
+      "tool:memory:delete_relations": {
+        "coef": 6.183389248857443,
+        "se": 0.8193300666417503,
+        "z": 7.5468843395455565,
+        "p": 4.318884166610456e-10,
+        "odds_ratio": 484.6317134918553,
+        "or_ci": [
+          93.88530682978528,
+          2501.6470164801062
+        ],
+        "ame": 0.5622761757286997,
+        "ame_se": 0.022668452013653476,
+        "ame_ci": [
+          0.5168658096217,
+          0.6076865418356994
+        ]
+      },
+      "tool:memory:open_nodes": {
+        "coef": 2.3651912695637893,
+        "se": 0.5948869105941097,
+        "z": 3.9758670554739357,
+        "p": 0.00020306426503366855,
+        "odds_ratio": 10.646074892885007,
+        "or_ci": [
+          3.233255702936955,
+          35.05411295554638
+        ],
+        "ame": 0.28021912541064736,
+        "ame_se": 0.05772273235915143,
+        "ame_ci": [
+          0.16458659754563754,
+          0.3958516532756572
+        ]
+      },
+      "tool:memory:read_graph": {
+        "coef": 1.8896942533748715,
+        "se": 0.7148053027664679,
+        "z": 2.6436489014019644,
+        "p": 0.010618917640115104,
+        "odds_ratio": 6.6173451407694355,
+        "or_ci": [
+          1.580540954685528,
+          27.705233820263384
+        ],
+        "ame": 0.23150552097166466,
+        "ame_se": 0.07829332621141406,
+        "ame_ci": [
+          0.07466514189092063,
+          0.38834590005240865
+        ]
+      },
+      "tool:memory:search_nodes": {
+        "coef": 1.3875973738575822,
+        "se": 0.7308301390477137,
+        "z": 1.8986592091914127,
+        "p": 0.06276633122095945,
+        "odds_ratio": 4.005215448110509,
+        "or_ci": [
+          0.926416539092127,
+          17.315915799067795
+        ],
+        "ame": 0.17509139300281407,
+        "ame_se": 0.08735208079000095,
+        "ame_ci": [
+          0.00010414788819518295,
+          0.35007863811743295
+        ]
+      },
+      "tool:time:convert_time": {
+        "coef": 5.745499944653439,
+        "se": 0.738044181214539,
+        "z": 7.784764233488758,
+        "p": 1.748971481509123e-10,
+        "odds_ratio": 312.77996141714095,
+        "or_ci": [
+          71.30880332095691,
+          1371.938662660976
+        ],
+        "ame": 0.5425185516756296,
+        "ame_se": 0.024023294122178927,
+        "ame_ci": [
+          0.494394110689222,
+          0.5906429926620371
+        ]
+      },
+      "tool:time:get_current_time": {
+        "coef": 4.111110410002595,
+        "se": 0.5900462242647444,
+        "z": 6.967437873406346,
+        "p": 3.917225549900054e-09,
+        "odds_ratio": 61.014431002315696,
+        "or_ci": [
+          18.710891501604532,
+          198.96223492168195
+        ],
+        "ame": 0.4347436481947747,
+        "ame_se": 0.034573122706817457,
+        "ame_ci": [
+          0.365485361010754,
+          0.5040019353787953
+        ]
+      },
+      "tool:time:get_time_ago": {
+        "coef": 4.6596057999348774,
+        "se": 0.618300645899839,
+        "z": 7.536149009117654,
+        "p": 4.4988654077190683e-10,
+        "odds_ratio": 105.59444861270605,
+        "or_ci": [
+          30.600023274982238,
+          364.3849378028908
+        ],
+        "ame": 0.4765318037030374,
+        "ame_se": 0.029648680268278042,
+        "ame_ci": [
+          0.4171383601295214,
+          0.5359252472765534
+        ]
+      },
+      "model:anthropic-claude-sonnet-5.5": {
+        "coef": 0.45288405872450077,
+        "se": 0.17591427311403762,
+        "z": 2.5744588583264965,
+        "p": 0.012710939857787953,
+        "odds_ratio": 1.5728418186557849,
+        "or_ci": [
+          1.1057075245681003,
+          2.2373288881060462
+        ],
+        "ame": 0.05856294541730677,
+        "ame_se": 0.02383464643494872,
+        "ame_ci": [
+          0.01081641115947523,
+          0.10630947967513832
+        ]
+      },
+      "model:google-gemini-3.8-flash": {
+        "coef": 1.352189335187488,
+        "se": 0.2671474989410805,
+        "z": 5.061583359557164,
+        "p": 4.802195825275207e-06,
+        "odds_ratio": 3.8658799795786774,
+        "or_ci": [
+          2.263763259173147,
+          6.6018511237637085
+        ],
+        "ame": 0.17442599032009548,
+        "ame_se": 0.035317931460550164,
+        "ame_ci": [
+          0.1036756719128431,
+          0.24517630872734786
+        ]
+      },
+      "model:google-gemini-4-hydrogen": {
+        "coef": 1.616343356469775,
+        "se": 0.2501081193128937,
+        "z": 6.462578507688009,
+        "p": 2.6619371194634828e-08,
+        "odds_ratio": 5.034646707952064,
+        "or_ci": [
+          3.0505337879459495,
+          8.309256423925788
+        ],
+        "ame": 0.20803587057241102,
+        "ame_se": 0.0330680220298772,
+        "ame_ci": [
+          0.14179266235040255,
+          0.2742790787944195
+        ]
+      },
+      "model:meta-llama-llama-4-maverick": {
+        "coef": 2.065140212351524,
+        "se": 0.5383486379678293,
+        "z": 3.836064711052418,
+        "p": 0.0003196509328607776,
+        "odds_ratio": 7.886403591329741,
+        "or_ci": [
+          2.68236347580023,
+          23.186776201828465
+        ],
+        "ame": 0.2643457324583323,
+        "ame_se": 0.05984880707453058,
+        "ame_ci": [
+          0.14445416515216208,
+          0.38423729976450255
+        ]
+      },
+      "model:mistralai-mistral-large-2512": {
+        "coef": 0.12178654735139552,
+        "se": 0.42555474817126376,
+        "z": 0.2861830302088011,
+        "p": 0.775793992913061,
+        "odds_ratio": 1.1295129785101377,
+        "or_ci": [
+          0.48157078351610966,
+          2.649246200751222
+        ],
+        "ame": 0.015729503276348252,
+        "ame_se": 0.05484495288781382,
+        "ame_ci": [
+          -0.09413813957181356,
+          0.12559714612451006
+        ]
+      },
+      "model:openai-gpt-5.6-luna": {
+        "coef": 0.6222367838158541,
+        "se": 0.20957591989661106,
+        "z": 2.969028045411032,
+        "p": 0.004390976556573151,
+        "odds_ratio": 1.8630907157704555,
+        "or_ci": [
+          1.2243447064872834,
+          2.8350733227318607
+        ],
+        "ame": 0.08047592642062036,
+        "ame_se": 0.026605572868917533,
+        "ame_ci": [
+          0.027178559501330565,
+          0.13377329333991017
+        ]
+      },
+      "model:openai-gpt-5.6-terra": {
+        "coef": 0.8896488955210867,
+        "se": 0.22791061828620043,
+        "z": 3.903499109479417,
+        "p": 0.00025706785488734634,
+        "odds_ratio": 2.434274816439526,
+        "or_ci": [
+          1.5420135535784139,
+          3.842828662692658
+        ],
+        "ame": 0.11502148344846762,
+        "ame_se": 0.028687252996820265,
+        "ame_ci": [
+          0.05755401013334663,
+          0.1724889567635886
+        ]
+      },
+      "model:qwen-qwen3.8-flash": {
+        "coef": 0.6696506802505573,
+        "se": 0.239874427702804,
+        "z": 2.7916718203919215,
+        "p": 0.007159266540592706,
+        "odds_ratio": 1.9535547861630693,
+        "or_ci": [
+          1.208191313729841,
+          3.158751647335549
+        ],
+        "ame": 0.08661987516449103,
+        "ame_se": 0.031775108175211335,
+        "ame_ci": [
+          0.022966684622111794,
+          0.15027306570687027
+        ]
+      },
+      "mode:json": {
+        "coef": -1.9696366615204821,
+        "se": 0.2986846777108393,
+        "z": -6.5943679354965585,
+        "p": 1.6158736190837517e-08,
+        "odds_ratio": 0.13950753546344946,
+        "or_ci": [
+          0.07669076592208382,
+          0.2537769993177397
+        ],
+        "ame": -0.26360470799179364,
+        "ame_se": 0.03000910530117002,
+        "ame_ci": [
+          -0.32372016966729095,
+          -0.20348924631629633
+        ]
+      },
+      "order:1": {
+        "coef": -0.14317868074544896,
+        "se": 0.07676783180826897,
+        "z": -1.8650869429664756,
+        "p": 0.0674118845449984,
+        "odds_ratio": 0.8665992104678595,
+        "or_ci": [
+          0.7430714108900904,
+          1.0106622063200315
+        ],
+        "ame": -0.018481170438058702,
+        "ame_se": 0.009757182690314215,
+        "ame_ci": [
+          -0.03802715610453376,
+          0.001064815228416359
+        ]
+      },
+      "same_gen_family": {
+        "coef": -0.05893136071708268,
+        "se": 0.16810256411432592,
+        "z": -0.3505678870966161,
+        "p": 0.7272278603733608,
+        "odds_ratio": 0.9427714780944981,
+        "or_ci": [
+          0.6732212428729231,
+          1.3202466043934056
+        ],
+        "ame": -0.0076006837017623145,
+        "ame_se": 0.021782449968753444,
+        "ame_ci": [
+          -0.051236174435435766,
+          0.03603480703191114
+        ]
+      }
+    }
+  }
+}
