@@ -98,7 +98,8 @@ class Tool:
             return False
         if self.destructive is True or self.read_only is False:
             return True
-        return any(w in WRITE_VERBS for w in words(self.name)[:2])
+        local = re.split(r"--|__", self.name)[-1]
+        return any(w in WRITE_VERBS for w in words(self.name)[:2]) or any(w in WRITE_VERBS for w in words(local)[:2])
 
     @property
     def params(self) -> dict[str, Any]:

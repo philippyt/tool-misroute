@@ -271,6 +271,38 @@ def propose(tools: list[Tool], doc: dict | None = None) -> dict[str, Any]:
                 "why": f"{len(bare)} lists that take no arguments",
                 "operations": dict(zip(kinds, [t.name for t in bare], strict=True)),
             }
+
+    # Fallback for MCP tool catalogs without OpenAPI routes: group read tools sharing a leading verb
+    # (list, fetch, get) and compatible parameter shapes behind a resource selector. Writes are never merged.
+    if not out and not any(t.route for t in tools):
+        from misroute.server.catalog import words
+
+        no_route_reads = [t for t in tools if t.name not in exclude and not t.is_write]
+        by_verb: dict[str, list[tuple[str, Tool]]] = defaultdict(list)
+        for t in no_route_reads:
+            local = re.split(r"--|__", t.name)[-1]
+            ws = words(local)
+            if len(ws) >= 2 and ws[0] in ("list", "fetch", "get"):
+                by_verb[ws[0]].append(("_".join(ws[1:]), t))
+        for verb, found in sorted(by_verb.items()):
+            # Keep only tools whose parameter sets are alike to the group's first member
+            group = [(res, t) for res, t in found if t.name not in used and alike(found[0][1], t)]
+            if len(group) < REFERENCE_MIN:
+                continue
+            ops: dict[str, str] = {}
+            for res, t in group:
+                key = res
+                n = 2
+                while key in ops:
+                    key = f"{res}_{n}"
+                    n += 1
+                ops[key] = t.name
+            out[unique(f"{verb}_resource", taken)] = {
+                "selector": "resource",
+                "why": f"{len(group)} {verb} read tools with compatible parameters",
+                "operations": ops,
+            }
+            used |= {t.name for _, t in group}
     return {"note": NOTE, "tools": out, "exclude": exclude}
 
 
