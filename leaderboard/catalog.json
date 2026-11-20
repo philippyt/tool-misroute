@@ -1,0 +1,760 @@
+{
+  "schema_version": 1,
+  "description": "Curated catalog of web-verified official and widely-used MCP servers for the misroute leaderboard.",
+  "servers": [
+    {
+      "name": "fetch",
+      "display_name": "MCP Fetch (Reference Control)",
+      "category": "control",
+      "repo_url": "https://github.com/modelcontextprotocol/servers",
+      "package": "mcp-server-fetch",
+      "ecosystem": "pypi",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "uvx",
+      "args": ["mcp-server-fetch"],
+      "env": {},
+      "notes": "Official MCP reference server (control: minimal single-tool surface)."
+    },
+    {
+      "name": "time",
+      "display_name": "MCP Time (Reference Control)",
+      "category": "control",
+      "repo_url": "https://github.com/modelcontextprotocol/servers",
+      "package": "mcp-server-time",
+      "ecosystem": "pypi",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "uvx",
+      "args": ["mcp-server-time"],
+      "env": {},
+      "notes": "Official MCP reference server (control: 2 distinct time tools)."
+    },
+    {
+      "name": "sequential-thinking",
+      "display_name": "MCP Sequential Thinking (Reference Control)",
+      "category": "control",
+      "repo_url": "https://github.com/modelcontextprotocol/servers",
+      "package": "@modelcontextprotocol/server-sequential-thinking",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "env": {},
+      "notes": "Official MCP reference server (control: single reasoning tool)."
+    },
+    {
+      "name": "everything",
+      "display_name": "MCP Everything (Reference)",
+      "category": "control",
+      "repo_url": "https://github.com/modelcontextprotocol/servers",
+      "package": "@modelcontextprotocol/server-everything",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-everything"],
+      "env": {},
+      "notes": "Official MCP reference test server exercising protocol features."
+    },
+    {
+      "name": "filesystem",
+      "display_name": "MCP Filesystem (Reference)",
+      "category": "code",
+      "repo_url": "https://github.com/modelcontextprotocol/servers",
+      "package": "@modelcontextprotocol/server-filesystem",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "{cwd}"],
+      "env": {},
+      "notes": "Official MCP reference filesystem server; sibling risk across read/edit/write/list/search tools."
+    },
+    {
+      "name": "git",
+      "display_name": "MCP Git (Reference)",
+      "category": "code",
+      "repo_url": "https://github.com/modelcontextprotocol/servers",
+      "package": "mcp-server-git",
+      "ecosystem": "pypi",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "uvx",
+      "args": ["mcp-server-git"],
+      "env": {},
+      "notes": "Official MCP reference Git server; sibling risk across diff/show/log/status/branch tools."
+    },
+    {
+      "name": "memory",
+      "display_name": "MCP Memory (Reference)",
+      "category": "database",
+      "repo_url": "https://github.com/modelcontextprotocol/servers",
+      "package": "@modelcontextprotocol/server-memory",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {},
+      "notes": "Official MCP reference knowledge-graph memory server; sibling risk across entities/relations/observations."
+    },
+    {
+      "name": "playwright",
+      "display_name": "Playwright MCP",
+      "category": "browser",
+      "repo_url": "https://github.com/microsoft/playwright-mcp",
+      "package": "@playwright/mcp",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"],
+      "env": {},
+      "notes": "Official Microsoft Playwright MCP server; high sibling risk across browser automation tools."
+    },
+    {
+      "name": "chrome-devtools",
+      "display_name": "Chrome DevTools MCP",
+      "category": "browser",
+      "repo_url": "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+      "package": "chrome-devtools-mcp",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"],
+      "env": {},
+      "notes": "Official Google Chrome DevTools MCP server; high sibling risk across DOM/network/console/perf tools."
+    },
+    {
+      "name": "next-devtools",
+      "display_name": "Next.js DevTools MCP",
+      "category": "code",
+      "repo_url": "https://github.com/vercel/next-devtools-mcp",
+      "package": "next-devtools-mcp",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "next-devtools-mcp@latest"],
+      "env": {},
+      "notes": "Official Vercel Next.js DevTools MCP server."
+    },
+    {
+      "name": "context7",
+      "display_name": "Context7 MCP",
+      "category": "docs",
+      "repo_url": "https://github.com/upstash/context7",
+      "package": "@upstash/context7-mcp",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env": {},
+      "notes": "Official Upstash Context7 documentation MCP server."
+    },
+    {
+      "name": "firecrawl",
+      "display_name": "Firecrawl MCP",
+      "category": "search",
+      "repo_url": "https://github.com/firecrawl/firecrawl-mcp-server",
+      "package": "firecrawl-mcp",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "firecrawl-mcp"],
+      "env": {
+        "FIRECRAWL_API_KEY": "fc-dummy-key-for-tools-list"
+      },
+      "notes": "Official Firecrawl MCP server; dummy FIRECRAWL_API_KEY used for tools/list only."
+    },
+    {
+      "name": "tavily",
+      "display_name": "Tavily MCP",
+      "category": "search",
+      "repo_url": "https://github.com/tavily-ai/tavily-mcp",
+      "package": "tavily-mcp",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "tavily-mcp@latest"],
+      "env": {
+        "TAVILY_API_KEY": "tvly-dummy-key-for-tools-list"
+      },
+      "notes": "Official Tavily MCP server; dummy TAVILY_API_KEY used for tools/list only."
+    },
+    {
+      "name": "exa",
+      "display_name": "Exa MCP",
+      "category": "search",
+      "repo_url": "https://github.com/exa-labs/exa-mcp-server",
+      "package": "exa-mcp-server",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "exa-mcp-server"],
+      "env": {
+        "EXA_API_KEY": "exa-dummy-key-for-tools-list"
+      },
+      "notes": "Official Exa MCP server; dummy EXA_API_KEY used for tools/list only."
+    },
+    {
+      "name": "brave-search",
+      "display_name": "Brave Search MCP",
+      "category": "search",
+      "repo_url": "https://github.com/brave/brave-search-mcp-server",
+      "package": "@brave/brave-search-mcp-server",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@brave/brave-search-mcp-server", "--transport", "stdio"],
+      "env": {
+        "BRAVE_API_KEY": "BSA-dummy-key-for-tools-list"
+      },
+      "notes": "Official Brave Search MCP server; dummy BRAVE_API_KEY used for tools/list only."
+    },
+    {
+      "name": "sqlite",
+      "display_name": "MCP SQLite (Reference)",
+      "category": "database",
+      "repo_url": "https://github.com/modelcontextprotocol/servers-archived",
+      "package": "mcp-server-sqlite",
+      "ecosystem": "pypi",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "uvx",
+      "args": ["mcp-server-sqlite", "--db-path", ":memory:"],
+      "env": {},
+      "notes": "Official MCP reference SQLite server (archived); in-memory DB used for tools/list."
+    },
+    {
+      "name": "supabase",
+      "display_name": "Supabase MCP",
+      "category": "database",
+      "repo_url": "https://github.com/supabase-community/supabase-mcp",
+      "package": "@supabase/mcp-server-supabase",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@supabase/mcp-server-supabase@latest", "--access-token", "sbp_dummy_token_for_tools_list"],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "sbp_dummy_token_for_tools_list"
+      },
+      "notes": "Official Supabase MCP server; dummy access token used for tools/list only."
+    },
+    {
+      "name": "neon",
+      "display_name": "Neon MCP",
+      "category": "database",
+      "repo_url": "https://github.com/neondatabase/mcp-server-neon",
+      "package": "@neondatabase/mcp-server-neon",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@neondatabase/mcp-server-neon", "start", "napi_dummy_key_for_tools_list"],
+      "env": {
+        "NEON_API_KEY": "napi_dummy_key_for_tools_list"
+      },
+      "notes": "Official Neon Postgres MCP server; dummy NEON_API_KEY used for tools/list only."
+    },
+    {
+      "name": "mongodb",
+      "display_name": "MongoDB MCP",
+      "category": "database",
+      "repo_url": "https://github.com/mongodb-js/mongodb-mcp-server",
+      "package": "mongodb-mcp-server",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "mongodb-mcp-server@latest"],
+      "env": {
+        "MDB_MCP_CONNECTION_STRING": "mongodb://localhost:27017/test"
+      },
+      "notes": "Official MongoDB MCP server; dummy local connection string used for tools/list only."
+    },
+    {
+      "name": "redis",
+      "display_name": "Redis MCP",
+      "category": "database",
+      "repo_url": "https://github.com/redis/mcp-redis",
+      "package": "redis-mcp-server",
+      "ecosystem": "pypi",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "uvx",
+      "args": ["--from", "redis-mcp-server", "redis-mcp-server"],
+      "env": {
+        "REDIS_URL": "redis://localhost:6379"
+      },
+      "notes": "Official Redis MCP server; high sibling risk across string/hash/list/set/zset/stream/json tools."
+    },
+    {
+      "name": "clickhouse",
+      "display_name": "ClickHouse MCP",
+      "category": "database",
+      "repo_url": "https://github.com/ClickHouse/mcp-clickhouse",
+      "package": "mcp-clickhouse",
+      "ecosystem": "pypi",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "uvx",
+      "args": ["mcp-clickhouse"],
+      "env": {
+        "CLICKHOUSE_HOST": "localhost",
+        "CLICKHOUSE_PORT": "8123",
+        "CLICKHOUSE_USER": "default",
+        "CLICKHOUSE_PASSWORD": "",
+        "CLICKHOUSE_SECURE": "false"
+      },
+      "notes": "Official ClickHouse MCP server; dummy localhost env vars used for tools/list only."
+    },
+    {
+      "name": "qdrant",
+      "display_name": "Qdrant MCP",
+      "category": "database",
+      "repo_url": "https://github.com/qdrant/mcp-server-qdrant",
+      "package": "mcp-server-qdrant",
+      "ecosystem": "pypi",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "uvx",
+      "args": ["mcp-server-qdrant"],
+      "env": {
+        "QDRANT_URL": "http://localhost:6333",
+        "COLLECTION_NAME": "test"
+      },
+      "notes": "Official Qdrant vector database MCP server; dummy localhost URL used for tools/list only."
+    },
+    {
+      "name": "motherduck",
+      "display_name": "MotherDuck / DuckDB MCP",
+      "category": "database",
+      "repo_url": "https://github.com/motherduckdb/mcp-server-motherduck",
+      "package": "mcp-server-motherduck",
+      "ecosystem": "pypi",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "uvx",
+      "args": ["mcp-server-motherduck", "--db-path", ":memory:", "--read-write"],
+      "env": {},
+      "notes": "Official MotherDuck/DuckDB MCP server; in-memory DuckDB used for tools/list."
+    },
+    {
+      "name": "elasticsearch",
+      "display_name": "Elasticsearch MCP",
+      "category": "database",
+      "repo_url": "https://github.com/elastic/mcp-server-elasticsearch",
+      "package": "@elastic/mcp-server-elasticsearch",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@elastic/mcp-server-elasticsearch"],
+      "env": {
+        "ES_URL": "http://localhost:9200",
+        "ES_API_KEY": "dummy-api-key-for-tools-list"
+      },
+      "notes": "Official Elastic MCP server; dummy ES_URL/ES_API_KEY used for tools/list only."
+    },
+    {
+      "name": "github",
+      "display_name": "GitHub MCP",
+      "category": "code",
+      "repo_url": "https://github.com/github/github-mcp-server",
+      "package": "ghcr.io/github/github-mcp-server",
+      "ecosystem": "docker",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_dummy_token_for_tools_list"
+      },
+      "notes": "Official GitHub MCP server (default toolsets); dummy PAT used for tools/list only. Requires Docker."
+    },
+    {
+      "name": "gitlab",
+      "display_name": "MCP GitLab (Reference)",
+      "category": "code",
+      "repo_url": "https://github.com/modelcontextprotocol/servers-archived",
+      "package": "@modelcontextprotocol/server-gitlab",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-gitlab"],
+      "env": {
+        "GITLAB_PERSONAL_ACCESS_TOKEN": "glpat-dummy-token-for-tools-list",
+        "GITLAB_API_URL": "https://gitlab.com/api/v4"
+      },
+      "notes": "Official MCP reference GitLab server (archived); dummy PAT used for tools/list only."
+    },
+    {
+      "name": "notion",
+      "display_name": "Notion MCP",
+      "category": "docs",
+      "repo_url": "https://github.com/makenotion/notion-mcp-server",
+      "package": "@notionhq/notion-mcp-server",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@notionhq/notion-mcp-server"],
+      "env": {
+        "NOTION_TOKEN": "ntn_dummy_token_for_tools_list"
+      },
+      "notes": "Official Notion MCP server; OpenAPI-derived tools with high sibling risk. Dummy NOTION_TOKEN used."
+    },
+    {
+      "name": "slack",
+      "display_name": "MCP Slack (Reference)",
+      "category": "comms",
+      "repo_url": "https://github.com/modelcontextprotocol/servers-archived",
+      "package": "@modelcontextprotocol/server-slack",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "env": {
+        "SLACK_BOT_TOKEN": "xoxb-dummy-token-for-tools-list",
+        "SLACK_TEAM_ID": "T00000000"
+      },
+      "notes": "Official MCP reference Slack server (archived); dummy bot token and team ID used for tools/list."
+    },
+    {
+      "name": "atlassian-oss",
+      "display_name": "Atlassian Jira/Confluence MCP (sooperset)",
+      "category": "issue_tracker",
+      "repo_url": "https://github.com/sooperset/mcp-atlassian",
+      "package": "mcp-atlassian",
+      "ecosystem": "pypi",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "uvx",
+      "args": ["mcp-atlassian"],
+      "env": {
+        "JIRA_URL": "https://example.atlassian.net",
+        "JIRA_USERNAME": "user@example.com",
+        "JIRA_API_TOKEN": "dummy-token",
+        "CONFLUENCE_URL": "https://example.atlassian.net/wiki",
+        "CONFLUENCE_USERNAME": "user@example.com",
+        "CONFLUENCE_API_TOKEN": "dummy-token"
+      },
+      "notes": "Widely-used open-source Atlassian Jira+Confluence MCP server; dummy credentials used for tools/list."
+    },
+    {
+      "name": "hubspot",
+      "display_name": "HubSpot MCP",
+      "category": "crm",
+      "repo_url": "https://github.com/HubSpot/mcp-server",
+      "package": "@hubspot/mcp-server",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@hubspot/mcp-server"],
+      "env": {
+        "HUBSPOT_ACCESS_TOKEN": "pat-na1-dummy-token-for-tools-list"
+      },
+      "notes": "Official HubSpot CRM MCP server; dummy HUBSPOT_ACCESS_TOKEN used for tools/list only."
+    },
+    {
+      "name": "stripe",
+      "display_name": "Stripe MCP",
+      "category": "payments",
+      "repo_url": "https://github.com/stripe/agent-toolkit",
+      "package": "@stripe/mcp",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@stripe/mcp", "--tools=all"],
+      "env": {
+        "STRIPE_SECRET_KEY": "sk_test_dummy_key_for_tools_list"
+      },
+      "notes": "Official Stripe MCP server (--tools=all); dummy STRIPE_SECRET_KEY used for tools/list only."
+    },
+    {
+      "name": "paypal",
+      "display_name": "PayPal MCP",
+      "category": "payments",
+      "repo_url": "https://github.com/paypal/agent-toolkit",
+      "package": "@paypal/mcp",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@paypal/mcp", "--tools=all"],
+      "env": {
+        "PAYPAL_ACCESS_TOKEN": "dummy-paypal-access-token",
+        "PAYPAL_ENVIRONMENT": "SANDBOX"
+      },
+      "notes": "Official PayPal MCP server (--tools=all); dummy sandbox token used for tools/list only."
+    },
+    {
+      "name": "twilio",
+      "display_name": "Twilio MCP",
+      "category": "comms",
+      "repo_url": "https://github.com/twilio-labs/mcp",
+      "package": "@twilio-alpha/mcp",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@twilio-alpha/mcp",
+        "AC00000000000000000000000000000000/SK00000000000000000000000000000000:dummy",
+        "--services",
+        "twilio_api_v2010"
+      ],
+      "env": {},
+      "notes": "Official Twilio MCP server (scoped to twilio_api_v2010); dummy credentials used for tools/list."
+    },
+    {
+      "name": "sentry",
+      "display_name": "Sentry MCP",
+      "category": "observability",
+      "repo_url": "https://github.com/getsentry/sentry-mcp",
+      "package": "@sentry/mcp-server",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@sentry/mcp-server@latest"],
+      "env": {
+        "SENTRY_AUTH_TOKEN": "sntryu_dummy_token_for_tools_list"
+      },
+      "notes": "Official Sentry MCP server; dummy SENTRY_AUTH_TOKEN used for tools/list only."
+    },
+    {
+      "name": "grafana",
+      "display_name": "Grafana MCP",
+      "category": "observability",
+      "repo_url": "https://github.com/grafana/mcp-grafana",
+      "package": "mcp-grafana",
+      "ecosystem": "pypi",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "uvx",
+      "args": ["mcp-grafana"],
+      "env": {
+        "GRAFANA_URL": "http://localhost:3000",
+        "GRAFANA_SERVICE_ACCOUNT_TOKEN": "glsa_dummy_token_for_tools_list"
+      },
+      "notes": "Official Grafana MCP server; dummy URL and service account token used for tools/list only."
+    },
+    {
+      "name": "kubernetes",
+      "display_name": "Kubernetes MCP",
+      "category": "infra",
+      "repo_url": "https://github.com/containers/kubernetes-mcp-server",
+      "package": "kubernetes-mcp-server",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "kubernetes-mcp-server@latest"],
+      "env": {},
+      "notes": "Official containers/Red Hat Kubernetes MCP server; sibling risk across pods/resources/namespaces/helm."
+    },
+    {
+      "name": "azure",
+      "display_name": "Microsoft Azure MCP",
+      "category": "cloud",
+      "repo_url": "https://github.com/microsoft/mcp",
+      "package": "@azure/mcp",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "@azure/mcp@latest", "server", "start"],
+      "env": {},
+      "notes": "Official Microsoft Azure MCP server; large cloud management tool surface."
+    },
+    {
+      "name": "aws-docs",
+      "display_name": "AWS Documentation MCP",
+      "category": "cloud",
+      "repo_url": "https://github.com/awslabs/mcp",
+      "package": "awslabs.aws-documentation-mcp-server",
+      "ecosystem": "pypi",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "awslabs.aws-documentation-mcp-server@latest",
+        "awslabs.aws-documentation-mcp-server"
+      ],
+      "env": {},
+      "notes": "Official AWS Labs documentation MCP server."
+    },
+    {
+      "name": "aws-cdk",
+      "display_name": "AWS CDK MCP",
+      "category": "cloud",
+      "repo_url": "https://github.com/awslabs/mcp",
+      "package": "awslabs.cdk-mcp-server",
+      "ecosystem": "pypi",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "awslabs.cdk-mcp-server@latest",
+        "awslabs.cdk-mcp-server"
+      ],
+      "env": {},
+      "notes": "Official AWS Labs CDK MCP server."
+    },
+    {
+      "name": "aws-serverless",
+      "display_name": "AWS Serverless MCP",
+      "category": "cloud",
+      "repo_url": "https://github.com/awslabs/mcp",
+      "package": "awslabs.aws-serverless-mcp-server",
+      "ecosystem": "pypi",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "awslabs.aws-serverless-mcp-server@latest",
+        "awslabs.aws-serverless-mcp-server"
+      ],
+      "env": {},
+      "notes": "Official AWS Labs Serverless MCP server."
+    },
+    {
+      "name": "terraform",
+      "display_name": "HashiCorp Terraform MCP",
+      "category": "infra",
+      "repo_url": "https://github.com/hashicorp/terraform-mcp-server",
+      "package": "hashicorp/terraform-mcp-server:latest",
+      "ecosystem": "docker",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "hashicorp/terraform-mcp-server:latest"],
+      "env": {},
+      "notes": "Official HashiCorp Terraform MCP server; requires Docker."
+    },
+    {
+      "name": "figma-developer",
+      "display_name": "Figma Developer MCP (Framelink)",
+      "category": "design",
+      "repo_url": "https://github.com/GLips/Figma-Context-MCP",
+      "package": "figma-developer-mcp",
+      "ecosystem": "npm",
+      "runnable": true,
+      "capture_method": "mcp_stdio_tools_list",
+      "command": "npx",
+      "args": ["-y", "figma-developer-mcp", "--stdio"],
+      "env": {
+        "FIGMA_API_KEY": "figd_dummy_token_for_tools_list"
+      },
+      "notes": "Popular open-source Figma MCP server; dummy FIGMA_API_KEY used for tools/list only."
+    }
+  ],
+  "remote_only_servers": [
+    {
+      "name": "linear-remote",
+      "display_name": "Linear MCP (Official Remote)",
+      "category": "issue_tracker",
+      "endpoint": "https://mcp.linear.app/sse",
+      "auth": "OAuth 2.1 / API key",
+      "notes": "Closed-source hosted remote server; requires authenticated user session to list tools."
+    },
+    {
+      "name": "atlassian-remote",
+      "display_name": "Atlassian MCP (Official Remote)",
+      "category": "issue_tracker",
+      "endpoint": "https://mcp.atlassian.com/v2/mcp",
+      "auth": "OAuth 2.1",
+      "notes": "Official remote server for Jira/Confluence/Bitbucket/Compass; requires user OAuth."
+    },
+    {
+      "name": "slack-remote",
+      "display_name": "Slack MCP (Official Remote)",
+      "category": "comms",
+      "endpoint": "https://mcp.slack.com",
+      "auth": "Workspace OAuth",
+      "notes": "Official enterprise remote server; requires workspace admin approval and OAuth."
+    },
+    {
+      "name": "cloudflare-remote",
+      "display_name": "Cloudflare API MCP (Official Remote)",
+      "category": "cloud",
+      "endpoint": "https://mcp.cloudflare.com/mcp",
+      "auth": "OAuth / Cloudflare API Token",
+      "notes": "Official hosted Cloudflare MCP server; requires live Cloudflare OAuth or API token."
+    },
+    {
+      "name": "vercel-remote",
+      "display_name": "Vercel MCP (Official Remote)",
+      "category": "cloud",
+      "endpoint": "https://mcp.vercel.com",
+      "auth": "OAuth",
+      "notes": "Official hosted Vercel MCP server; requires browser OAuth."
+    },
+    {
+      "name": "prisma-remote",
+      "display_name": "Prisma MCP (Official Remote)",
+      "category": "database",
+      "endpoint": "https://mcp.prisma.io/mcp",
+      "auth": "OAuth",
+      "notes": "Official hosted Prisma MCP server (replaced local CLI stdio server); requires Prisma OAuth."
+    },
+    {
+      "name": "asana-remote",
+      "display_name": "Asana MCP (Official Remote)",
+      "category": "issue_tracker",
+      "endpoint": "https://mcp.asana.com/v2/mcp",
+      "auth": "OAuth",
+      "notes": "Official hosted Asana MCP server; requires user OAuth."
+    },
+    {
+      "name": "figma-remote",
+      "display_name": "Figma MCP (Official Remote)",
+      "category": "design",
+      "endpoint": "https://mcp.figma.com/mcp",
+      "auth": "OAuth",
+      "notes": "Official hosted Figma MCP server; requires Figma OAuth."
+    },
+    {
+      "name": "huggingface-remote",
+      "display_name": "Hugging Face MCP (Official Remote)",
+      "category": "ai",
+      "endpoint": "https://huggingface.co/mcp",
+      "auth": "OAuth / HF_TOKEN",
+      "notes": "Official hosted Hugging Face Hub MCP server; personalized per account."
+    },
+    {
+      "name": "gitlab-remote",
+      "display_name": "GitLab Native MCP (Official Remote)",
+      "category": "code",
+      "endpoint": "https://gitlab.com/api/v4/mcp",
+      "auth": "OAuth / PAT",
+      "notes": "Native GitLab 18.6+ remote MCP endpoint; requires live GitLab authentication."
+    }
+  ]
+}
