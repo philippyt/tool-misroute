@@ -12,6 +12,8 @@ class Request:
     sibling: str | None = None
     lang: str = "en"
     operation: str = ""
+    generator_model: str = ""
+    generator_family: str = ""
 
     def texts(self) -> list[tuple[str, str]]:
         if "{slot}" not in self.template or not self.slots:
@@ -45,6 +47,8 @@ class Trial:
     unread_pages: bool = False
     operation: str = ""
     operation_picked: str | None = None
+    generator_model: str = ""
+    generator_family: str = ""
 
     @property
     def picks(self) -> list[str]:

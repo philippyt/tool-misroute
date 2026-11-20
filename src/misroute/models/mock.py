@@ -150,8 +150,9 @@ class MockAdapter:
             own = sorted(bag(" ".join(field.get(k, "") for k in ("Description", "Tool", "Route", "Returns"))))
             extra = sorted(bag(field.get("Sibling", ""))) if kind == "borrowed" else []
             n = int(field.get("Count", 6))
+            lead = str(self.opts.get("prefix", "please"))
             reqs = [
-                " ".join(["please", *own[i % max(len(own), 1) :][:3], *extra[:1], "for", "{slot}", str(i)])
+                " ".join([lead, *own[i % max(len(own), 1) :][:3], *extra[:1], "for", "{slot}", str(i)])
                 for i in range(n)
             ]
             return json.dumps({"slot_kind": "item", "slots": ["alpha", "beta", "gamma", "delta"], "requests": reqs})

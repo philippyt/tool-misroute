@@ -86,6 +86,8 @@ class Config(BaseModel):
     generator: str | None = None
     validator: str | None = None
     writer: str | None = None
+    generators: list[str] = Field(default_factory=list)
+    validators: list[str] = Field(default_factory=list)
     requests_per_tool: int = 6
     slots: int = 4
     rotations: int = 3
@@ -125,6 +127,20 @@ class Config(BaseModel):
                     models.append(block)
                     names.add(block["name"])
                 data[role] = block["name"]
+        for role_list in ("generators", "validators"):
+            values = data.get(role_list)
+            if isinstance(values, list):
+                resolved = []
+                for value in values:
+                    if isinstance(value, str) and ":" in value and value not in names:
+                        block = expand(value)
+                        if block["name"] not in names:
+                            models.append(block)
+                            names.add(block["name"])
+                        resolved.append(block["name"])
+                    else:
+                        resolved.append(value)
+                data[role_list] = resolved
         data["models"] = models
         return data
 
@@ -135,6 +151,10 @@ class Config(BaseModel):
             value = getattr(self, role)
             if value and value not in names:
                 raise ValueError(f"{role} {value} is not a configured model, models are {', '.join(names)}")
+        for role_list in ("generators", "validators"):
+            for value in getattr(self, role_list):
+                if value not in names:
+                    raise ValueError(f"{role_list} {value} is not a configured model, models are {', '.join(names)}")
         return self
 
     def model(self, name: str) -> ModelConfig:
@@ -143,22 +163,58 @@ class Config(BaseModel):
                 return m
         raise KeyError(f"unknown model {name}")
 
+    def generator_models(self) -> list[ModelConfig]:
+        """Models that write test requests: the generators list when set, else the single generator role."""
+        if self.generators:
+            return [self.model(n) for n in self.generators]
+        return [self.role("generator")]
+
+    def validator_models(self) -> list[ModelConfig]:
+        """Models that judge test requests: the validators panel when set, else the single validator role."""
+        if self.validators:
+            return [self.model(n) for n in self.validators]
+        return [self.role("validator")]
+
     def tested(self) -> list[str]:
         """Models under test: every model not configured only as generator, validator or writer."""
-        roles = {self.generator, self.validator, self.writer} - {None}
+        roles = {self.generator, self.validator, self.writer, *self.generators, *self.validators} - {None}
         return [m.name for m in self.models if m.name not in roles] or [m.name for m in self.models]
 
     def role_warnings(self) -> list[str]:
         """Roles played by a tested model or its family, which lets one model write, judge and pass its own test."""
         tested = [self.model(n) for n in self.tested()]
         out = []
-        for role in ("generator", "validator", "writer"):
-            rm = self.role(role)
-            for t in tested:
-                if rm.name == t.name:
-                    out.append(f"{role} is the model under test ({t.name}), set {role} to a model from another family")
-                elif family(rm) == family(t):
-                    out.append(f"{role} {rm.name} is the same family as the tested {t.name}, prefer another family")
+        gens = self.generator_models()
+        vals = self.validator_models()
+        gen_fams = {family(g) for g in gens}
+        val_fams = {family(v) for v in vals}
+        for t in tested:
+            tf = family(t)
+            if len(gens) == 1:
+                g = gens[0]
+                if g.name == t.name:
+                    out.append(
+                        f"generator is the model under test ({t.name}), set generator to a model from another family"
+                    )
+                elif family(g) == tf:
+                    out.append(f"generator {g.name} is the same family as the tested {t.name}, prefer another family")
+            elif gen_fams == {tf}:
+                out.append(f"all generators are the same family as the tested {t.name}, add another family")
+            if len(vals) == 1:
+                v = vals[0]
+                if v.name == t.name:
+                    out.append(
+                        f"validator is the model under test ({t.name}), set validator to a model from another family"
+                    )
+                elif family(v) == tf:
+                    out.append(f"validator {v.name} is the same family as the tested {t.name}, prefer another family")
+            elif val_fams == {tf}:
+                out.append(f"all validators are the same family as the tested {t.name}, add another family")
+            w = self.role("writer")
+            if w.name == t.name:
+                out.append(f"writer is the model under test ({t.name}), set writer to a model from another family")
+            elif family(w) == tf:
+                out.append(f"writer {w.name} is the same family as the tested {t.name}, prefer another family")
         return list(dict.fromkeys(out))
 
     def role(self, role: str) -> ModelConfig:

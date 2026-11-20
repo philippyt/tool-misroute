@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import random
 import re
+from typing import Any
 from misroute.requests import generate
 from misroute.requests.generate import brief
 from misroute.server.catalog import Tool
@@ -96,3 +97,90 @@ async def keep_valid(
         other = next((n for n in counted if n != r.tool), None)
         rejected.append({"request": r.texts()[0][1], "picked": other, "reason": reason})
     return ok, rejected
+
+
+async def panel_keep_valid(
+    panel: list[tuple[Any, str, str]],
+    reqs: list[Request],
+    tools: list[Tool],
+    source: str = "description",
+    domain: str = "",
+    lookups: frozenset[str] = frozenset(),
+) -> tuple[list[Request], list[dict], list[dict]]:
+    """Validate requests across a multi-family validator panel.
+
+    panel holds (adapter, model_name, family_name) tuples. For each request, validators from a different family
+    than the request's generator_family vote; if none differ, all panel members vote. Two validators must agree
+    unanimously, three or more require a strict majority. Returns (kept, rejected, vote_records).
+    """
+    ok: list[Request] = []
+    rejected: list[dict] = []
+    records: list[dict] = []
+
+    async def eval_one(r: Request) -> tuple[Request, list[tuple[str, list[str], str]]]:
+        chosen = [p for p in panel if not r.generator_family or p[2] != r.generator_family] or panel
+        res = await asyncio.gather(*(judge(ad, r, tools, source=source, domain=domain) for ad, _, _ in chosen))
+        return r, [(name, needed, reason) for (_, name, _), (needed, reason) in zip(chosen, res, strict=True)]
+
+    evaluated = await asyncio.gather(*(eval_one(r) for r in reqs))
+    for r, votes in evaluated:
+        accepts = 0
+        vote_bools: dict[str, bool] = {}
+        first_other = None
+        first_reason = ""
+        for vname, needed, reason in votes:
+            counted = [n for n in needed if n not in lookups or n == r.tool]
+            accepted = counted == [r.tool]
+            vote_bools[vname] = accepted
+            if accepted:
+                accepts += 1
+            else:
+                if len(counted) > 1 and not reason:
+                    reason = f"asks for more than one thing, needs {' and '.join(counted)}"
+                if first_other is None:
+                    first_other = next((n for n in counted if n != r.tool), None)
+                if not first_reason and reason:
+                    first_reason = reason
+        k = len(votes)
+        passed = accepts == k if k <= 2 else accepts > k / 2
+        records.append({"request_id": r.id, "tool": r.tool, "votes": vote_bools, "passed": passed})
+        if passed:
+            ok.append(r)
+        else:
+            rejected.append(
+                {
+                    "request": r.texts()[0][1],
+                    "picked": first_other,
+                    "reason": first_reason or f"panel consensus failed ({accepts}/{k} accepted)",
+                }
+            )
+    return ok, rejected, records
+
+
+def agreement_stats(records: list[dict]) -> dict[str, Any]:
+    """Inter-validator agreement over panel vote records: raw unanimous agreement and Fleiss kappa."""
+    multi = [list(r["votes"].values()) for r in records if len(r.get("votes") or {}) >= 2]
+    if not multi:
+        return {}
+    unanimous = sum(1 for vs in multi if len(set(vs)) == 1)
+    # Pairwise agreement averaged across requests (handles variable panel sizes cleanly)
+    pair_agree = 0.0
+    total_yes = 0
+    total_votes = 0
+    for vs in multi:
+        k = len(vs)
+        yes = sum(1 for v in vs if v)
+        no = k - yes
+        pair_agree += (yes * (yes - 1) + no * (no - 1)) / (k * (k - 1))
+        total_yes += yes
+        total_votes += k
+    p_bar = pair_agree / len(multi)
+    p_yes = total_yes / total_votes if total_votes else 0.0
+    p_e = p_yes * p_yes + (1.0 - p_yes) * (1.0 - p_yes)
+    kappa = (p_bar - p_e) / (1.0 - p_e) if (1.0 - p_e) > 1e-12 else None
+    return {
+        "requests_judged": len(multi),
+        "unanimous_rate": unanimous / len(multi),
+        "pairwise_agreement": p_bar,
+        "fleiss_kappa": kappa,
+    }

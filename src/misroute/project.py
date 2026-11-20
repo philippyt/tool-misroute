@@ -69,6 +69,7 @@ class Project:
         self.add_total: Progress = lambda n: None
         self.rejected: dict[str, Counter] = {}
         self.dropped: dict[str, list[dict]] = {}
+        self.validator_votes: list[dict] = []
         self.request_use = {"written": 0, "reused": 0}
         self.unreadable: Counter = Counter()
         self._fixtures: dict[str, Any] | None = None
@@ -102,8 +103,17 @@ class Project:
     def usage(self) -> dict[str, dict[str, Any]]:
         """Measured calls, tokens and dollars per model, with its roles, to hold against the estimate."""
         out = {}
+        gen_names = {m.name for m in self.cfg.generator_models()}
+        val_names = {m.name for m in self.cfg.validator_models()}
+        writer_name = self.cfg.role("writer").name
         for name, a in self._adapters.items():
-            roles = [r for r in ("generator", "validator", "writer") if self.cfg.role(r).name == name]
+            roles = []
+            if name in gen_names:
+                roles.append("generator")
+            if name in val_names:
+                roles.append("validator")
+            if name == writer_name:
+                roles.append("writer")
             tested = ["tested"] if name in self.cfg.tested() else []
             out[name] = {"roles": tested + roles, **a.usage()}
         return out
@@ -211,25 +221,65 @@ class Project:
     async def requests_in(
         self, tool: Tool, tools: list[Tool], sibling: Tool | None, seed: int, lang: str
     ) -> list[Request]:
-        gen, val = self.role("generator"), self.role("validator")
-        n, kept, src = self.cfg.requests_per_tool, [], self.cfg.request_source
-        turned_down: list[dict] = []
-        for attempt in range(generate.ROUNDS):
-            if len(kept) >= n:
-                break
-            try:
-                reqs = await generate.generate(
-                    gen, tool, n, self.cfg.slots, sibling, f"{seed}:{attempt}", src, lang, self.domain(), turned_down
-                )
-            except (ValueError, KeyError, TypeError):
-                self.unreadable[tool.name] += 1
-                break
-            ok, bad = await validate.keep_valid(val, reqs, tools, src, self.domain(), self.lookups(tools))
-            self.rejected.setdefault(tool.name, Counter()).update(b["picked"] or "(no tool)" for b in bad)
-            self.dropped.setdefault(tool.name, []).extend(bad)
-            turned_down += bad
-            kept += [r for r in ok if r.id not in {k.id for k in kept}]
-        return kept[:n]
+        gens = self.cfg.generator_models()
+        vals = self.cfg.validator_models()
+        n, src = self.cfg.requests_per_tool, self.cfg.request_source
+        quotas = [n // len(gens) + (1 if i < n % len(gens) else 0) for i in range(len(gens))]
+        panel = [(self.adapter(v.name), v.name, family(v)) for v in vals]
+
+        async def from_one(gen_cfg, quota: int) -> list[Request]:
+            if quota <= 0:
+                return []
+            gen = self.adapter(gen_cfg.name)
+            gfam = family(gen_cfg)
+            kept: list[Request] = []
+            turned_down: list[dict] = []
+            for attempt in range(generate.ROUNDS):
+                if len(kept) >= quota:
+                    break
+                try:
+                    reqs = await generate.generate(
+                        gen,
+                        tool,
+                        quota,
+                        self.cfg.slots,
+                        sibling,
+                        f"{seed}:{gen_cfg.name}:{attempt}",
+                        src,
+                        lang,
+                        self.domain(),
+                        turned_down,
+                    )
+                except (ValueError, KeyError, TypeError):
+                    self.unreadable[tool.name] += 1
+                    break
+                for r in reqs:
+                    r.generator_model = gen_cfg.name
+                    r.generator_family = gfam
+                if len(panel) > 1:
+                    ok, bad, votes = await validate.panel_keep_valid(
+                        panel, reqs, tools, src, self.domain(), self.lookups(tools)
+                    )
+                    self.validator_votes.extend(votes)
+                else:
+                    ok, bad = await validate.keep_valid(
+                        panel[0][0], reqs, tools, src, self.domain(), self.lookups(tools)
+                    )
+                self.rejected.setdefault(tool.name, Counter()).update(b["picked"] or "(no tool)" for b in bad)
+                self.dropped.setdefault(tool.name, []).extend(bad)
+                turned_down += bad
+                kept += [r for r in ok if r.id not in {k.id for k in kept}]
+            return kept[:quota]
+
+        batches = await asyncio.gather(*(from_one(g, q) for g, q in zip(gens, quotas, strict=True)))
+        seen_ids: set[str] = set()
+        merged: list[Request] = []
+        for batch in batches:
+            for r in batch:
+                if r.id not in seen_ids:
+                    seen_ids.add(r.id)
+                    merged.append(r)
+        return merged[:n]
 
     async def request_set(self, tools: list[Tool], only: list[Tool] | None = None) -> dict[str, list[Request]]:
         """Validated requests per tool. Under a catalog plan requests are written and validated per original
@@ -275,7 +325,12 @@ class Project:
         them, so requests from other instructions or another domain are never reused."""
         langs = self.cfg.request_languages or ["en"]
         made = validate.recipe(self.domain(), self.cfg.slots)
-        return f"{tool.name}|{self.cfg.request_source}|{','.join(langs)}|{made}"
+        panel_tag = ""
+        if self.cfg.generators or self.cfg.validators:
+            gs = ",".join(self.cfg.generators)
+            vs = ",".join(self.cfg.validators)
+            panel_tag = f"|g:{gs}|v:{vs}"
+        return f"{tool.name}|{self.cfg.request_source}|{','.join(langs)}|{made}{panel_tag}"
 
     async def run_trials(self, trials: list[Trial], tools_for: Callable[[Trial], list[Tool]]) -> list[Trial]:
         stopped: list[BudgetExceeded] = []
@@ -416,6 +471,8 @@ class Project:
                             for rep in range(self.repeats(m, mode)):
                                 t = Trial(m, mode, r.tool, r.id, text, r.kind, slot, o, rep, "discover", lang=r.lang)
                                 t.operation = r.operation
+                                t.generator_model = r.generator_model
+                                t.generator_family = r.generator_family
                                 out.append(t)
         return out
 
@@ -424,10 +481,12 @@ class Project:
         langs = len(self.cfg.request_languages or ["en"])
         reached = sum(len(t.operations) or 1 for t in tools)
         requests = reached * self.cfg.requests_per_tool * langs
-        written, judged = reached * langs, requests
+        gens = self.cfg.generator_models()
+        vals = self.cfg.validator_models()
+        written, judged = reached * langs * len(gens), requests * len(vals)
         calls = written + judged
-        cost = self.estimate(written, self.cfg.role("generator").name, [], 1)
-        cost += self.estimate(judged, self.cfg.role("validator").name, tools, 1)
+        cost = sum(self.estimate(reached * langs, g.name, [], 1) for g in gens)
+        cost += sum(self.estimate(requests, v.name, tools, 1) for v in vals)
         for m in models_:
             removal_trials = requests if "json" in modes else 0
             calls += removal_trials
@@ -482,6 +541,8 @@ class Project:
             request_source=self.cfg.request_source,
             by_language=rates_by(trials, "lang"),
             by_kind=rates_by(trials, "kind"),
+            by_generator_family=rates_by([t for t in trials if t.generator_family], "generator_family"),
+            validator_agreement=validate.agreement_stats(self.validator_votes),
             untested=sorted(k for k, v in reqs.items() if not v),
             effect_unknown=effect_unknown(tools),
             lookup_tools=sorted(self.lookups(tools)),
@@ -556,9 +617,31 @@ class Project:
                         "stub_rerun": codemode.rerun_choice(ts),
                         "unanswered": codemode.unanswered(ts),
                         "matrix": {k: dict(v) for k, v in confusion.matrix(ts).items()},
+                        **self._family_split(m, ts, writes),
                     }
                 )
         return {"cells": cells, "writes": sorted(writes)}
+
+    def _family_split(self, model: str, ts: list[Trial], writes: set[str]) -> dict[str, Any]:
+        """Leave-own-family-out and own-family rates when trials carry generator_family provenance."""
+        stamped = [t for t in ts if t.generator_family]
+        if not stamped:
+            return {}
+        m_fam = family(self.cfg.model(model))
+        out: dict[str, Any] = {}
+        for label, sub in (
+            ("other_family", [t for t in stamped if t.generator_family != m_fam]),
+            ("own_family", [t for t in stamped if t.generator_family == m_fam]),
+        ):
+            if sub:
+                out[label] = {
+                    "trials": len(sub),
+                    "accuracy": sum(not t.error for t in sub) / len(sub),
+                    "wrong_rate": confusion.wrong_rate(sub),
+                    "hedge_rate": hedge.hedge_rate(sub),
+                    "write_hedge_rate": hedge.hedge_rate(sub, writes),
+                }
+        return out
 
     def pairs_from(self, top: int | None, pairs: list[tuple[str, str]] | None = None) -> list[tuple[str, str]]:
         """Given pairs, else the top pairs from discover, else every pair discover flagged by the flag rule."""
@@ -587,6 +670,8 @@ class Project:
                         for o in range(2):
                             t = Trial(m, mode, r.tool, r.id, text, r.kind, slot, o, 0, lang=r.lang, **kw)
                             t.operation = r.operation
+                            t.generator_model = r.generator_model
+                            t.generator_family = r.generator_family
                             out.append(t)
         return out
 
