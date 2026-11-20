@@ -65,12 +65,15 @@ class Budget:
         self.limit = limit_usd
         self.spent = 0.0
         self.reserved = 0.0
+        self.slots = 0
 
-    def reserve(self, need: float, share: int = 1) -> float:
+    def reserve(self, need: float, share: int = 1, ceiling: float | None = None) -> float:
         free = self.limit - self.spent - self.reserved
         if need > free:
             raise BudgetExceeded(f"budget {self.limit:.2f} usd reached, {self.spent:.2f} spent")
-        held = max(need, free / max(share, 1))
+        held = max(need, free / max(share, self.slots, 1))
+        if ceiling is not None:
+            held = min(held, max(need, ceiling))
         self.reserved += held
         return held
 

@@ -218,3 +218,16 @@ async def test_discover_estimate_covers_validation_and_removal(tmp_path):
     _, one = await proj.discover_cost(["m"], ["json"])
     helpers = proj.estimate(1, "m", [], 1) + proj.estimate(2 * requests, "m", await proj.tools(), 1)
     assert three - helpers == pytest.approx(3 * (one - helpers)) and one < three < 3 * one
+
+
+async def test_many_concurrent_models_do_not_starve_shared_budget(tmp_path):
+    budget = Budget(5.0)
+    adapters = [
+        Metered(Fake(200), ModelConfig(name=f"m{i}", provider="mock", price_in=2, price_out=10), budget, tmp_path)
+        for i in range(9)
+    ]
+    tasks = [a.chat(f"req {j}", []) for a in adapters for j in range(4)]
+    results = await asyncio.gather(*tasks)
+    assert len(results) == 36
+    assert budget.reserved == pytest.approx(0)
+    assert 0 < budget.spent < 0.5

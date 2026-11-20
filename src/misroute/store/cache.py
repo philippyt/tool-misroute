@@ -60,6 +60,7 @@ class Metered:
         self.dir = Path(root) / "cache" / cfg.name
         self.dir.mkdir(parents=True, exist_ok=True)
         self.sem = asyncio.Semaphore(cfg.concurrency)
+        self.budget.slots += cfg.concurrency
         self.price_known = fill_price(cfg)
         self.calls = 0
         self.hits = 0
@@ -126,7 +127,8 @@ class Metered:
         if not self.price_known:
             raise BudgetExceeded(no_price(self.cfg.name))
         async with self.sem:
-            held = self.budget.reserve(self.estimate(*parts), self.cfg.concurrency)
+            ceiling = self.price(estimate_tokens(*parts), NO_LIMIT_ABOVE)
+            held = self.budget.reserve(self.estimate(*parts), self.cfg.concurrency, ceiling)
             room = self.room(held, *parts)
             token = OUTPUT_ROOM.set(room)
             try:
