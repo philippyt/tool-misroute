@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from mcp.types import PaginatedRequestParams
 from misroute.server.static import tools as load_static_tools
 
 LEADERBOARD_DIR = Path(__file__).resolve().parent
@@ -133,7 +134,11 @@ async def fetch_tools_stdio(
                     tools_out: list[dict[str, Any]] = []
                     cursor: str | None = None
                     while True:
-                        res = await session.list_tools(cursor=cursor)
+                        res = (
+                            await session.list_tools(params=PaginatedRequestParams(cursor=cursor))
+                            if cursor
+                            else await session.list_tools()
+                        )
                         for t in res.tools:
                             tools_out.append(serialize_tool(t))
                         cursor = getattr(res, "nextCursor", None)
