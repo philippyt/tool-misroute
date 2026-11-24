@@ -19,7 +19,7 @@ def test_parallel_audiences_detects_external_collision():
     assert set(found) == {"Ekstern_CreateArbeidsordre", "Ekstern_GetArbeidsordreStatus"}
 
 
-def test_clean_name_fixes_truncation_acronyms_and_numbered_twins():
+def test_clean_name_fixes_truncation_acronyms_parent_child_and_list_vs_get():
     taken: set[str] = set()
     t1 = Tool(
         "ArbeidsordreFrekvensGrupper_GetDetaljertArbeidsordreFrek",
@@ -35,64 +35,101 @@ def test_clean_name_fixes_truncation_acronyms_and_numbered_twins():
         read_only=True,
     )
     t4 = Tool("IKOmraade_GetById", route="GET /api/IKOmraade/{id}", op_id="IKOmraade_GetById", read_only=True)
-    n1 = clean_name(t1, taken)
-    n2 = clean_name(t2, taken)
-    n3 = clean_name(t3, taken)
-    n4 = clean_name(t4, taken)
-    assert not n1.endswith("_med") and len(n1) <= 48
-    assert n2 == "list_my_grupper"
-    assert n3 == "list_ansatte_grupper"
-    assert n4 == "get_ik_omraade_by_id"
+    t5 = Tool(
+        "Skjema_GetById",
+        route="GET /api/Arbeidsordrer/{id}/Skjema",
+        op_id="Skjema_GetById",
+        read_only=True,
+    )
+    t6 = Tool(
+        "Ansatte_GetAnsatte",
+        route="GET /api/Ansatte",
+        op_id="Ansatte_GetAnsatte",
+        output_schema={"type": "array", "items": {"type": "object", "properties": {"id": {}}}},
+        read_only=True,
+    )
+    assert clean_name(t1, taken) == "get_arbeidsordre_frekvens_gruppe"
+    assert clean_name(t2, taken) == "list_my_grupper"
+    assert clean_name(t3, taken) == "list_ansatte_grupper"
+    assert clean_name(t4, taken) == "get_ik_omraade_by_id"
+    assert clean_name(t5, taken) == "get_arbeidsordre_skjema"
+    assert clean_name(t6, taken) == "list_ansatte"
 
 
-def test_same_effect_siblings_merged_ops_and_list_detail_chains():
+def test_infer_chains_matches_exact_compound_entity_and_rejects_downstream_id_tools():
     tools = [
         Tool(
-            "Arbeidsordrer_GetArbeidsordreDetaljer",
-            "Executes GET /api/Arbeidsordrer/{arbeidsordreId}",
-            {"type": "object", "properties": {"arbeidsordreId": {"type": "string"}}, "required": ["arbeidsordreId"]},
-            {"type": "object", "properties": {"id": {}, "tittel": {}, "status": {}}},
-            read_only=True,
+            "get_arbeidsordre_detaljer",
+            input_schema={"type": "object", "properties": {"arbeidsordreId": {}}, "required": ["arbeidsordreId"]},
             route="GET /api/Arbeidsordrer/{arbeidsordreId}",
-            op_id="Arbeidsordrer_GetArbeidsordreDetaljer",
+            read_only=True,
         ),
         Tool(
-            "Arbeidsordrer_CreateArbeidsordre",
-            "Executes POST /api/Arbeidsordrer",
-            {"type": "object", "properties": {"tittel": {"type": "string"}}, "required": ["tittel"]},
-            read_only=False,
-            destructive=False,
-            route="POST /api/Arbeidsordrer",
-            op_id="Arbeidsordrer_CreateArbeidsordre",
+            "get_arbeidsordre_frekvens_gruppe",
+            input_schema={"type": "object", "properties": {"id": {}}, "required": ["id"]},
+            route="GET /api/ArbeidsordreFrekvensGrupper/{id}",
+            read_only=True,
         ),
         Tool(
-            "Arbeidsordrer_UpdateArbeidsordre",
-            "Executes PUT /api/Arbeidsordrer/{arbeidsordreId}",
-            {"type": "object", "properties": {"arbeidsordreId": {"type": "string"}}, "required": ["arbeidsordreId"]},
-            read_only=False,
-            destructive=False,
-            idempotent=True,
-            route="PUT /api/Arbeidsordrer/{arbeidsordreId}",
-            op_id="Arbeidsordrer_UpdateArbeidsordre",
+            "get_ik_omraade_by_id",
+            input_schema={"type": "object", "properties": {"id": {}}, "required": ["id"]},
+            route="GET /api/IKOmraade/{id}",
+            read_only=True,
+        ),
+        Tool(
+            "get_ik_sted_by_ekstern_referanse",
+            input_schema={"type": "object", "properties": {"eksternReferanse": {}}, "required": ["eksternReferanse"]},
+            route="GET /api/IKSted/{eksternReferanse}",
+            read_only=True,
+        ),
+        Tool(
+            "list_ansatte_grupper",
+            input_schema={"type": "object", "properties": {"ansattId": {}}, "required": ["ansattId"]},
+            route="GET /api/Ansatte/{ansattId}/Grupper",
+            read_only=True,
+        ),
+        Tool("list_ansatte", route="GET /api/Ansatte", read_only=True),
+        Tool("list_my_grupper", route="GET /api/Ansatte/me/grupper", read_only=True),
+        Tool("list_hendelser", route="POST /api/Hendelser/Paginert", read_only=True),
+        Tool(
+            "get_hendelse_detaljer",
+            input_schema={"type": "object", "properties": {"hendelseId": {}}, "required": ["hendelseId"]},
+            route="GET /api/Hendelser/{hendelseId}",
+            read_only=True,
         ),
         Tool(
             "arbeidsordrer_view",
-            "Consolidated view",
             read_only=True,
             selector="view",
-            operations={"paginert": "Arbeidsordrer_PaginertArbeidsordreListe", "count": "Arbeidsordrer_Count"},
+            operations={"paginert": "Arbeidsordrer_Paginert", "count": "Arbeidsordrer_Count"},
+        ),
+        Tool(
+            "vedlegg_by_parent",
+            input_schema={"type": "object", "properties": {"parent": {}, "id": {}}, "required": ["parent", "id"]},
+            read_only=True,
+            selector="parent",
+            operations={"arbeidsordrer": "Vedlegg_GetArbeidsordreVedlegg", "hendelser": "Vedlegg_GetHendelseVedlegg"},
+        ),
+        Tool(
+            "reference_data",
+            read_only=True,
+            selector="kind",
+            operations={
+                "arbeidsordrefrekvensgrupper": "ArbeidsordreFrekvensGrupper_GetAll",
+                "ikomraade": "IKOmraade_GetAll",
+                "grupper": "Grupper_GetGrupper",
+            },
         ),
     ]
-    polished, _, diag = apply_e1_e2(tools)
-    by = {t.name: t for t in polished}
-    # Reads should NOT reference write tools; detail read should point to list view first
-    assert "create_arbeidsordre" not in by["get_arbeidsordre_detaljer"].description
-    assert "arbeidsordrer_view(view='paginert')" in by["get_arbeidsordre_detaljer"].description
-    # Writes should point to sibling writes, not reads
-    assert "update_arbeidsordre" in by["create_arbeidsordre"].description
-    assert "get_arbeidsordre_detaljer" not in by["create_arbeidsordre"].description
-    assert not diag["needs_human_name"]
-    assert "get_arbeidsordre_detaljer" in infer_chains(polished)
+    chains = infer_chains(tools)
+    assert chains["get_arbeidsordre_detaljer"] == ["`arbeidsordrer_view(view='paginert')`"]
+    assert chains["get_arbeidsordre_frekvens_gruppe"] == ["`reference_data(kind='arbeidsordrefrekvensgrupper')`"]
+    assert chains["get_ik_omraade_by_id"] == ["`reference_data(kind='ikomraade')`"]
+    assert "get_ik_sted_by_ekstern_referanse" not in chains
+    assert chains["list_ansatte_grupper"] == ["`list_ansatte`"]
+    assert chains["get_hendelse_detaljer"] == ["`list_hendelser`"]
+    # Downstream tool vedlegg_by_parent requires id itself -> never suggested anywhere
+    assert all("vedlegg_by_parent" not in hint for hints in chains.values() for hint in hints)
 
 
 def test_propose_clean_excludes_singletons_and_infers_enrichments():
@@ -118,3 +155,5 @@ def test_propose_clean_excludes_singletons_and_infers_enrichments():
     ref_ops = set(plan["tools"]["reference_data"]["operations"].values())
     assert ref_ops == {"Statuser_GetAll", "Graderinger_GetAll", "FDVOmraader_GetAll"}
     assert any(e["field"] == "fdvOmraadeId" and e["enabled"] is False for e in plan.get("enrich", []))
+    polished, _, diag = apply_e1_e2(tools)
+    assert polished and not diag["needs_human_name"]

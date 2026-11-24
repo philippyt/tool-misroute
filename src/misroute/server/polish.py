@@ -9,6 +9,7 @@ from misroute.server.catalog import Tool, words
 AUDIENCE_PREFIX = re.compile(r"^(ekstern|external|partner|public|admin|internal|backoffice)$", re.I)
 CALLER_SCOPED = re.compile(r"/(me|self|current|my)(?:/|$)|detaljer$|details$|profile$|info$|config$", re.I)
 SUSPICIOUS_BINARY = re.compile(r"schema|feature|geojson|json|export|report", re.I)
+EXTERNAL_REF = re.compile(r"(ekstern|external|referanse|reference)", re.I)
 FILLER_WORDS = frozenset({"detaljert", "paginert", "filtrert", "filtered", "paginated", "detailed", "liste", "list"})
 TRAILING_PREPS = frozenset({"med", "for", "i", "av", "til", "by", "of", "with", "to", "in", "on", "from"})
 PAGING_FIELDS = frozenset(
@@ -78,12 +79,31 @@ NAME_MAX = 48
 def _stem(word: str) -> str:
     w = word.lower()
     if len(w) > 5 and w.endswith("ene"):
-        return w[:-2]
-    if len(w) > 4 and w.endswith(("er", "es")):
+        w = w[:-3]
+    elif len(w) > 4 and w.endswith(("er", "es")):
+        w = w[:-2]
+    elif len(w) > 4 and w.endswith(("r", "s")):
+        w = w[:-1]
+    if len(w) > 4 and w.endswith("e"):
+        w = w[:-1]
+    return w
+
+
+def _singular(word: str) -> str:
+    w = word.lower()
+    if len(w) > 5 and w.endswith("er") and not w.endswith(("ser", "ter")):
         return w[:-1]
-    if len(w) > 4 and w.endswith(("r", "s")):
+    if len(w) > 4 and w.endswith("s") and not w.endswith("ss"):
         return w[:-1]
     return w
+
+
+def _is_collection_return(tool: Tool) -> bool:
+    schema = tool.output_schema or {}
+    if schema.get("type") == "array" or "items" in schema:
+        return True
+    props = schema.get("properties") or {}
+    return any(isinstance(v, dict) and (v.get("type") == "array" or "items" in v) for v in props.values())
 
 
 def _domain_stems(tool: Tool) -> set[str]:
@@ -130,9 +150,7 @@ def is_caller_or_singleton(tool: Tool) -> bool:
         return True
     schema = tool.output_schema or {}
     if schema.get("type") == "object" and "items" not in schema:
-        props = schema.get("properties") or {}
-        has_list = any(isinstance(v, dict) and (v.get("type") == "array" or "items" in v) for v in props.values())
-        return not has_list
+        return not _is_collection_return(tool)
     return False
 
 
@@ -143,7 +161,7 @@ def _from_route(tool: Tool) -> list[str]:
     ws: list[str] = []
     if method == "POST":
         ws.append("list" if tool.read_only else "create")
-    elif method == "PUT" or method == "PATCH":
+    elif method in ("PUT", "PATCH"):
         ws.append("update")
     elif method == "DELETE":
         ws.append("delete")
@@ -154,11 +172,13 @@ def _from_route(tool: Tool) -> list[str]:
         if s.startswith("{"):
             continue
         ws.extend(words(s))
+    # Singularize trailing plural resource noun on single-item get/create/update/delete
+    if ws and ws[0] in ("get", "create", "update", "delete") and len(ws) > 1:
+        ws[-1] = _singular(ws[-1])
     return ws
 
 
 def _trim_words(ws: list[str], limit: int = NAME_MAX) -> str:
-    # Drop filler words first if over limit
     if len("_".join(ws)) > limit:
         pruned = [ws[0], *[w for w in ws[1:] if w not in FILLER_WORDS]] if ws else []
         if pruned:
@@ -170,29 +190,39 @@ def _trim_words(ws: list[str], limit: int = NAME_MAX) -> str:
             kept.append(w)
         else:
             break
-    # Never end on a dangling preposition
     while len(kept) > 1 and kept[-1] in TRAILING_PREPS:
         kept.pop()
     return "_".join(kept) if kept else "_".join(ws)[:limit].rstrip("_")
 
 
 def clean_name(tool: Tool, taken: set[str]) -> str:
-    """E2 name normalization: acronym-aware snake_case, caller-vs-param disambiguation, no dangling prepositions."""
+    """E2 name normalization: acronym-aware snake_case, caller/param & parent/child aware, list vs get consistent."""
     raw = tool.op_id or tool.name
     path = tool.route.partition(" ")[2] if tool.route else ""
+    segs = [p for p in path.split("/") if p and p.lower() != "api" and not re.fullmatch(r"v\d+", p, re.I)]
 
-    # Disambiguate caller-scoped (/me/) vs parameter-scoped (/{userId}/) twins cleanly
+    # 1. Caller-scoped (/me/) vs parameter-scoped (/{userId}/) twins
     if not tool.operations and re.search(r"/(me|self|current)/", path, re.I):
         tail = [w for p in path.split("/")[-1:] for w in words(p) if not p.startswith("{")]
         ws = ["list", "my", *tail] if tail else ["list", "my", *words(raw)]
     elif not tool.operations and re.search(r"/\{[^}]+\}/[^/{}]+$", path) and re.search(r"\d$", raw):
-        # e.g. GET /api/Ansatte/{ansattId}/Grupper with operationId Ansatte_GetGrupper2
-        parts = [p for p in path.split("/") if p and p.lower() != "api"]
-        parent = words(parts[-3]) if len(parts) >= 3 else []
-        leaf = words(parts[-1])
+        parent = words(segs[-3]) if len(segs) >= 3 else []
+        leaf = words(segs[-1])
         ws = ["list", *parent, *leaf]
+    # 2. Parent-child route like GET /api/Arbeidsordrer/{id}/Skjema where op_id is Skjema_GetById
+    elif (
+        not tool.operations
+        and len(segs) == 3
+        and segs[1].startswith("{")
+        and not segs[2].startswith("{")
+        and re.search(r"by_?id$", raw, re.I)
+    ):
+        parent_ws = words(segs[0])
+        if parent_ws:
+            parent_ws[-1] = _singular(parent_ws[-1])
+        ws = ["get", *parent_ws, *words(segs[2])]
+    # 3. OperationId hit/exceeded 56-char limit; derive clean name from route
     elif not tool.operations and len(raw) >= openapi.NAME_LIMIT and tool.route:
-        # OperationId hit or exceeded the 56-char limit; derive clean name from route
         ws = _from_route(tool)
     elif "_" in raw and not tool.operations:
         ctrl, _, action = raw.partition("_")
@@ -207,12 +237,23 @@ def clean_name(tool: Tool, taken: set[str]) -> str:
     else:
         ws = words(raw)
 
-    # Normalize verbs and strip implementation-only noise words
+    # Normalize verbs
     if ws and ws[0] == "opprett":
         ws[0] = "create"
     elif ws and ws[0] == "hent":
         ws[0] = "get"
     elif ws and ws[0] in ("paginert", "paginated"):
+        ws[0] = "list"
+
+    # Collection-returning GET without a path {id} should use list_, not get_
+    has_path_id = any(s.startswith("{") for s in segs)
+    if (
+        not tool.operations
+        and not tool.is_write
+        and not has_path_id
+        and _is_collection_return(tool)
+        and ws[:1] == ["get"]
+    ):
         ws[0] = "list"
 
     dedup: list[str] = []
@@ -222,7 +263,6 @@ def clean_name(tool: Tool, taken: set[str]) -> str:
         if not dedup or _stem(dedup[-1]) != _stem(w):
             dedup.append(w)
 
-    # Strip trailing filler/preposition words
     while len(dedup) > 1 and dedup[-1] in TRAILING_PREPS:
         dedup.pop()
 
@@ -238,20 +278,22 @@ def clean_name(tool: Tool, taken: set[str]) -> str:
 
 
 def _item_fields(tool: Tool) -> list[str]:
-    """Return meaningful domain fields from output_schema, excluding pagination wrapper fields."""
-    return [f for f in output_fields(tool.output_schema) if f.lower() not in PAGING_FIELDS]
+    """Return meaningful item fields from output_schema, excluding pagination wrapper fields."""
+    raw = output_fields(tool.output_schema)
+    schema = tool.output_schema or {}
+    props = schema.get("properties") or {}
+    wrapper_arrays = {
+        k.lower() for k, v in props.items() if isinstance(v, dict) and (v.get("type") == "array" or "items" in v)
+    }
+    return [f for f in raw if f.lower() not in PAGING_FIELDS and f.lower() not in wrapper_arrays]
 
 
 def _short_purpose(tool: Tool) -> str:
-    """Concise noun/gerund phrase describing what a tool does, for clean E1 boundary clauses."""
+    """Concise noun/gerund phrase describing what a tool does, never cutting mid-sentence."""
     if tool.operations:
         vals = ", ".join(list(tool.operations)[:4])
         more = ", ..." if len(tool.operations) > 4 else ""
         return f"{tool.selector} lookups ({vals}{more})"
-    desc = " ".join((tool.description or "").split())
-    if desc and not desc.startswith("Executes "):
-        first = re.split(r"(?<=[.!?])\s", desc)[0].rstrip(".")
-        return first[0].lower() + first[1:] if len(first) <= 85 else first[:82].rstrip() + "..."
     ws = words(tool.name)
     noun = " ".join(ws[1:]) or tool.name
     if ws and ws[0] == "create":
@@ -271,7 +313,7 @@ def _base_description(tool: Tool) -> str:
     """Schema-grounded description scaffold replacing 'Executes GET /api/...' stubs (always draft/untested)."""
     desc = " ".join((tool.description or "").split())
     if desc and not desc.startswith("Executes "):
-        return desc
+        return desc if desc.endswith((".", "!", "?")) else desc + "."
     if tool.operations:
         vals = ", ".join(tool.operations)
         return f"Consolidated read tool; set `{tool.selector}` to one of: {vals}."
@@ -302,32 +344,69 @@ def _base_description(tool: Tool) -> str:
     return " ".join(parts)
 
 
+def _norm_entity(text: str) -> str:
+    return _stem("".join(words(text)))
+
+
+def _entity_of_id_param(tool: Tool, param: str) -> str | None:
+    """Resolve the full compound entity of a required ID parameter, or None for external references."""
+    if EXTERNAL_REF.search(param):
+        return None
+    if param.lower().endswith("id") and len(param) > 2:
+        return _norm_entity(param[:-2])
+    if param.lower() == "id" and tool.route:
+        path = tool.route.partition(" ")[2]
+        segs = [p for p in path.split("/") if p]
+        for i, seg in enumerate(segs):
+            if seg.lower() == "{id}" and i > 0:
+                return _norm_entity(segs[i - 1])
+    return None
+
+
+def _requires_id(tool: Tool) -> bool:
+    return any(p.lower() == "id" or p.lower().endswith("id") for p in tool.required)
+
+
+def _source_entities(tool: Tool) -> list[tuple[str, str]]:
+    """Return [(compound_entity, call_hint)] for zero-required-ID read tools that can supply IDs."""
+    if tool.is_write or _requires_id(tool):
+        return []
+    if tool.operations:
+        # reference_data: each kind is its own entity
+        if tool.name == "reference_data":
+            return [(_norm_entity(k), f"`{tool.name}({tool.selector}='{k}')`") for k in tool.operations]
+        # *_view: entity is the prefix before _view, prefer paginert/list selector
+        base = re.sub(r"_(view|by_parent)$", "", tool.name)
+        pref = next((v for v in tool.operations if v in ("paginert", "list", "all")), next(iter(tool.operations)))
+        return [(_norm_entity(base), f"`{tool.name}({tool.selector}='{pref}')`")]
+    ws = words(tool.name)
+    if ws and ws[0] == "list":
+        noun = "_".join(w for w in ws[1:] if w not in ("my", "all", "alle"))
+        if noun:
+            return [(_norm_entity(noun), f"`{tool.name}`")]
+    return []
+
+
 def infer_chains(tools: list[Tool]) -> dict[str, list[str]]:
-    """Infer list -> detail ID-resolution chains from required *Id params matching list/view/reference tools."""
+    """Infer exact compound-entity list -> detail chains, rejecting downstream tools that require an ID."""
+    sources: dict[str, list[str]] = defaultdict(list)
+    for t in tools:
+        for ent, call_hint in _source_entities(t):
+            if ent:
+                sources[ent].append(call_hint)
+
     chains: dict[str, list[str]] = defaultdict(list)
-    list_like = [t for t in tools if not t.is_write and (t.operations or words(t.name)[:1] == ["list"])]
-    list_stems = {t.name: _domain_stems(t) for t in list_like}
     for t in tools:
         if t.is_write or t.operations or not t.required:
             continue
-        id_params = [p for p in t.required if p.lower().endswith(("id", "referanse", "ref"))]
-        if not id_params:
-            continue
-        t_stems = _domain_stems(t)
-        for lt in list_like:
-            if lt.name == t.name:
+        for param in t.required:
+            ent = _entity_of_id_param(t, param)
+            if not ent:
                 continue
-            if t_stems & list_stems[lt.name]:
-                # Check if lt is a merged tool and name the exact selector value when obvious
-                if lt.operations:
-                    match_val = next(
-                        (v for v in lt.operations if {_stem(w) for w in words(v)} & t_stems),
-                        next(iter(lt.operations)),
-                    )
-                    chains[t.name].append(f"`{lt.name}({lt.selector}='{match_val}')`")
-                else:
-                    chains[t.name].append(f"`{lt.name}`")
-    return {k: list(dict.fromkeys(v))[:2] for k, v in chains.items()}
+            for call_hint in sources.get(ent, []):
+                if f"`{t.name}`" != call_hint and call_hint not in chains[t.name]:
+                    chains[t.name].append(call_hint)
+    return {k: v[:2] for k, v in chains.items()}
 
 
 def infer_enrichments(tools: list[Tool], plan: dict[str, Any]) -> list[dict[str, Any]]:
@@ -336,14 +415,14 @@ def infer_enrichments(tools: list[Tool], plan: dict[str, Any]) -> list[dict[str,
     if not ref:
         return []
     kinds = list((ref.get("operations") or {}).keys())
-    kind_norm = {k: _stem("".join(words(k))) for k in kinds}
+    kind_norm = {k: _norm_entity(k) for k in kinds}
     proposals: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
     for t in tools:
         for fld in _item_fields(t):
             if not fld.endswith("Id") or len(fld) <= 3:
                 continue
-            f_norm = _stem("".join(words(fld[:-2])))
+            f_norm = _norm_entity(fld[:-2])
             for kind, k_norm in kind_norm.items():
                 if f_norm and (f_norm == k_norm or (len(f_norm) > 4 and f_norm in k_norm)) and (fld, kind) not in seen:
                     seen.add((fld, kind))
@@ -352,18 +431,18 @@ def infer_enrichments(tools: list[Tool], plan: dict[str, Any]) -> list[dict[str,
 
 
 def static_siblings(tools: list[Tool]) -> tuple[dict[str, list[Tool]], list[tuple[str, str, str]]]:
-    """Identify same-effect sibling pairs (read<->read, write<->write) from domain stems and response-field overlap.
+    """Identify same-effect sibling pairs from domain stems and response-field overlap.
 
-    Returns (siblings_by_tool, probe_candidates) where probe_candidates are pairs queued for misroute discover.
+    Returns (siblings_by_tool, probe_candidates) sorted with schema-overlap pairs first.
     """
     stems = {t.name: _domain_stems(t) for t in tools}
     fields_map = {t.name: {f.lower() for f in _item_fields(t) if f.lower() != "id"} for t in tools}
     sibs: dict[str, list[tuple[float, Tool]]] = defaultdict(list)
-    probe: list[tuple[str, str, str]] = []
+    probe: list[tuple[int, str, str, str]] = []
     for i, a in enumerate(tools):
         for b in tools[i + 1 :]:
             if a.is_write != b.is_write:
-                continue  # models rarely confuse reads with writes
+                continue
             shared_stems = stems[a.name] & stems[b.name]
             fa, fb = fields_map[a.name], fields_map[b.name]
             jaccard = len(fa & fb) / len(fa | fb) if (fa and fb) else 0.0
@@ -371,23 +450,24 @@ def static_siblings(tools: list[Tool]) -> tuple[dict[str, list[Tool]], list[tupl
             if score > 0:
                 sibs[a.name].append((score, b))
                 sibs[b.name].append((score, a))
-                why = "domain stem overlap" if shared_stems else f"response schema overlap ({jaccard:.0%})"
-                probe.append((a.name, b.name, why))
+                if jaccard >= 0.35 and not shared_stems:
+                    probe.append((0, a.name, b.name, f"response schema overlap ({jaccard:.0%})"))
+                elif jaccard >= 0.35:
+                    probe.append((1, a.name, b.name, f"stem + schema overlap ({jaccard:.0%})"))
+                else:
+                    probe.append((2, a.name, b.name, "domain stem overlap"))
     out: dict[str, list[Tool]] = {}
     for name, rows in sibs.items():
         rows.sort(key=lambda x: (-x[0], x[1].name))
         out[name] = [t for _, t in rows[:2]]
-    return out, probe
+    probe.sort(key=lambda x: (x[0], x[1], x[2]))
+    return out, [(a, b, why) for _, a, b, why in probe]
 
 
 def apply_e1_e2(
     tools: list[Tool], excluded: dict[str, str] | None = None
 ) -> tuple[list[Tool], dict[str, str], dict[str, Any]]:
-    """Apply E2 (clean sibling-distinct naming) and E1 (same-effect boundaries + list->detail pointers).
-
-    Returns (polished_tools, old_to_new_name_map, diagnostics) where diagnostics includes probe_candidates and
-    needs_human_name flags. All generated descriptions are static drafts until confirmed with misroute check.
-    """
+    """Apply E2 (clean sibling-distinct naming) and E1 (same-effect boundaries + exact list->detail pointers)."""
     taken: set[str] = set()
     rename_map: dict[str, str] = {}
     renamed: list[Tool] = []
@@ -401,7 +481,6 @@ def apply_e1_e2(
     sib_map, probe_candidates = static_siblings(grounded)
     chains = infer_chains(grounded)
 
-    # Note excluded binary attachment downloads on attachment-listing tools
     excluded = excluded or {}
     binary_attach_excluded = any("attachment" in k.lower() or "vedlegg" in k.lower() for k in excluded)
 
@@ -416,7 +495,10 @@ def apply_e1_e2(
             extra.append(f"Use `{s.name}` for {_short_purpose(s)}.")
         if binary_attach_excluded and ("attachment" in t.name or "vedlegg" in t.name):
             extra.append("Returns metadata only; raw file download endpoints are excluded.")
-        desc = f"{t.description} {' '.join(extra)}".strip() if extra else t.description
+        base_desc = t.description.rstrip()
+        if base_desc and not base_desc.endswith((".", "!", "?")):
+            base_desc += "."
+        desc = f"{base_desc} {' '.join(extra)}".strip() if extra else base_desc
         final.append(replace(t, description=desc))
     return final, rename_map, {"probe_candidates": probe_candidates, "needs_human_name": needs_human}
 
@@ -425,13 +507,9 @@ def propose_clean(tools: list[Tool], doc: dict | None = None, split_audiences: b
     """Propose a clean catalog plan: split parallel audiences, drop singletons from reference_data, flag binaries."""
     base = merge.propose(tools, doc)
     exclude = dict(base.get("exclude") or {})
-    suspicious_binary: dict[str, str] = {}
     for name, why in list(exclude.items()):
         if "returns a file" in why and SUSPICIOUS_BINARY.search(name):
-            suspicious_binary[name] = (
-                "declared application/octet-stream; verify whether it returns JSON/GeoJSON before excluding"
-            )
-            exclude[name] = suspicious_binary[name]
+            exclude[name] = "declared application/octet-stream; verify whether it returns JSON/GeoJSON before excluding"
 
     audience_excluded = parallel_audiences(tools) if split_audiences else {}
     for name, why in audience_excluded.items():
