@@ -35,12 +35,41 @@ OVERLAY = yaml.safe_load((HERE / "overlay.yaml").read_text(encoding="utf-8"))["o
 MERGED = json.loads((HERE / "merged.json").read_text(encoding="utf-8")) if (HERE / "merged.json").exists() else {{}}
 MAX_RESPONSE_BYTES = int(os.environ.get("MCP_MAX_RESPONSE_BYTES", "32000"))
 REDACT_SECRETS = os.environ.get("MCP_REDACT_SECRETS", "1") != "0"
-SECRET_KEY_RE = re.compile(
-    r"(passord|password|passwd|secret|apikey|api_key|accesstoken|access_token|"
-    r"refreshtoken|refresh_token|privatekey|private_key|clientsecret|client_secret|authorization)",
+PAGING_ALLOWLIST = frozenset(
+    {{
+        "continuationtoken",
+        "nexttoken",
+        "pagetoken",
+        "nextpagetoken",
+        "prevtoken",
+        "previoustoken",
+        "synctoken",
+        "cursor",
+        "nextcursor",
+        "previouscursor",
+    }}
+)
+SECRET_KEYS = frozenset(
+    {{
+        "password",
+        "passord",
+        "passwd",
+        "secret",
+        "clientsecret",
+        "apikey",
+        "accesstoken",
+        "refreshtoken",
+        "idtoken",
+        "bearertoken",
+        "authtoken",
+        "privatekey",
+        "authorization",
+    }}
+)
+SECRET_HEADER_RE = re.compile(
+    r"(^authorization$|api[-_]?key|access[-_]?token|refresh[-_]?token|auth[-_]?token|secret|password|passord|cookie)",
     re.I,
 )
-SECRET_HEADER_RE = re.compile(r"(authorization|api[-_]?key|token|secret|password|passord|cookie)", re.I)
 
 
 def redact_secrets(node):
@@ -53,11 +82,12 @@ def redact_secrets(node):
     header_is_secret = isinstance(header_name, str) and bool(SECRET_HEADER_RE.search(header_name))
     out = {{}}
     for k, v in node.items():
-        if isinstance(v, str) and v:
-            if (flagged_secret or header_is_secret) and k.lower() in ("value", "headervalue", "secret", "token"):
+        norm = re.sub(r"[-_]", "", k).lower()
+        if isinstance(v, str) and v and norm not in PAGING_ALLOWLIST:
+            if (flagged_secret or header_is_secret) and norm in ("value", "headervalue", "secret", "token"):
                 out[k] = "[REDACTED]"
                 continue
-            if SECRET_KEY_RE.search(k) and not k.lower().startswith(("is", "has")):
+            if norm in SECRET_KEYS:
                 out[k] = "[REDACTED]"
                 continue
         out[k] = redact_secrets(v)

@@ -391,9 +391,24 @@ def test_dev_spec_generalization_fixes():
     assert ch["collection_info"] == ["`list_collections`"]
     assert ch["droplets_get"] == ["`droplets_list`"]
 
-    # 7. Tag-based toolset splitting
+    # 7. Tag-based toolset splitting and findings.json builder
+    from misroute.server.polish import append_discover_findings, build_findings
+
     doc = {
         "paths": {"/v2/droplets": {"get": {"tags": ["Droplets"]}}, "/collections": {"get": {"tags": ["Collections"]}}}
     }
     sets = split_by_tag([col_list, drop_list], doc)
     assert set(sets) == {"collections", "droplets"}
+    fdoc = build_findings(
+        [col_list, col_get],
+        {"verify": [{"op_id": "Features_Get", "reason": "octet-stream"}]},
+        {"probe_candidates": [("a", "b", "domain stem overlap")], "needs_human_name": ["bad_2"]},
+        toolsets={"mega": [col_list] * 35},
+    )
+    kinds = {f["kind"] for f in fdoc["findings"]}
+    assert {"collision", "verify_endpoint", "name_review", "oversized_toolset"} <= kinds
+    assert all(d["status"] == "draft" for d in fdoc["drafts"])
+    merged_f = append_discover_findings(
+        fdoc, {"flagged": [{"pair": ["a", "b"], "errors": 7, "trials": 96, "error_rate": 0.07, "example": "get a"}]}
+    )
+    assert any(f["source"] == "discover" and f["tools"] == ["a", "b"] for f in merged_f["findings"])

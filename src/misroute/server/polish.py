@@ -839,3 +839,135 @@ def split_by_tag(tools: list[Tool], doc: dict | None = None) -> dict[str, list[T
         slug = "_".join(words(tag or "default")) or "default"
         groups[slug].append(t)
     return dict(sorted(groups.items()))
+
+
+def build_findings(
+    polished: list[Tool],
+    plan: dict[str, Any],
+    diag: dict[str, Any],
+    toolsets: dict[str, list[Tool]] | None = None,
+    oversized_threshold: int = 30,
+) -> dict[str, Any]:
+    """Build machine-readable findings.json and labelled drafts for an agent to review or act on."""
+    chains = infer_chains(polished)
+    by_name = {t.name: t for t in polished}
+
+    drafts: list[dict[str, Any]] = []
+    for t in polished:
+        name_rule = (
+            "merged_selector"
+            if t.operations
+            else ("route_fallback" if t.op_id and len(t.op_id) >= openapi.NAME_LIMIT else "normalized_op_id")
+        )
+        drafts.append(
+            {
+                "tool": t.name,
+                "op_id": t.op_id,
+                "route": t.route,
+                "status": "draft",
+                "name_rule": name_rule,
+                "description": t.description,
+                "pointers": chains.get(t.name, []),
+                "merged_from": dict(t.operations) if t.operations else {},
+                "hints": {
+                    "readOnlyHint": bool(t.read_only),
+                    "destructiveHint": bool(t.destructive),
+                    "idempotentHint": bool(t.idempotent),
+                },
+            }
+        )
+
+    findings: list[dict[str, Any]] = []
+    for a, b, signal in diag.get("probe_candidates") or []:
+        findings.append(
+            {
+                "kind": "collision",
+                "tools": [a, b],
+                "source": "static",
+                "evidence": {"signal": signal},
+                "suggested_fix": "boundary_clause",
+                "draft": {
+                    a: by_name[a].description if a in by_name else "",
+                    b: by_name[b].description if b in by_name else "",
+                },
+            }
+        )
+
+    for v in plan.get("verify") or []:
+        findings.append(
+            {
+                "kind": "verify_endpoint",
+                "tools": [v["op_id"]],
+                "source": "static",
+                "evidence": {"reason": v.get("reason", "")},
+                "suggested_fix": "review_exclusion_or_keep_ops",
+                "draft": None,
+            }
+        )
+
+    for t in polished:
+        if not t.is_write and not t.operations and _requires_id(t) and t.name not in chains:
+            findings.append(
+                {
+                    "kind": "missing_pointer",
+                    "tools": [t.name],
+                    "source": "static",
+                    "evidence": {"required": list(t.required), "route": t.route},
+                    "suggested_fix": "add_id_pointer",
+                    "draft": None,
+                }
+            )
+
+    for name in diag.get("needs_human_name") or []:
+        findings.append(
+            {
+                "kind": "name_review",
+                "tools": [name],
+                "source": "static",
+                "evidence": {"reason": "trailing_digit_or_uncleaned_name"},
+                "suggested_fix": "rename_tool",
+                "draft": name,
+            }
+        )
+
+    if toolsets:
+        for tag, subset in toolsets.items():
+            if len(subset) > oversized_threshold:
+                findings.append(
+                    {
+                        "kind": "oversized_toolset",
+                        "tools": [tag],
+                        "source": "static",
+                        "evidence": {"tool_count": len(subset), "threshold": oversized_threshold},
+                        "suggested_fix": "split_toolset",
+                        "draft": None,
+                    }
+                )
+
+    return {"schema_version": 1, "drafts": drafts, "findings": findings}
+
+
+def append_discover_findings(findings_doc: dict[str, Any], discover_result: dict[str, Any]) -> dict[str, Any]:
+    """Append model-observed collision findings from a `misroute discover` result into findings.json."""
+    out = {**findings_doc, "findings": list(findings_doc.get("findings") or [])}
+    for spot in discover_result.get("flagged") or discover_result.get("spots") or []:
+        pair = spot.get("pair") or [spot.get("target"), spot.get("confused_with")]
+        tools = [x for x in pair if x]
+        if len(tools) < 2:
+            continue
+        out["findings"].append(
+            {
+                "kind": "collision",
+                "tools": tools,
+                "source": "discover",
+                "evidence": {
+                    "errors": spot.get("errors"),
+                    "trials": spot.get("trials"),
+                    "error_rate": spot.get("error_rate"),
+                    "example_goal": spot.get("example") or spot.get("example_goal"),
+                },
+                "suggested_fix": "boundary_clause",
+                "draft": None,
+            }
+        )
+    return out

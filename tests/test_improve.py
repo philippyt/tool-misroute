@@ -105,9 +105,10 @@ async def test_improve_end_to_end(tmp_path):
     assert 0 < capped["_truncated"]["returned_items"] < 100
     assert capped["_truncated"]["total_items"] == 100
     assert ns["cap_payload"]({"ok": True}, 2000) is None
-    # Verify redact_secrets catches isSecret:true headerList entries and secret keys
+    # Verify redact_secrets catches isSecret:true headerList entries and secret keys,
+    # while preserving pagination tokens (KDV AttachmentMetadataListResponse)
     rns: dict = {"re": __import__("re")}
-    rsrc = server[server.index("SECRET_KEY_RE") : server.index("def cap_payload")]
+    rsrc = server[server.index("PAGING_ALLOWLIST") : server.index("def cap_payload")]
     exec(rsrc, rns)
     kartlag = {
         "headerList": [
@@ -116,12 +117,24 @@ async def test_improve_end_to_end(tmp_path):
             {"headerName": "Accept", "headerValue": "application/json", "isSecret": False},
         ],
         "apiKey": "sk-live-123",
+        "clientSecret": "shh",
+        "accessToken": "eyJ...",
     }
     red = rns["redact_secrets"](kartlag)
     assert red["headerList"][0]["headerValue"] == "[REDACTED]"
     assert red["headerList"][1]["headerValue"] == "[REDACTED]"
     assert red["headerList"][2]["headerValue"] == "application/json"
     assert red["apiKey"] == "[REDACTED]"
+    assert red["clientSecret"] == "[REDACTED]"
+    assert red["accessToken"] == "[REDACTED]"
+    att_resp = {
+        "continuationToken": "page-2-token",
+        "nextToken": "next-2",
+        "pageToken": "pt-2",
+        "cursor": "cur-2",
+        "attachments": [{"id": "1", "name": "photo.jpg"}],
+    }
+    assert rns["redact_secrets"](att_resp) == att_resp
 
 
 @pytest.mark.fastmcp
