@@ -268,3 +268,36 @@ def test_merged_description_qualified_id_and_primitive_array_return():
     assert "Returns: list of IDs." in by[renames["ArbeidsordreFrekvensGrupper_GetIder"]].description
     assert by["reference_data"].description.startswith("Reference data. Set `kind` to choose: grupper, statuser.")
     assert "access based" not in by["reference_data"].description
+
+
+def test_strict_twin_matching_and_head_noun_filtering():
+    from misroute.server.polish import static_siblings
+
+    tools = [
+        Tool("Arbeidsordrer_CreateArbeidsordre", route="POST /api/Arbeidsordrer", destructive=False),
+        Tool(
+            "Arbeidsordrer_GetArbeidsordreDetaljer",
+            route="GET /api/Arbeidsordrer/{arbeidsordreId}",
+            input_schema={"type": "object", "properties": {"arbeidsordreId": {"type": "integer"}}},
+            output_schema={"type": "object", "properties": {"id": {}, "beskrivelse": {}, "status": {}}},
+            read_only=True,
+        ),
+        Tool("Ekstern_CreateArbeidsordre", route="POST /api/Ekstern/Arbeidsordre", destructive=False),
+        Tool(
+            "Ekstern_GetArbeidsordreStatus",
+            route="POST /api/Ekstern/Arbeidsordre/Status",
+            input_schema={"type": "object", "properties": {"ids": {"type": "array"}}},
+            output_schema={"type": "array", "items": {"type": "object", "properties": {"id": {}, "statusNavn": {}}}},
+            read_only=True,
+        ),
+    ]
+    plan = propose_clean(tools, split_audiences=True)
+    assert "duplicating `Arbeidsordrer_CreateArbeidsordre`" in plan["exclude"]["Ekstern_CreateArbeidsordre"]
+    assert "no verified primary twin" in plan["exclude"]["Ekstern_GetArbeidsordreStatus"]
+    assert any(v["op_id"] == "Ekstern_GetArbeidsordreStatus" for v in plan.get("verify", []))
+
+    # Modifier-only overlap ("arbeidsordre") must not pair frekvens_gruppe with update_arbeidsordre
+    w1 = Tool("create_arbeidsordre_frekvens_gruppe", destructive=False)
+    w2 = Tool("update_arbeidsordre", destructive=True)
+    sibs, probes = static_siblings([w1, w2])
+    assert not sibs and not probes

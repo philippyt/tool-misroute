@@ -133,6 +133,39 @@ def _domain_stems(tool: Tool) -> set[str]:
     return stems
 
 
+def _head_stem(tool: Tool) -> str | None:
+    """Last non-generic domain stem (head noun in English/Norwegian compounds like arbeidsordre_frekvens_gruppe)."""
+    name = tool.name if tool.operations else (tool.name or tool.op_id)
+    ws = [
+        _stem(w)
+        for w in words(name)
+        if len(w) > 2 and w not in GENERIC_WORDS and not AUDIENCE_PREFIX.match(w) and not w.isdigit()
+    ]
+    return ws[-1] if ws else None
+
+
+def _is_verified_twin(sec: Tool, pri: Tool, sec_stems: set[str], pri_stems: set[str]) -> bool:
+    """True only when primary op matches effect, entity, cardinality, key shape, and returned fields."""
+    if pri.is_write != sec.is_write or sec_stems != pri_stems:
+        return False
+    if _is_collection_return(sec) != _is_collection_return(pri):
+        return False
+    sec_ext = any(EXTERNAL_REF.search(p) for p in sec.params)
+    pri_ext = any(EXTERNAL_REF.search(p) for p in pri.params)
+    if sec_ext != pri_ext:
+        return False
+    sec_id_params = {p.lower() for p in sec.params if p.lower() in ("id", "ids") or p.lower().endswith("id")}
+    pri_params = {p.lower() for p in pri.params}
+    if sec_id_params and not (sec_id_params & pri_params):
+        return False
+    if not sec.is_write:
+        sec_fields = {f.lower() for f in _item_fields(sec)}
+        pri_fields = {f.lower() for f in _item_fields(pri)}
+        if sec_fields and not (sec_fields <= pri_fields):
+            return False
+    return True
+
+
 def parallel_audiences(tools: list[Tool]) -> dict[str, str]:
     """Detect secondary audience surfaces (e.g. Ekstern, Admin, Internal) and verify primary twins."""
     secondary: list[tuple[str, Tool]] = []
@@ -153,14 +186,14 @@ def parallel_audiences(tools: list[Tool]) -> dict[str, str]:
         t_stems = _domain_stems(t)
         if not t_stems:
             continue
-        twins = [p.op_id or p.name for p, p_stems in primary_by_tool if p.is_write == t.is_write and t_stems == p_stems]
+        twins = [p.op_id or p.name for p, p_stems in primary_by_tool if _is_verified_twin(t, p, t_stems, p_stems)]
         if twins:
             out[t.name] = (
                 f"parallel {aud} surface duplicating `{twins[0]}`; expose in a separate MCP server for that audience"
             )
         elif any(t_stems & p_stems for _, p_stems in primary_by_tool):
             out[t.name] = (
-                f"{aud} surface with no exact primary twin; verify whether primary audience needs this before excluding"
+                f"{aud} surface with no verified primary twin; verify whether primary audience needs this before excluding"
             )
     return out
 
@@ -528,6 +561,7 @@ def static_siblings(
     chains = chains or {}
     source_by = {t.name: t for t in source_tools} if source_tools else None
     stems = {t.name: _domain_stems(t) for t in tools}
+    heads = {t.name: _head_stem(t) for t in tools}
     fields_map = {t.name: _informative_fields(t, source_by) for t in tools}
     sibs: dict[str, list[tuple[float, Tool]]] = defaultdict(list)
     probe: list[tuple[int, str, str, str]] = []
@@ -539,15 +573,18 @@ def static_siblings(
             if any(b.name in h for h in chains.get(a.name, [])) or any(a.name in h for h in chains.get(b.name, [])):
                 continue
             shared_stems = stems[a.name] & stems[b.name]
+            same_head = bool(heads[a.name] and heads[a.name] == heads[b.name])
+            stem_match = same_head or len(shared_stems) >= 2
             fa, fb = fields_map[a.name], fields_map[b.name]
             shared_fields = fa & fb
             jaccard = len(shared_fields) / len(fa | fb) if (fa and fb) else 0.0
             has_schema = len(shared_fields) >= 2 and jaccard >= 0.25
-            score = len(shared_stems) * 2.0 + (jaccard * 3.0 if has_schema else 0.0)
+            stem_score = (len(shared_stems) * 2.0 + (1.5 if same_head else 0.0)) if stem_match else 0.0
+            score = stem_score + (jaccard * 3.0 if has_schema else 0.0)
             if score > 0:
                 sibs[a.name].append((score, b))
                 sibs[b.name].append((score, a))
-                if has_schema and not shared_stems:
+                if has_schema and not stem_match:
                     probe.append((0, a.name, b.name, f"response schema overlap ({jaccard:.0%})"))
                 elif has_schema:
                     probe.append((1, a.name, b.name, f"stem + schema overlap ({jaccard:.0%})"))
@@ -633,7 +670,7 @@ def propose_clean(
         if name in keep:
             continue
         exclude.setdefault(name, why)
-        if "no exact primary twin" in why:
+        if "no verified primary twin" in why:
             verify.append({"op_id": name, "reason": why})
 
     by_name = {t.name: t for t in tools}
