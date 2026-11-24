@@ -301,3 +301,11 @@ def test_strict_twin_matching_and_head_noun_filtering():
     w2 = Tool("update_arbeidsordre", destructive=True)
     sibs, probes = static_siblings([w1, w2])
     assert not sibs and not probes
+
+    # Generic binary-sibling note works for any domain noun (not just attachment/vedlegg)
+    doc_meta = Tool("Documents_List", route="GET /api/documents", read_only=True, op_id="Documents_List")
+    out, _, _ = apply_e1_e2(
+        [doc_meta],
+        excluded={"Documents_Download": "binary response; excluded by default unless wrapped with a file/URL handler"},
+    )
+    assert "Returns metadata only; raw file download endpoints are excluded." in out[0].description

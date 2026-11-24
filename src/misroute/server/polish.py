@@ -619,7 +619,10 @@ def apply_e1_e2(
     sib_map, probe_candidates = static_siblings(grounded, chains=chains, source_tools=source_tools)
 
     excluded = excluded or {}
-    binary_attach_excluded = any("attachment" in k.lower() or "vedlegg" in k.lower() for k in excluded)
+    binary_stems: set[str] = set()
+    for op_name, why in excluded.items():
+        if "binary response" in why or "returns a file" in why:
+            binary_stems |= _domain_stems(Tool(op_name, op_id=op_name))
 
     final: list[Tool] = []
     for t in grounded:
@@ -630,7 +633,7 @@ def apply_e1_e2(
             if s.name in " ".join(chains.get(t.name, [])):
                 continue
             extra.append(f"Use `{s.name}` for {_short_purpose(s)}.")
-        if binary_attach_excluded and ("attachment" in t.name or "vedlegg" in t.name):
+        if not t.is_write and binary_stems and (_domain_stems(t) & binary_stems):
             extra.append("Returns metadata only; raw file download endpoints are excluded.")
         base_desc = t.description.rstrip()
         if base_desc and not base_desc.endswith((".", "!", "?")):
