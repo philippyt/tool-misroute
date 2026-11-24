@@ -841,6 +841,22 @@ def split_by_tag(tools: list[Tool], doc: dict | None = None) -> dict[str, list[T
     return dict(sorted(groups.items()))
 
 
+def _route_resource(tool: Tool, term_stem: str) -> str:
+    if tool.route:
+        path = tool.route.partition(" ")[2]
+        segs = [
+            s
+            for s in path.split("/")
+            if s and not s.startswith("{") and s.lower() != "api" and not re.fullmatch(r"v\d+", s, re.I)
+        ]
+        for s in reversed(segs):
+            if any(_stem(w) == term_stem for w in words(s)):
+                return s
+        if segs:
+            return segs[-1]
+    return tool.name
+
+
 def _nested_id_sources(tools: list[Tool]) -> dict[str, list[str]]:
     """Map normalized entity -> ['tool.field.id', ...] for nested object fields that expose an id."""
     out: dict[str, list[str]] = defaultdict(list)
@@ -928,6 +944,7 @@ def build_findings(
     diag: dict[str, Any],
     toolsets: dict[str, list[Tool]] | None = None,
     source_tools: list[Tool] | None = None,
+    checked_notes: dict[str, str] | None = None,
     oversized_threshold: int = 30,
 ) -> dict[str, Any]:
     """Build compact, machine-readable findings.json and labelled drafts for an agent to act on."""
@@ -1022,18 +1039,48 @@ def build_findings(
 
     grouped_pairs: set[tuple[str, str]] = set()
     findings: list[dict[str, Any]] = []
-    for term, plist in sorted(head_pairs.items()):
+    for term_stem, plist in sorted(head_pairs.items()):
         involved = sorted({x for a, b, _ in plist for x in (a, b)})
         distinct_entities = {frozenset(stems_map[x]) for x in involved}
         if len(involved) >= 4 and len(distinct_entities) >= 2:
             grouped_pairs.update((a, b) for a, b, _ in plist)
+            # Group ALL matching tools (reads, writes, and reference_data options) by route resource
+            by_resource: dict[str, list[str]] = defaultdict(list)
+            surface_forms: set[str] = set()
+            all_tools: list[str] = []
+            for t in polished:
+                if t.operations:
+                    for opt, op_name in t.operations.items():
+                        opt_ws = [w for w in words(opt) if _stem(w) == term_stem]
+                        if opt_ws:
+                            surface_forms.update(opt_ws)
+                            src_t = source_by.get(op_name) if source_by else None
+                            res = _route_resource(src_t, term_stem) if src_t else opt
+                            label = f"{t.name}({t.selector}='{opt}')"
+                            if label not in by_resource[res]:
+                                by_resource[res].append(label)
+                            if label not in all_tools:
+                                all_tools.append(label)
+                    continue
+                if heads_map.get(t.name) == term_stem:
+                    surface_forms.update(w for w in words(t.name) if _stem(w) == term_stem)
+                    res = _route_resource(t, term_stem)
+                    if t.name not in by_resource[res]:
+                        by_resource[res].append(t.name)
+                    if t.name not in all_tools:
+                        all_tools.append(t.name)
+            term_display = "/".join(sorted(surface_forms, key=len)) or term_stem
             findings.append(
                 {
                     "kind": "term_ambiguity",
-                    "term": term,
-                    "tools": involved,
+                    "term": term_display,
+                    "tools": sorted(all_tools),
                     "source": "static",
-                    "evidence": {"shared_stem": term, "pair_count": len(plist)},
+                    "evidence": {
+                        "shared_stem": term_stem,
+                        "pair_count": len(plist),
+                        "groups": {k: sorted(v) for k, v in sorted(by_resource.items())},
+                    },
                     "suggested_fix": "gloss",
                     "draft": None,
                 }
@@ -1074,9 +1121,10 @@ def build_findings(
             }
         )
 
+    checked_map = checked_notes or {}
     for v in plan.get("verify") or []:
         op_id = v["op_id"]
-        ev_v: dict[str, Any] = {"reason": v.get("reason", ""), "checked": None}
+        ev_v: dict[str, Any] = {"reason": v.get("reason", ""), "checked": checked_map.get(op_id)}
         if source_by and op_id in source_by and "no verified primary twin" in ev_v["reason"]:
             st_op = source_by[op_id]
             ev_v["params"] = list(st_op.params)
