@@ -1188,8 +1188,11 @@ def build_findings(
 def append_discover_findings(findings_doc: dict[str, Any], discover_result: dict[str, Any]) -> dict[str, Any]:
     """Append model-observed collision findings from a `misroute discover` result into findings.json."""
     out = {**findings_doc, "findings": list(findings_doc.get("findings") or [])}
-    for spot in discover_result.get("flagged") or discover_result.get("spots") or []:
-        pair = spot.get("pair") or [spot.get("target"), spot.get("confused_with")]
+    spots = discover_result.get("spots") or discover_result.get("flagged") or []
+    for spot in spots:
+        if "flagged" in spot and not spot.get("flagged"):
+            continue
+        pair = spot.get("pair") or [spot.get("a") or spot.get("target"), spot.get("b") or spot.get("confused_with")]
         tools = [x for x in pair if x]
         if len(tools) < 2:
             continue
@@ -1199,9 +1202,12 @@ def append_discover_findings(findings_doc: dict[str, Any], discover_result: dict
                 "tools": tools,
                 "source": "discover",
                 "evidence": {
+                    "score": spot.get("score"),
                     "errors": spot.get("errors"),
-                    "trials": spot.get("trials"),
-                    "error_rate": spot.get("error_rate"),
+                    "templates": spot.get("templates"),
+                    "ci95": spot.get("ci95"),
+                    "directions": spot.get("directions"),
+                    "one_wording": bool(spot.get("one_wording")),
                     "example_goal": spot.get("example") or spot.get("example_goal"),
                 },
                 "suggested_fix": "boundary_clause",
