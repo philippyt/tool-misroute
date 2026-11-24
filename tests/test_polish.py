@@ -194,10 +194,18 @@ def test_preserves_domain_arrays_ignores_generic_overlap_and_matches_merged_memb
     sibs, probes = static_siblings([gruppe, skjema])
     assert not sibs and not probes
 
-    # Merged tool inherits member response fields from source_tools so bilingual siblings match
+    # Merged tool inherits member response fields from source_tools, including envelope arrays
     src_vedlegg = Tool(
         "Vedlegg_GetArbeidsordreVedlegg",
-        output_schema={"type": "array", "items": {"type": "object", "properties": {"fileName": {}, "contentType": {}}}},
+        output_schema={
+            "type": "object",
+            "properties": {
+                "files": {
+                    "type": "array",
+                    "items": {"type": "object", "properties": {"id": {}, "contentType": {}, "size": {}, "url": {}}},
+                }
+            },
+        },
         read_only=True,
     )
     merged_vedlegg = Tool(
@@ -208,9 +216,20 @@ def test_preserves_domain_arrays_ignores_generic_overlap_and_matches_merged_memb
     )
     attachments = Tool(
         "list_attachments_metadata",
-        output_schema={"type": "object", "properties": {"fileName": {}, "contentType": {}, "continuationToken": {}}},
+        output_schema={
+            "type": "object",
+            "properties": {
+                "continuationToken": {"type": "string"},
+                "attachments": {
+                    "type": "array",
+                    "items": {"type": "object", "properties": {"id": {}, "contentType": {}, "size": {}, "lokalId": {}}},
+                },
+            },
+        },
         read_only=True,
     )
+    assert "contentType" in _item_fields(src_vedlegg) and "files" not in _item_fields(src_vedlegg)
+    assert "contentType" in _item_fields(attachments) and "attachments" not in _item_fields(attachments)
     sibs2, probes2 = static_siblings([merged_vedlegg, attachments], source_tools=[src_vedlegg, attachments])
     assert any(p[:2] == ("vedlegg_by_parent", "list_attachments_metadata") for p in probes2)
     assert any(t.name == "list_attachments_metadata" for t in sibs2["vedlegg_by_parent"])

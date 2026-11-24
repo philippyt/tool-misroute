@@ -294,17 +294,30 @@ def clean_name(tool: Tool, taken: set[str]) -> str:
 
 
 def _item_fields(tool: Tool) -> list[str]:
-    """Return meaningful item fields from output_schema; only strip an array field when next to paging fields."""
-    raw = output_fields(tool.output_schema)
+    """Return meaningful item fields from output_schema, unwrapping paginated or single-key array envelopes."""
     schema = tool.output_schema or {}
     props = schema.get("properties") or {}
     has_paging = any(k.lower() in PAGING_FIELDS for k in props)
-    wrapper_arrays = (
-        {k.lower() for k, v in props.items() if isinstance(v, dict) and (v.get("type") == "array" or "items" in v)}
-        if has_paging
-        else set()
-    )
-    return [f for f in raw if f.lower() not in PAGING_FIELDS and f.lower() not in wrapper_arrays]
+    arrays = [(k, v) for k, v in props.items() if isinstance(v, dict) and (v.get("type") == "array" or "items" in v)]
+    is_envelope = bool(arrays) and (has_paging or len(props) == 1)
+    if is_envelope:
+        unwrapped: list[str] = []
+        seen: set[str] = set()
+        for _, v in arrays:
+            items = v.get("items") if isinstance(v.get("items"), dict) else {}
+            for key in items.get("properties") or {}:
+                if key.lower() not in PAGING_FIELDS and key not in seen:
+                    seen.add(key)
+                    unwrapped.append(key)
+        if unwrapped:
+            return unwrapped
+        wrapper_arrays = {k.lower() for k, _ in arrays}
+        return [
+            f
+            for f in output_fields(tool.output_schema)
+            if f.lower() not in PAGING_FIELDS and f.lower() not in wrapper_arrays
+        ]
+    return [f for f in output_fields(tool.output_schema) if f.lower() not in PAGING_FIELDS]
 
 
 def _short_purpose(tool: Tool) -> str:
