@@ -28,6 +28,22 @@ PAGING_FIELDS = frozenset(
         "hasmore",
     }
 )
+COMMON_OVERLAP_FIELDS = frozenset(
+    {
+        "id",
+        "navn",
+        "name",
+        "title",
+        "tittel",
+        "beskrivelse",
+        "description",
+        "code",
+        "kode",
+        "type",
+        "status",
+    }
+)
+TIMESTAMP_FIELD = re.compile(r"^(datotid|created|updated|modified|timestamp)", re.I)
 GENERIC_WORDS = frozenset(
     {
         "api",
@@ -278,13 +294,16 @@ def clean_name(tool: Tool, taken: set[str]) -> str:
 
 
 def _item_fields(tool: Tool) -> list[str]:
-    """Return meaningful item fields from output_schema, excluding pagination wrapper fields."""
+    """Return meaningful item fields from output_schema; only strip an array field when next to paging fields."""
     raw = output_fields(tool.output_schema)
     schema = tool.output_schema or {}
     props = schema.get("properties") or {}
-    wrapper_arrays = {
-        k.lower() for k, v in props.items() if isinstance(v, dict) and (v.get("type") == "array" or "items" in v)
-    }
+    has_paging = any(k.lower() in PAGING_FIELDS for k in props)
+    wrapper_arrays = (
+        {k.lower() for k, v in props.items() if isinstance(v, dict) and (v.get("type") == "array" or "items" in v)}
+        if has_paging
+        else set()
+    )
     return [f for f in raw if f.lower() not in PAGING_FIELDS and f.lower() not in wrapper_arrays]
 
 
@@ -430,29 +449,51 @@ def infer_enrichments(tools: list[Tool], plan: dict[str, Any]) -> list[dict[str,
     return proposals
 
 
-def static_siblings(tools: list[Tool]) -> tuple[dict[str, list[Tool]], list[tuple[str, str, str]]]:
-    """Identify same-effect sibling pairs from domain stems and response-field overlap.
+def _informative_fields(tool: Tool, source_by_name: dict[str, Tool] | None = None) -> set[str]:
+    """Non-generic response fields for schema-overlap scoring, including member ops of merged tools."""
+    flds = list(_item_fields(tool))
+    if tool.operations and source_by_name:
+        for op_name in tool.operations.values():
+            if op_name in source_by_name:
+                flds.extend(_item_fields(source_by_name[op_name]))
+    return {f.lower() for f in flds if f.lower() not in COMMON_OVERLAP_FIELDS and not TIMESTAMP_FIELD.match(f)}
 
-    Returns (siblings_by_tool, probe_candidates) sorted with schema-overlap pairs first.
+
+def static_siblings(
+    tools: list[Tool],
+    chains: dict[str, list[str]] | None = None,
+    source_tools: list[Tool] | None = None,
+) -> tuple[dict[str, list[Tool]], list[tuple[str, str, str]]]:
+    """Identify same-effect sibling pairs from domain stems and non-generic response-field overlap.
+
+    Skips pairs already linked by a list -> detail chain. Returns (siblings_by_tool, probe_candidates)
+    sorted with schema-overlap pairs first.
     """
+    chains = chains or {}
+    source_by = {t.name: t for t in source_tools} if source_tools else None
     stems = {t.name: _domain_stems(t) for t in tools}
-    fields_map = {t.name: {f.lower() for f in _item_fields(t) if f.lower() != "id"} for t in tools}
+    fields_map = {t.name: _informative_fields(t, source_by) for t in tools}
     sibs: dict[str, list[tuple[float, Tool]]] = defaultdict(list)
     probe: list[tuple[int, str, str, str]] = []
     for i, a in enumerate(tools):
         for b in tools[i + 1 :]:
             if a.is_write != b.is_write:
                 continue
+            # Skip pairs already linked as a list -> detail chain
+            if any(b.name in h for h in chains.get(a.name, [])) or any(a.name in h for h in chains.get(b.name, [])):
+                continue
             shared_stems = stems[a.name] & stems[b.name]
             fa, fb = fields_map[a.name], fields_map[b.name]
-            jaccard = len(fa & fb) / len(fa | fb) if (fa and fb) else 0.0
-            score = len(shared_stems) * 2.0 + (jaccard * 3.0 if jaccard >= 0.35 else 0.0)
+            shared_fields = fa & fb
+            jaccard = len(shared_fields) / len(fa | fb) if (fa and fb) else 0.0
+            has_schema = len(shared_fields) >= 2 and jaccard >= 0.25
+            score = len(shared_stems) * 2.0 + (jaccard * 3.0 if has_schema else 0.0)
             if score > 0:
                 sibs[a.name].append((score, b))
                 sibs[b.name].append((score, a))
-                if jaccard >= 0.35 and not shared_stems:
+                if has_schema and not shared_stems:
                     probe.append((0, a.name, b.name, f"response schema overlap ({jaccard:.0%})"))
-                elif jaccard >= 0.35:
+                elif has_schema:
                     probe.append((1, a.name, b.name, f"stem + schema overlap ({jaccard:.0%})"))
                 else:
                     probe.append((2, a.name, b.name, "domain stem overlap"))
@@ -465,7 +506,9 @@ def static_siblings(tools: list[Tool]) -> tuple[dict[str, list[Tool]], list[tupl
 
 
 def apply_e1_e2(
-    tools: list[Tool], excluded: dict[str, str] | None = None
+    tools: list[Tool],
+    excluded: dict[str, str] | None = None,
+    source_tools: list[Tool] | None = None,
 ) -> tuple[list[Tool], dict[str, str], dict[str, Any]]:
     """Apply E2 (clean sibling-distinct naming) and E1 (same-effect boundaries + exact list->detail pointers)."""
     taken: set[str] = set()
@@ -478,8 +521,8 @@ def apply_e1_e2(
 
     needs_human = [t.name for t in renamed if re.search(r"(?:_|^)\d+$|[a-z]\d+$", t.name)]
     grounded = [replace(t, description=_base_description(t)) for t in renamed]
-    sib_map, probe_candidates = static_siblings(grounded)
     chains = infer_chains(grounded)
+    sib_map, probe_candidates = static_siblings(grounded, chains=chains, source_tools=source_tools)
 
     excluded = excluded or {}
     binary_attach_excluded = any("attachment" in k.lower() or "vedlegg" in k.lower() for k in excluded)

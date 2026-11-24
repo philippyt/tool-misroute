@@ -157,3 +157,60 @@ def test_propose_clean_excludes_singletons_and_infers_enrichments():
     assert any(e["field"] == "fdvOmraadeId" and e["enabled"] is False for e in plan.get("enrich", []))
     polished, _, diag = apply_e1_e2(tools)
     assert polished and not diag["needs_human_name"]
+
+
+def test_preserves_domain_arrays_ignores_generic_overlap_and_matches_merged_member_schemas():
+    from misroute.server.polish import _item_fields, static_siblings
+
+    gruppe = Tool(
+        "get_gruppe",
+        output_schema={
+            "type": "object",
+            "properties": {"id": {}, "navn": {}, "medlemmer": {"type": "array", "items": {}}},
+        },
+        read_only=True,
+    )
+    skjema = Tool(
+        "get_arbeidsordre_skjema",
+        output_schema={
+            "type": "object",
+            "properties": {"id": {}, "navn": {}, "sjekkpunkter": {"type": "array", "items": {}}},
+        },
+        read_only=True,
+    )
+    paginated = Tool(
+        "list_hendelser",
+        output_schema={
+            "type": "object",
+            "properties": {"sidenummer": {}, "hendelser": {"type": "array", "items": {}}, "beskrivelse": {}},
+        },
+        read_only=True,
+    )
+    assert "medlemmer" in _item_fields(gruppe)
+    assert "sjekkpunkter" in _item_fields(skjema)
+    assert "hendelser" not in _item_fields(paginated) and "sidenummer" not in _item_fields(paginated)
+
+    # Generic overlap (id, navn) must not link unrelated tools
+    sibs, probes = static_siblings([gruppe, skjema])
+    assert not sibs and not probes
+
+    # Merged tool inherits member response fields from source_tools so bilingual siblings match
+    src_vedlegg = Tool(
+        "Vedlegg_GetArbeidsordreVedlegg",
+        output_schema={"type": "array", "items": {"type": "object", "properties": {"fileName": {}, "contentType": {}}}},
+        read_only=True,
+    )
+    merged_vedlegg = Tool(
+        "vedlegg_by_parent",
+        read_only=True,
+        selector="parent",
+        operations={"arbeidsordrer": "Vedlegg_GetArbeidsordreVedlegg"},
+    )
+    attachments = Tool(
+        "list_attachments_metadata",
+        output_schema={"type": "object", "properties": {"fileName": {}, "contentType": {}, "continuationToken": {}}},
+        read_only=True,
+    )
+    sibs2, probes2 = static_siblings([merged_vedlegg, attachments], source_tools=[src_vedlegg, attachments])
+    assert any(p[:2] == ("vedlegg_by_parent", "list_attachments_metadata") for p in probes2)
+    assert any(t.name == "list_attachments_metadata" for t in sibs2["vedlegg_by_parent"])
