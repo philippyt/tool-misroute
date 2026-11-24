@@ -251,6 +251,8 @@ def propose(tools: list[Tool], doc: dict | None = None) -> dict[str, Any]:
         if len(group) < 2 or len({v for v, _ in group}) < len(group):
             continue
         resource = parent.rpartition("/")[2]
+        if not resource or resource.startswith("{"):
+            continue
         out[unique(f"{resource}_view", taken)] = {
             "selector": "view",
             "why": f"{len(group)} forms of the same {resource} query that take the same arguments",

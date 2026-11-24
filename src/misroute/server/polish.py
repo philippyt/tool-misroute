@@ -89,16 +89,52 @@ GENERIC_WORDS = frozenset(
         "user",
     }
 )
+KNOWN_VERBS = frozenset(
+    {
+        "get",
+        "list",
+        "create",
+        "update",
+        "delete",
+        "opprett",
+        "hent",
+        "finn",
+        "paginert",
+        "add",
+        "remove",
+        "set",
+        "patch",
+        "post",
+        "put",
+        "cancel",
+        "pause",
+        "unpause",
+        "trigger",
+        "clear",
+        "materialize",
+        "find",
+        "place",
+        "upload",
+        "download",
+    }
+)
+DELETE_VERBS = frozenset({"delete", "remove", "clear"})
 NAME_MAX = 48
 
 
 def _stem(word: str) -> str:
     w = word.lower()
+    if len(w) > 4 and w.endswith("ies"):
+        return w[:-3] + "y"
     if len(w) > 5 and w.endswith("ene"):
         w = w[:-3]
-    elif len(w) > 4 and w.endswith(("er", "es")):
+    elif len(w) >= 4 and w.endswith("s") and not w.endswith(("ss", "us", "is", "es")):
+        w = w[:-1]
+    elif len(w) > 4 and w.endswith("es"):
         w = w[:-2]
-    elif len(w) > 4 and w.endswith(("r", "s")):
+    if len(w) > 4 and w.endswith("er"):
+        w = w[:-2]
+    elif len(w) > 4 and w.endswith("r"):
         w = w[:-1]
     if len(w) > 4 and w.endswith("e"):
         w = w[:-1]
@@ -282,14 +318,14 @@ def clean_name(tool: Tool, taken: set[str]) -> str:
         ws = _from_route(tool)
     elif "_" in raw and not tool.operations:
         ctrl, _, action = raw.partition("_")
-        ctrl_ws = words(ctrl)
         act_ws = words(action)
-        ctrl_stems = {_stem(w) for w in ctrl_ws}
-        act_stems = {_stem(w) for w in act_ws}
-        if act_ws and (ctrl_stems & act_stems):
-            ws = act_ws
+        if ctrl[:1].isupper() and act_ws and act_ws[0] in KNOWN_VERBS:
+            ctrl_ws = words(ctrl)
+            ctrl_stems = {_stem(w) for w in ctrl_ws}
+            act_stems = {_stem(w) for w in act_ws}
+            ws = act_ws if ctrl_stems & act_stems else [*act_ws[:1], *ctrl_ws, *act_ws[1:]]
         else:
-            ws = [*act_ws[:1], *ctrl_ws, *act_ws[1:]] if act_ws else ctrl_ws
+            ws = words(raw)
     else:
         ws = words(raw)
 
@@ -315,7 +351,10 @@ def clean_name(tool: Tool, taken: set[str]) -> str:
     dedup: list[str] = []
     for w in ws:
         if len(dedup) >= 1 and w in FILLER_WORDS and not tool.operations:
-            continue
+            if w in ("list", "liste") and dedup[0] != "list":
+                pass
+            else:
+                continue
         if not dedup or _stem(dedup[-1]) != _stem(w):
             dedup.append(w)
 
@@ -369,17 +408,26 @@ def _short_purpose(tool: Tool) -> str:
         return f"{label} by {tool.selector} ({vals}{more})"
     ws = words(tool.name)
     noun = " ".join(ws[1:]) or tool.name
-    if ws and ws[0] == "create":
+    if ws and ws[0] in ("create", "add", "place"):
         return f"creating {noun}"
-    if ws and ws[0] == "update":
+    if ws and ws[0] in ("update", "patch", "set"):
         return f"updating {noun}"
-    if ws and ws[0] == "delete":
+    if ws and ws[0] in ("delete", "remove", "clear"):
         return f"deleting {noun}"
     if ws and ws[0] == "list":
         return f"listing {noun}"
-    if tool.required:
-        return f"fetching {noun} by {', '.join(tool.required[:2])}"
-    return f"fetching {noun}"
+    method = tool.route.partition(" ")[0].upper() if tool.route else ""
+    if method == "POST" and tool.is_write:
+        return f"creating/submitting {noun}"
+    if method in ("PUT", "PATCH"):
+        return f"updating {noun}"
+    if method == "DELETE":
+        return f"deleting {noun}"
+    if method == "GET" or not tool.is_write:
+        if tool.required:
+            return f"fetching {noun} by {', '.join(tool.required[:2])}"
+        return f"fetching {noun}"
+    return f"calling {tool.name}"
 
 
 def _format_required(tool: Tool) -> list[str]:
@@ -549,6 +597,13 @@ def _informative_fields(tool: Tool, source_by_name: dict[str, Tool] | None = Non
     return {f.lower() for f in flds if f.lower() not in COMMON_OVERLAP_FIELDS and not TIMESTAMP_FIELD.match(f)}
 
 
+def _is_delete_op(tool: Tool) -> bool:
+    if tool.route and tool.route.upper().startswith("DELETE "):
+        return True
+    ws = words(tool.name)
+    return bool(ws and ws[0] in DELETE_VERBS)
+
+
 def static_siblings(
     tools: list[Tool],
     chains: dict[str, list[str]] | None = None,
@@ -556,19 +611,46 @@ def static_siblings(
 ) -> tuple[dict[str, list[Tool]], list[tuple[str, str, str]]]:
     """Identify same-effect sibling pairs from domain stems and non-generic response-field overlap.
 
-    Skips pairs already linked by a list -> detail chain. Returns (siblings_by_tool, probe_candidates)
-    sorted with schema-overlap pairs first.
+    Skips pairs already linked by a list -> detail chain, drops delete pairs from CRUD triplets,
+    and suppresses spec-wide generic fields (>=40% doc freq) and shared generic response wrappers.
     """
     chains = chains or {}
     source_by = {t.name: t for t in source_tools} if source_tools else None
     stems = {t.name: _domain_stems(t) for t in tools}
     heads = {t.name: _head_stem(t) for t in tools}
-    fields_map = {t.name: _informative_fields(t, source_by) for t in tools}
+    raw_fields = {t.name: _informative_fields(t, source_by) for t in tools}
+
+    # Statistical generic fields: drop any field appearing in >=40% of tools with response schemas
+    with_schema = [f for f in raw_fields.values() if f]
+    freq_generic: set[str] = set()
+    if len(with_schema) >= 8:
+        counts: dict[str, int] = defaultdict(int)
+        for fset in with_schema:
+            for fld in fset:
+                counts[fld] += 1
+        cutoff = max(4, int(len(with_schema) * 0.40))
+        freq_generic = {fld for fld, c in counts.items() if c >= cutoff}
+    fields_map = {name: fset - freq_generic for name, fset in raw_fields.items()}
+
+    # Generic response wrappers: identical field-set shared by >=4 tools across >=3 distinct head nouns
+    sig_heads: dict[frozenset[str], set[str]] = defaultdict(set)
+    sig_count: dict[frozenset[str], int] = defaultdict(int)
+    for t in tools:
+        fs = frozenset(fields_map[t.name])
+        if len(fs) >= 2:
+            sig_count[fs] += 1
+            if heads[t.name]:
+                sig_heads[fs].add(heads[t.name] or "")
+    generic_wrappers = {fs for fs, c in sig_count.items() if c >= 4 and len(sig_heads[fs]) >= 3}
+
     sibs: dict[str, list[tuple[float, Tool]]] = defaultdict(list)
     probe: list[tuple[int, str, str, str]] = []
     for i, a in enumerate(tools):
         for b in tools[i + 1 :]:
             if a.is_write != b.is_write:
+                continue
+            # Drop pairs involving DELETE in CRUD write triplets
+            if a.is_write and (_is_delete_op(a) or _is_delete_op(b)):
                 continue
             # Skip pairs already linked as a list -> detail chain
             if any(b.name in h for h in chains.get(a.name, [])) or any(a.name in h for h in chains.get(b.name, [])):
@@ -577,9 +659,13 @@ def static_siblings(
             same_head = bool(heads[a.name] and heads[a.name] == heads[b.name])
             stem_match = same_head or len(shared_stems) >= 2
             fa, fb = fields_map[a.name], fields_map[b.name]
-            shared_fields = fa & fb
-            jaccard = len(shared_fields) / len(fa | fb) if (fa and fb) else 0.0
-            has_schema = len(shared_fields) >= 2 and jaccard >= 0.25
+            if frozenset(fa) in generic_wrappers and frozenset(fb) in generic_wrappers and fa == fb and not stem_match:
+                has_schema = False
+                jaccard = 0.0
+            else:
+                shared_fields = fa & fb
+                jaccard = len(shared_fields) / len(fa | fb) if (fa and fb) else 0.0
+                has_schema = len(shared_fields) >= 2 and jaccard >= 0.25
             stem_score = (len(shared_stems) * 2.0 + (1.5 if same_head else 0.0)) if stem_match else 0.0
             score = stem_score + (jaccard * 3.0 if has_schema else 0.0)
             if score > 0:
@@ -678,6 +764,7 @@ def propose_clean(
             verify.append({"op_id": name, "reason": why})
 
     by_name = {t.name: t for t in tools}
+    write_paths = {t.route.partition(" ")[2].rstrip("/").lower() for t in tools if t.is_write and t.route}
     cleaned_tools: dict[str, Any] = {}
     for mname, body in (base.get("tools") or {}).items():
         ops = {}
@@ -685,8 +772,13 @@ def propose_clean(
             op_name = spec["operation"] if isinstance(spec, dict) else str(spec)
             if op_name in exclude:
                 continue
-            if mname == "reference_data" and op_name in by_name and is_caller_or_singleton(by_name[op_name]):
-                continue
+            if mname == "reference_data" and op_name in by_name:
+                t_ref = by_name[op_name]
+                ref_path = t_ref.route.partition(" ")[2].rstrip("/").lower() if t_ref.route else ""
+                if is_caller_or_singleton(t_ref) or not _is_collection_return(t_ref) or "{" in ref_path:
+                    continue
+                if ref_path and any(wp == ref_path or wp.startswith(ref_path + "/{") for wp in write_paths):
+                    continue
             ops[sel] = spec
         if len(ops) >= 2:
             cleaned_tools[mname] = {**body, "operations": ops}

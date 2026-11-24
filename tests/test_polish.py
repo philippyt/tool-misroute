@@ -133,10 +133,11 @@ def test_infer_chains_matches_exact_compound_entity_and_rejects_downstream_id_to
 
 
 def test_propose_clean_excludes_singletons_and_infers_enrichments():
+    arr = {"type": "array", "items": {"type": "object", "properties": {"id": {}, "name": {}}}}
     tools = [
-        Tool("Statuser_GetAll", route="GET /api/Statuser", read_only=True),
-        Tool("Graderinger_GetAll", route="GET /api/Graderinger", read_only=True),
-        Tool("FDVOmraader_GetAll", route="GET /api/FDVOmraader", read_only=True),
+        Tool("Statuser_GetAll", route="GET /api/Statuser", output_schema=arr, read_only=True),
+        Tool("Graderinger_GetAll", route="GET /api/Graderinger", output_schema=arr, read_only=True),
+        Tool("FDVOmraader_GetAll", route="GET /api/FDVOmraader", output_schema=arr, read_only=True),
         Tool("Ansatte_GetGrupper", route="GET /api/Ansatte/me/grupper", read_only=True),
         Tool(
             "Org_GetInfo",
@@ -309,3 +310,43 @@ def test_strict_twin_matching_and_head_noun_filtering():
         excluded={"Documents_Download": "binary response; excluded by default unless wrapped with a file/URL handler"},
     )
     assert "Returns metadata only; raw file download endpoints are excluded." in out[0].description
+
+
+def test_dev_spec_generalization_fixes():
+    from misroute.server import merge, openapi
+    from misroute.server.polish import static_siblings
+
+    # 1. FastAPI snake_case names stay verb-first (never scrambled into asset_get / backfill_create)
+    taken: set[str] = set()
+    fa_get = Tool("get_asset", route="GET /api/v2/assets/{asset_id}", read_only=True, op_id="get_asset")
+    fa_list = Tool(
+        "get_assets",
+        route="GET /api/v2/assets",
+        output_schema={"type": "object", "properties": {"assets": {"type": "array", "items": {}}}},
+        read_only=True,
+        op_id="get_assets",
+    )
+    fa_create = Tool("create_backfill", route="POST /api/v2/backfills", destructive=False, op_id="create_backfill")
+    assert clean_name(fa_get, taken) == "get_asset"
+    assert clean_name(fa_list, taken) == "list_assets"
+    assert clean_name(fa_create, taken) == "create_backfill"
+
+    # 2. Whole-token POST read detection: createWithList is a write, Paginert/Status are reads
+    assert not openapi.reads("post", "/user/createWithList", {"operationId": "createUsersWithListInput"})
+    assert openapi.reads("post", "/api/Arbeidsordrer/Paginert", {"operationId": "Arbeidsordrer_Paginert"})
+    assert openapi.reads("post", "/api/Ekstern/Hendelse/Status", {"operationId": "Ekstern_GetHendelseStatus"})
+
+    # 3. merge.propose never names a *_view group after a {param} parent
+    param_sub = [
+        Tool("a", route="GET /dags/{dag_id}/links", read_only=True),
+        Tool("b", route="GET /dags/{dag_id}/tries", read_only=True),
+        Tool("parent", route="GET /dags/{dag_id}", read_only=True),
+    ]
+    assert not any("dag_id" in k for k in merge.propose(param_sub)["tools"])
+
+    # 4. CRUD delete pairs are dropped, create<->update is kept
+    c = Tool("add_pet", route="POST /pet", destructive=False)
+    u = Tool("update_pet", route="PUT /pet", destructive=True)
+    d = Tool("delete_pet", route="DELETE /pet/{petId}", destructive=True)
+    _, probes = static_siblings([c, u, d])
+    assert [p[:2] for p in probes] == [("add_pet", "update_pet")]

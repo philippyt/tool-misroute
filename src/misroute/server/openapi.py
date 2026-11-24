@@ -3,19 +3,36 @@ import re
 from pathlib import Path
 from typing import Any
 import yaml
-from misroute.server.catalog import Tool
+from misroute.server.catalog import Tool, words
 
 METHODS = ("get", "post", "put", "patch", "delete")
-READ_POSTS = ("paginert", "count", "search", "sok", "query", "filter", "list", "liste")
+READ_POST_TOKENS = frozenset(
+    {"paginert", "paginated", "count", "search", "sok", "query", "filter", "geojson", "status"}
+)
 NAME_LIMIT = 56
-READ_VERBS = ("get", "list", "count", "search", "find", "hent", "finn", "query", "paginert")
+READ_VERBS = frozenset({"get", "list", "liste", "count", "search", "find", "hent", "finn", "query", "paginert"})
+WRITE_VERBS = frozenset(
+    {"create", "add", "update", "patch", "delete", "remove", "place", "post", "put", "set", "opprett"}
+)
 
 
 def reads(method: str, route: str, op: dict) -> bool:
-    action = str(op.get("operationId", "")).split("_")[-1].lower()
-    return method == "get" or (
-        method == "post" and (action.startswith(READ_VERBS) or any(w in route.lower() for w in READ_POSTS))
-    )
+    if method == "get":
+        return True
+    if method != "post":
+        return False
+    op_id = str(op.get("operationId", ""))
+    action = op_id.split("_")[-1] if op_id[:1].isupper() and "_" in op_id else op_id
+    act_ws = words(action)
+    if act_ws and act_ws[0] in READ_VERBS:
+        return True
+    if act_ws and act_ws[0] in WRITE_VERBS:
+        return False
+    segs = [s.lower() for s in route.split("/") if s and not s.startswith("{")]
+    if any(s in ("list", "liste") for s in segs):
+        return True
+    route_tokens = {w for s in segs for w in words(s)}
+    return bool(route_tokens & READ_POST_TOKENS)
 
 
 FIXES = "x-misroute-fixes"
