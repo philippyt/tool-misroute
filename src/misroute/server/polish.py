@@ -193,7 +193,8 @@ def parallel_audiences(tools: list[Tool]) -> dict[str, str]:
             )
         elif any(t_stems & p_stems for _, p_stems in primary_by_tool):
             out[t.name] = (
-                f"{aud} surface with no verified primary twin; verify whether primary audience needs this before excluding"
+                f"{aud} surface with no verified primary twin; "
+                "verify whether primary audience needs this before excluding"
             )
     return out
 
