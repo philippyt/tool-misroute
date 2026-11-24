@@ -233,3 +233,38 @@ def test_preserves_domain_arrays_ignores_generic_overlap_and_matches_merged_memb
     sibs2, probes2 = static_siblings([merged_vedlegg, attachments], source_tools=[src_vedlegg, attachments])
     assert any(p[:2] == ("vedlegg_by_parent", "list_attachments_metadata") for p in probes2)
     assert any(t.name == "list_attachments_metadata" for t in sibs2["vedlegg_by_parent"])
+    assert any(t.name == "vedlegg_by_parent" for t in sibs2["list_attachments_metadata"])
+
+
+def test_merged_description_qualified_id_and_primitive_array_return():
+    skjema = Tool(
+        "Skjema_GetById",
+        "Executes GET /api/Arbeidsordrer/{id}/Skjema",
+        input_schema={"type": "object", "properties": {"id": {"type": "integer"}}, "required": ["id"]},
+        output_schema={"type": "object", "properties": {"id": {}, "navn": {}}},
+        read_only=True,
+        route="GET /api/Arbeidsordrer/{id}/Skjema",
+        op_id="Skjema_GetById",
+    )
+    id_list = Tool(
+        "ArbeidsordreFrekvensGrupper_GetIder",
+        "Executes GET /api/ArbeidsordreFrekvensGrupper/{id}/arbeidsordreIGruppe",
+        input_schema={"type": "object", "properties": {"id": {"type": "integer"}}, "required": ["id"]},
+        output_schema={"type": "array", "items": {"type": "integer"}},
+        read_only=True,
+        route="GET /api/ArbeidsordreFrekvensGrupper/{id}/arbeidsordreIGruppe",
+        op_id="ArbeidsordreFrekvensGrupper_GetIder",
+    )
+    ref = Tool(
+        "reference_data",
+        "reference data. Set kind to choose: grupper: The endpoint is access based.",
+        read_only=True,
+        selector="kind",
+        operations={"grupper": "Grupper_GetAll", "statuser": "Statuser_GetAll"},
+    )
+    out, renames, _ = apply_e1_e2([skjema, id_list, ref])
+    by = {t.name: t for t in out}
+    assert "Requires: id (arbeidsordrer)." in by["get_arbeidsordre_skjema"].description
+    assert "Returns: list of IDs." in by[renames["ArbeidsordreFrekvensGrupper_GetIder"]].description
+    assert by["reference_data"].description.startswith("Reference data. Set `kind` to choose: grupper, statuser.")
+    assert "access based" not in by["reference_data"].description

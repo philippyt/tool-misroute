@@ -297,7 +297,7 @@ def tools(path: str | Path) -> list[Tool]:
                     input_schema=args(doc, shared, op),
                     output_schema=returns(doc, op),
                     read_only=reads(method, route, op),
-                    destructive=method == "delete",
+                    destructive=method in ("delete", "put", "patch"),
                     idempotent=method == "put",
                     route=f"{method.upper()} {route}",
                     op_id=op.get("operationId", ""),

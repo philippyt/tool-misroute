@@ -123,11 +123,8 @@ def _is_collection_return(tool: Tool) -> bool:
 
 
 def _domain_stems(tool: Tool) -> set[str]:
-    """Domain noun stems from the tool name AND any merged operations inside tool.operations."""
-    parts = [tool.op_id or tool.name, tool.name]
-    if tool.operations:
-        parts.extend(tool.operations.keys())
-        parts.extend(tool.operations.values())
+    """Domain noun stems from the tool's own name (never member ops of a merged tool)."""
+    parts = [tool.name] if tool.operations else [tool.op_id or tool.name, tool.name]
     stems: set[str] = set()
     for part in parts:
         for w in words(part):
@@ -137,9 +134,9 @@ def _domain_stems(tool: Tool) -> set[str]:
 
 
 def parallel_audiences(tools: list[Tool]) -> dict[str, str]:
-    """Detect secondary audience surfaces (e.g. Ekstern, Admin, Internal) duplicating primary domain nouns."""
+    """Detect secondary audience surfaces (e.g. Ekstern, Admin, Internal) and verify primary twins."""
     secondary: list[tuple[str, Tool]] = []
-    primary_stems: set[str] = set()
+    primary: list[Tool] = []
     for t in tools:
         raw_path = t.route.partition(" ")[2] if t.route else ""
         path_parts = [p for p in raw_path.split("/") if p and not p.startswith("{")]
@@ -148,13 +145,22 @@ def parallel_audiences(tools: list[Tool]) -> dict[str, str]:
         if aud:
             secondary.append((aud.lower(), t))
         else:
-            primary_stems |= _domain_stems(t)
+            primary.append(t)
+
+    primary_by_tool = [(p, _domain_stems(p)) for p in primary]
     out: dict[str, str] = {}
     for aud, t in secondary:
-        if _domain_stems(t) & primary_stems:
+        t_stems = _domain_stems(t)
+        if not t_stems:
+            continue
+        twins = [p.op_id or p.name for p, p_stems in primary_by_tool if p.is_write == t.is_write and t_stems == p_stems]
+        if twins:
             out[t.name] = (
-                f"parallel {aud} surface duplicating primary domain operations; "
-                "expose in a separate MCP server for that audience"
+                f"parallel {aud} surface duplicating `{twins[0]}`; expose in a separate MCP server for that audience"
+            )
+        elif any(t_stems & p_stems for _, p_stems in primary_by_tool):
+            out[t.name] = (
+                f"{aud} surface with no exact primary twin; verify whether primary audience needs this before excluding"
             )
     return out
 
@@ -323,9 +329,10 @@ def _item_fields(tool: Tool) -> list[str]:
 def _short_purpose(tool: Tool) -> str:
     """Concise noun/gerund phrase describing what a tool does, never cutting mid-sentence."""
     if tool.operations:
+        label = " ".join(w for w in words(tool.name) if w not in ("by", tool.selector)) or tool.name
         vals = ", ".join(list(tool.operations)[:4])
         more = ", ..." if len(tool.operations) > 4 else ""
-        return f"{tool.selector} lookups ({vals}{more})"
+        return f"{label} by {tool.selector} ({vals}{more})"
     ws = words(tool.name)
     noun = " ".join(ws[1:]) or tool.name
     if ws and ws[0] == "create":
@@ -341,14 +348,46 @@ def _short_purpose(tool: Tool) -> str:
     return f"fetching {noun}"
 
 
+def _format_required(tool: Tool) -> list[str]:
+    """Qualify bare `id` parameters with their parent route segment when available."""
+    out: list[str] = []
+    segs = [p for p in (tool.route.partition(" ")[2] if tool.route else "").split("/") if p]
+    for param in tool.required[:5]:
+        if param.lower() == "id" and segs:
+            parent = next((segs[i - 1] for i, s in enumerate(segs) if s.lower() == "{id}" and i > 0), None)
+            if parent:
+                out.append(f"{param} ({parent.lower()})")
+                continue
+        out.append(param)
+    return out
+
+
+def _primitive_array_return(tool: Tool) -> str | None:
+    """Describe a primitive-array return schema (e.g. list of integer IDs) when _item_fields is empty."""
+    schema = tool.output_schema or {}
+    if schema.get("type") == "array" and isinstance(schema.get("items"), dict):
+        itype = schema["items"].get("type")
+        if itype in ("integer", "string", "number", "boolean"):
+            ws = set(words(tool.op_id or tool.name))
+            if "id" in ws or "ider" in ws or "ids" in ws:
+                return "list of IDs"
+            return f"list of {itype}s"
+    return None
+
+
 def _base_description(tool: Tool) -> str:
     """Schema-grounded description scaffold replacing 'Executes GET /api/...' stubs (always draft/untested)."""
+    if tool.operations:
+        title = " ".join(words(tool.name)).capitalize()
+        vals = ", ".join(tool.operations)
+        parts = [f"{title}.", f"Set `{tool.selector}` to choose: {vals}."]
+        req = [p for p in tool.required if p != tool.selector]
+        if req:
+            parts.append(f"Requires: {', '.join(req[:5])}.")
+        return " ".join(parts)
     desc = " ".join((tool.description or "").split())
     if desc and not desc.startswith("Executes "):
         return desc if desc.endswith((".", "!", "?")) else desc + "."
-    if tool.operations:
-        vals = ", ".join(tool.operations)
-        return f"Consolidated read tool; set `{tool.selector}` to one of: {vals}."
     ws = words(tool.name)
     verb = ws[0] if ws else ("create" if tool.is_write else "get")
     noun = " ".join(ws[1:]) or tool.name
@@ -356,7 +395,7 @@ def _base_description(tool: Tool) -> str:
     lead = action_map.get(verb, "Updates" if tool.is_write else "Retrieves")
     parts = [f"{lead} {noun}."]
     if tool.required:
-        parts.append(f"Requires: {', '.join(tool.required[:5])}.")
+        parts.append(f"Requires: {', '.join(_format_required(tool))}.")
     constraints = []
     for k, schema in tool.params.items():
         if not isinstance(schema, dict):
@@ -373,6 +412,10 @@ def _base_description(tool: Tool) -> str:
     ret = _item_fields(tool)
     if ret:
         parts.append(f"Returns: {', '.join(ret[:6])}.")
+    else:
+        prim = _primitive_array_return(tool)
+        if prim:
+            parts.append(f"Returns: {prim}.")
     return " ".join(parts)
 
 
@@ -559,17 +602,39 @@ def apply_e1_e2(
     return final, rename_map, {"probe_candidates": probe_candidates, "needs_human_name": needs_human}
 
 
-def propose_clean(tools: list[Tool], doc: dict | None = None, split_audiences: bool = True) -> dict[str, Any]:
+def propose_clean(
+    tools: list[Tool],
+    doc: dict | None = None,
+    split_audiences: bool = True,
+    keep_ops: set[str] | None = None,
+) -> dict[str, Any]:
     """Propose a clean catalog plan: split parallel audiences, drop singletons from reference_data, flag binaries."""
     base = merge.propose(tools, doc)
+    keep = keep_ops or set()
     exclude = dict(base.get("exclude") or {})
+    verify: list[dict[str, str]] = []
     for name, why in list(exclude.items()):
+        if name in keep:
+            exclude.pop(name, None)
+            continue
         if "returns a file" in why and SUSPICIOUS_BINARY.search(name):
-            exclude[name] = "declared application/octet-stream; verify whether it returns JSON/GeoJSON before excluding"
+            reason = (
+                "declared application/octet-stream; verify whether it returns JSON/GeoJSON or override via keep_ops"
+            )
+            exclude[name] = reason
+            verify.append({"op_id": name, "reason": reason})
+        elif "returns a file" in why:
+            exclude[name] = "binary response; excluded by default unless wrapped with a file/URL handler"
+        elif "takes a file" in why:
+            exclude[name] = "file upload; excluded by default unless wrapped with a file/URL handler"
 
     audience_excluded = parallel_audiences(tools) if split_audiences else {}
     for name, why in audience_excluded.items():
+        if name in keep:
+            continue
         exclude.setdefault(name, why)
+        if "no exact primary twin" in why:
+            verify.append({"op_id": name, "reason": why})
 
     by_name = {t.name: t for t in tools}
     cleaned_tools: dict[str, Any] = {}
@@ -591,6 +656,8 @@ def propose_clean(tools: list[Tool], doc: dict | None = None, split_audiences: b
         "tools": cleaned_tools,
         "exclude": exclude,
     }
+    if verify:
+        plan["verify"] = verify
     enrichments = infer_enrichments(tools, plan)
     if enrichments:
         plan["enrich"] = enrichments
