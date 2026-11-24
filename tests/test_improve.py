@@ -93,7 +93,18 @@ async def test_improve_end_to_end(tmp_path):
     files = export.write(tmp_path / "out", res["entries"], proj.cfg.server.openapi, SPEC, fastmcp=True)
     server = Path(files["server"]).read_text(encoding="utf-8")
     assert "fastmcp==4.1.4" in server and "spec.json" in server
+    assert "CapResponseMiddleware" in server and "MCP_MAX_RESPONSE_BYTES" in server
     compile(server, "server.py", "exec")
+    # Verify cap_payload trims oversized GeoJSON arrays cleanly without breaking JSON
+    ns: dict = {"json": json}
+    src = server[server.index("def cap_payload") : server.index("class CapResponseMiddleware")]
+    exec(src, ns)
+    big = {"type": "FeatureCollection", "features": [{"id": i, "payload": "x" * 200} for i in range(100)]}
+    capped = ns["cap_payload"](big, 2000)
+    assert capped is not None and capped["_truncated"]["field"] == "features"
+    assert 0 < capped["_truncated"]["returned_items"] < 100
+    assert capped["_truncated"]["total_items"] == 100
+    assert ns["cap_payload"]({"ok": True}, 2000) is None
 
 
 @pytest.mark.fastmcp

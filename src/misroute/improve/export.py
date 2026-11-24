@@ -23,6 +23,7 @@ from urllib.parse import quote
 import httpx2
 import yaml
 from fastmcp import FastMCP
+from fastmcp.server.middleware import Middleware
 from fastmcp.server.providers.openapi import MCPType
 from fastmcp.tools import Tool, ToolResult
 from mcp_types import ToolAnnotations
@@ -31,6 +32,70 @@ HERE = Path(__file__).resolve().parent
 SPEC = Path(os.environ.get("API_SPEC", HERE / {spec!r}))
 OVERLAY = yaml.safe_load((HERE / "overlay.yaml").read_text(encoding="utf-8"))["operations"]
 MERGED = json.loads((HERE / "merged.json").read_text(encoding="utf-8")) if (HERE / "merged.json").exists() else {{}}
+MAX_RESPONSE_BYTES = int(os.environ.get("MCP_MAX_RESPONSE_BYTES", "32000"))
+
+
+def cap_payload(data: dict, limit: int) -> dict | None:
+    raw = json.dumps(data, ensure_ascii=False).encode("utf-8")
+    if len(raw) <= limit:
+        return None
+    for key, val in data.items():
+        if isinstance(val, list) and val:
+            kept: list = []
+            used = len(json.dumps({{**data, key: []}}, ensure_ascii=False).encode("utf-8")) + 256
+            for item in val:
+                size = len(json.dumps(item, ensure_ascii=False).encode("utf-8")) + 2
+                if used + size > limit:
+                    break
+                kept.append(item)
+                used += size
+            return {{
+                **data,
+                key: kept,
+                "_truncated": {{
+                    "field": key,
+                    "returned_items": len(kept),
+                    "total_items": len(val),
+                    "max_bytes": limit,
+                    "hint": "Response exceeded MCP_MAX_RESPONSE_BYTES; narrow filters or paginate.",
+                }},
+            }}
+    return {{
+        "_truncated": True,
+        "max_bytes": limit,
+        "preview": raw[:limit].decode("utf-8", errors="ignore"),
+        "hint": "Response exceeded MCP_MAX_RESPONSE_BYTES; narrow filters or paginate.",
+    }}
+
+
+class CapResponseMiddleware(Middleware):
+    async def on_call_tool(self, context, call_next):
+        result = await call_next(context)
+        if MAX_RESPONSE_BYTES <= 0:
+            return result
+        if isinstance(result.structured_content, dict):
+            capped = cap_payload(result.structured_content, MAX_RESPONSE_BYTES)
+            if capped is not None:
+                return ToolResult(structured_content=capped, is_error=result.is_error)
+        elif result.content:
+            text = getattr(result.content[0], "text", None)
+            if isinstance(text, str) and len(text.encode("utf-8")) > MAX_RESPONSE_BYTES:
+                try:
+                    parsed = json.loads(text)
+                except ValueError:
+                    parsed = None
+                if isinstance(parsed, dict):
+                    capped = cap_payload(parsed, MAX_RESPONSE_BYTES)
+                    if capped is not None:
+                        return ToolResult(structured_content=capped, is_error=result.is_error)
+                elif isinstance(parsed, list):
+                    capped = cap_payload({{"result": parsed}}, MAX_RESPONSE_BYTES)
+                    if capped is not None:
+                        return ToolResult(structured_content=capped, is_error=result.is_error)
+                cut = text.encode("utf-8")[:MAX_RESPONSE_BYTES].decode("utf-8", errors="ignore")
+                note = f"\\n... [truncated at {{MAX_RESPONSE_BYTES}} bytes; narrow filters or paginate]"
+                return ToolResult(content=cut + note, is_error=result.is_error)
+        return result
 
 
 def load_spec() -> dict:
@@ -76,6 +141,7 @@ mcp = FastMCP.from_openapi(
     mcp_component_fn=component,
     mcp_names={{k: v["tool"] for k, v in OVERLAY.items() if v.get("op_id")}},
 )
+mcp.add_middleware(CapResponseMiddleware())
 
 
 class Merged(Tool):
