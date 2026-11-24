@@ -56,7 +56,9 @@ def component(route, tool) -> None:
     if found.get("description"):
         tool.description = found["description"]
     tool.annotations = ToolAnnotations(
-        readOnlyHint=bool(found.get("read_only")), destructiveHint=bool(found.get("destructive"))
+        readOnlyHint=bool(found.get("read_only")),
+        destructiveHint=bool(found.get("destructive")),
+        idempotentHint=bool(found.get("idempotent")),
     )
 
 
@@ -160,6 +162,7 @@ def overlay(entries: list[dict], spec: str | None) -> dict[str, Any]:
             "reason": e["reason"],
             "read_only": e["read_only"],
             "destructive": e["destructive"],
+            "idempotent": bool(e.get("idempotent")),
             "exclude": bool(e.get("exclude")),
             **({"review": e["review_state"]} if e.get("review_state") else {}),
             **({"suggest_exclude": e["suggest_exclude"]} if e.get("suggest_exclude") else {}),

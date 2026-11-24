@@ -298,6 +298,7 @@ def tools(path: str | Path) -> list[Tool]:
                     output_schema=returns(doc, op),
                     read_only=reads(method, route, op),
                     destructive=method == "delete",
+                    idempotent=method == "put",
                     route=f"{method.upper()} {route}",
                     op_id=op.get("operationId", ""),
                 )

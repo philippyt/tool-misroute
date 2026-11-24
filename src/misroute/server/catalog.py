@@ -74,7 +74,8 @@ READ_VERBS = set(
 
 
 def words(name: str) -> list[str]:
-    spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", name)
+    spaced = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", name)
+    spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", spaced)
     return [w for w in re.split(r"[^A-Za-z0-9]+", spaced.lower()) if w]
 
 
@@ -86,6 +87,7 @@ class Tool:
     output_schema: dict[str, Any] | None = None
     read_only: bool | None = None
     destructive: bool | None = None
+    idempotent: bool | None = None
     route: str = ""
     op_id: str = ""
     server: str = ""
