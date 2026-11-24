@@ -7,7 +7,7 @@ from misroute.server import merge
 from misroute.server.catalog import Tool, words
 
 AUDIENCE_PREFIX = re.compile(r"^(ekstern|external|partner|public|admin|internal|backoffice)$", re.I)
-CALLER_SCOPED = re.compile(r"/(me|self|current|my)(?:/|$)|detaljer$|details$|profile$|virksomhet$", re.I)
+CALLER_SCOPED = re.compile(r"/(me|self|current|my)(?:/|$)|detaljer$|details$|profile$|info$|config$", re.I)
 GENERIC_WORDS = frozenset(
     {
         "api",
@@ -97,9 +97,16 @@ def parallel_audiences(tools: list[Tool]) -> dict[str, str]:
 
 
 def is_caller_or_singleton(tool: Tool) -> bool:
-    """True when a zero-arg GET is caller-scoped (/me) or a singleton detail record rather than a lookup list."""
+    """True when a zero-arg GET is caller-scoped (/me) or returns a single object rather than a lookup list."""
     path = tool.route.partition(" ")[2] if tool.route else ""
-    return bool(CALLER_SCOPED.search(path))
+    if CALLER_SCOPED.search(path) or CALLER_SCOPED.search(tool.op_id or tool.name):
+        return True
+    schema = tool.output_schema or {}
+    if schema.get("type") == "object" and "items" not in schema:
+        props = schema.get("properties") or {}
+        has_list = any(isinstance(v, dict) and (v.get("type") == "array" or "items" in v) for v in props.values())
+        return not has_list
+    return False
 
 
 def _trim_words(ws: list[str], limit: int = NAME_MAX) -> str:
