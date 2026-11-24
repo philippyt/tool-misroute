@@ -4,11 +4,36 @@ from dataclasses import asdict, dataclass
 from typing import Any
 from misroute.lint import descriptions
 from misroute.server import openapi
-from misroute.server.catalog import Tool
+from misroute.server.catalog import Tool, words
 
-EXCLUDE = re.compile(r"health|ping|metrics|swagger|openapi|debug|internal|admin|login|logout|token|auth", re.I)
+EXCLUDE_TOKENS = frozenset(
+    {
+        "health",
+        "healthz",
+        "readyz",
+        "livez",
+        "ping",
+        "metrics",
+        "swagger",
+        "openapi",
+        "debug",
+        "internal",
+        "admin",
+        "login",
+        "logout",
+        "token",
+        "auth",
+    }
+)
 VERSION = re.compile(r"/v\d+(?=/|$)", re.I)
 VARIANT = re.compile(r"/(search|sok|paginert|query|filter|list|liste|all|alle)$", re.I)
+
+
+def _is_plumbing(tool: Tool) -> bool:
+    path = tool.route.partition(" ")[2] if tool.route else ""
+    segs = [s for s in path.split("/") if s and not s.startswith("{")]
+    tokens = set(words(tool.name)) | {w for s in segs for w in words(s)}
+    return bool(tokens & EXCLUDE_TOKENS)
 
 
 @dataclass
@@ -29,7 +54,7 @@ def notes(tools: list[Tool], doc: dict | None = None) -> list[Note]:
             out.append(Note(t.name, "name", f"cut to {openapi.NAME_LIMIT} characters from {t.op_id}"))
         elif t.op_id and t.name != t.op_id:
             out.append(Note(t.name, "name", f"renamed from {t.op_id}"))
-        if EXCLUDE.search(f"{t.route} {t.name}"):
+        if _is_plumbing(t):
             out.append(Note(t.name, "exclude", "looks like plumbing an agent does not need, consider excluding it"))
         if t.route.startswith("POST") and t.read_only:
             out.append(Note(t.name, "hint", "POST that reads, marked read only"))

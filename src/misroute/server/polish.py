@@ -505,34 +505,45 @@ def _norm_entity(text: str) -> str:
     return _stem("".join(words(text)))
 
 
+KEY_SUFFIXES = ("id", "name", "slug", "uuid", "key")
+
+
+def _path_params(route: str) -> list[str]:
+    return re.findall(r"\{([^/{}]+)\}", route or "")
+
+
 def _entity_of_id_param(tool: Tool, param: str) -> str | None:
-    """Resolve the full compound entity of a required ID parameter, or None for external references."""
+    """Resolve the compound entity of a required ID or path-key parameter, or None for external references."""
     if EXTERNAL_REF.search(param):
         return None
-    if param.lower().endswith("id") and len(param) > 2:
-        return _norm_entity(param[:-2])
-    if param.lower() == "id" and tool.route:
+    low = param.lower()
+    in_path = param in _path_params(tool.route)
+    for suf in KEY_SUFFIXES:
+        if low.endswith(f"_{suf}") and len(low) > len(suf) + 1:
+            return _norm_entity(param[: -(len(suf) + 1)])
+        if low.endswith(suf) and len(low) > len(suf) and (suf == "id" or in_path):
+            return _norm_entity(param[: -len(suf)])
+    if (low in KEY_SUFFIXES or in_path) and tool.route:
         path = tool.route.partition(" ")[2]
         segs = [p for p in path.split("/") if p]
         for i, seg in enumerate(segs):
-            if seg.lower() == "{id}" and i > 0:
+            if seg.lower() == f"{{{low}}}" and i > 0:
                 return _norm_entity(segs[i - 1])
     return None
 
 
 def _requires_id(tool: Tool) -> bool:
-    return any(p.lower() == "id" or p.lower().endswith("id") for p in tool.required)
+    path_keys = set(_path_params(tool.route))
+    return any(p.lower() == "id" or p.lower().endswith("id") or p in path_keys for p in tool.required)
 
 
 def _source_entities(tool: Tool) -> list[tuple[str, str]]:
-    """Return [(compound_entity, call_hint)] for zero-required-ID read tools that can supply IDs."""
+    """Return [(compound_entity, call_hint)] for zero-required-key read tools that can supply keys."""
     if tool.is_write or _requires_id(tool):
         return []
     if tool.operations:
-        # reference_data: each kind is its own entity
         if tool.name == "reference_data":
             return [(_norm_entity(k), f"`{tool.name}({tool.selector}='{k}')`") for k in tool.operations]
-        # *_view: entity is the prefix before _view, prefer paginert/list selector
         base = re.sub(r"_(view|by_parent)$", "", tool.name)
         pref = next((v for v in tool.operations if v in ("paginert", "list", "all")), next(iter(tool.operations)))
         return [(_norm_entity(base), f"`{tool.name}({tool.selector}='{pref}')`")]
@@ -541,6 +552,15 @@ def _source_entities(tool: Tool) -> list[tuple[str, str]]:
         noun = "_".join(w for w in ws[1:] if w not in ("my", "all", "alle"))
         if noun:
             return [(_norm_entity(noun), f"`{tool.name}`")]
+    if len(ws) >= 2 and ws[-1] == "list":
+        noun = "_".join(w for w in ws[:-1] if w not in ("my", "all", "alle"))
+        if noun:
+            return [(_norm_entity(noun), f"`{tool.name}`")]
+    if tool.route and tool.route.startswith("GET ") and _is_collection_return(tool):
+        path = tool.route.partition(" ")[2].rstrip("/")
+        segs = [p for p in path.split("/") if p and p.lower() != "api" and not re.fullmatch(r"v\d+", p, re.I)]
+        if segs and not any(s.startswith("{") for s in segs):
+            return [(_norm_entity(segs[-1]), f"`{tool.name}`")]
     return []
 
 
@@ -754,6 +774,8 @@ def propose_clean(
             exclude[name] = "binary response; excluded by default unless wrapped with a file/URL handler"
         elif "takes a file" in why:
             exclude[name] = "file upload; excluded by default unless wrapped with a file/URL handler"
+        elif "looks like plumbing" in why:
+            verify.append({"op_id": name, "reason": why})
 
     audience_excluded = parallel_audiences(tools) if split_audiences else {}
     for name, why in audience_excluded.items():
@@ -795,3 +817,25 @@ def propose_clean(
     if enrichments:
         plan["enrich"] = enrichments
     return plan
+
+
+def split_by_tag(tools: list[Tool], doc: dict | None = None) -> dict[str, list[Tool]]:
+    """Partition a large API's tools into focused toolsets by primary OpenAPI tag (or leading route segment)."""
+    op_tags: dict[str, str] = {}
+    for route, item in ((doc or {}).get("paths") or {}).items():
+        if not isinstance(item, dict):
+            continue
+        for method in openapi.METHODS:
+            op = item.get(method)
+            if isinstance(op, dict) and op.get("tags"):
+                op_tags[f"{method.upper()} {route}"] = str(op["tags"][0])
+    groups: dict[str, list[Tool]] = defaultdict(list)
+    for t in tools:
+        tag = op_tags.get(t.route)
+        if not tag and t.route:
+            path = t.route.partition(" ")[2]
+            segs = [p for p in path.split("/") if p and p.lower() != "api" and not re.fullmatch(r"v\d+", p, re.I)]
+            tag = segs[0] if segs else "default"
+        slug = "_".join(words(tag or "default")) or "default"
+        groups[slug].append(t)
+    return dict(sorted(groups.items()))

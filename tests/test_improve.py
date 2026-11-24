@@ -105,6 +105,23 @@ async def test_improve_end_to_end(tmp_path):
     assert 0 < capped["_truncated"]["returned_items"] < 100
     assert capped["_truncated"]["total_items"] == 100
     assert ns["cap_payload"]({"ok": True}, 2000) is None
+    # Verify redact_secrets catches isSecret:true headerList entries and secret keys
+    rns: dict = {"re": __import__("re")}
+    rsrc = server[server.index("SECRET_KEY_RE") : server.index("def cap_payload")]
+    exec(rsrc, rns)
+    kartlag = {
+        "headerList": [
+            {"headerName": "X-Custom", "headerValue": "top-secret", "isSecret": True},
+            {"headerName": "Authorization", "headerValue": "Bearer abc", "isSecret": False},
+            {"headerName": "Accept", "headerValue": "application/json", "isSecret": False},
+        ],
+        "apiKey": "sk-live-123",
+    }
+    red = rns["redact_secrets"](kartlag)
+    assert red["headerList"][0]["headerValue"] == "[REDACTED]"
+    assert red["headerList"][1]["headerValue"] == "[REDACTED]"
+    assert red["headerList"][2]["headerValue"] == "application/json"
+    assert red["apiKey"] == "[REDACTED]"
 
 
 @pytest.mark.fastmcp

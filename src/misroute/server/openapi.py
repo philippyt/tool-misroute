@@ -248,8 +248,22 @@ def merged(schema: Any) -> Any:
     return {**out, "type": "object", "properties": props, "required": required}
 
 
+def _has_binary_format(node: Any) -> bool:
+    if not isinstance(node, dict):
+        return False
+    if node.get("format") == "binary" or node.get("type") == "file" or node.get("contentEncoding") == "binary":
+        return True
+    for key in ("items", "additionalProperties"):
+        if _has_binary_format(node.get(key)):
+            return True
+    for key in ("allOf", "oneOf", "anyOf"):
+        if any(_has_binary_format(x) for x in node.get(key) or []):
+            return True
+    return any(_has_binary_format(v) for v in (node.get("properties") or {}).values())
+
+
 def uploads(body: dict) -> list[str]:
-    return [k for k, v in (body.get("properties") or {}).items() if "binary" in json.dumps(v)]
+    return [k for k, v in (body.get("properties") or {}).items() if _has_binary_format(v)]
 
 
 def shape(doc: dict, shared: list, op: dict) -> tuple[list[tuple[str, dict]], dict | None, dict]:

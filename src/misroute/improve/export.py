@@ -18,6 +18,7 @@ Review overlay.yaml first. Set exclude: true on operations agents should not see
 API_BASE_URL sets the backend and API_HEADERS takes a JSON object of headers, for example an API key."""
 import json
 import os
+import re
 from pathlib import Path
 from urllib.parse import quote
 import httpx2
@@ -33,6 +34,34 @@ SPEC = Path(os.environ.get("API_SPEC", HERE / {spec!r}))
 OVERLAY = yaml.safe_load((HERE / "overlay.yaml").read_text(encoding="utf-8"))["operations"]
 MERGED = json.loads((HERE / "merged.json").read_text(encoding="utf-8")) if (HERE / "merged.json").exists() else {{}}
 MAX_RESPONSE_BYTES = int(os.environ.get("MCP_MAX_RESPONSE_BYTES", "32000"))
+REDACT_SECRETS = os.environ.get("MCP_REDACT_SECRETS", "1") != "0"
+SECRET_KEY_RE = re.compile(
+    r"(passord|password|passwd|secret|apikey|api_key|accesstoken|access_token|"
+    r"refreshtoken|refresh_token|privatekey|private_key|clientsecret|client_secret|authorization)",
+    re.I,
+)
+SECRET_HEADER_RE = re.compile(r"(authorization|api[-_]?key|token|secret|password|passord|cookie)", re.I)
+
+
+def redact_secrets(node):
+    if isinstance(node, list):
+        return [redact_secrets(x) for x in node]
+    if not isinstance(node, dict):
+        return node
+    flagged_secret = node.get("isSecret") is True or node.get("is_secret") is True
+    header_name = node.get("headerName") or node.get("name") or node.get("key")
+    header_is_secret = isinstance(header_name, str) and bool(SECRET_HEADER_RE.search(header_name))
+    out = {{}}
+    for k, v in node.items():
+        if isinstance(v, str) and v:
+            if (flagged_secret or header_is_secret) and k.lower() in ("value", "headervalue", "secret", "token"):
+                out[k] = "[REDACTED]"
+                continue
+            if SECRET_KEY_RE.search(k) and not k.lower().startswith(("is", "has")):
+                out[k] = "[REDACTED]"
+                continue
+        out[k] = redact_secrets(v)
+    return out
 
 
 def cap_payload(data: dict, limit: int) -> dict | None:
@@ -71,30 +100,34 @@ def cap_payload(data: dict, limit: int) -> dict | None:
 class CapResponseMiddleware(Middleware):
     async def on_call_tool(self, context, call_next):
         result = await call_next(context)
-        if MAX_RESPONSE_BYTES <= 0:
-            return result
         if isinstance(result.structured_content, dict):
-            capped = cap_payload(result.structured_content, MAX_RESPONSE_BYTES)
+            data = redact_secrets(result.structured_content) if REDACT_SECRETS else result.structured_content
+            capped = cap_payload(data, MAX_RESPONSE_BYTES) if MAX_RESPONSE_BYTES > 0 else None
             if capped is not None:
                 return ToolResult(structured_content=capped, is_error=result.is_error)
+            if REDACT_SECRETS and data != result.structured_content:
+                return ToolResult(structured_content=data, is_error=result.is_error)
         elif result.content:
             text = getattr(result.content[0], "text", None)
-            if isinstance(text, str) and len(text.encode("utf-8")) > MAX_RESPONSE_BYTES:
+            if isinstance(text, str):
+                parsed = None
                 try:
                     parsed = json.loads(text)
                 except ValueError:
-                    parsed = None
-                if isinstance(parsed, dict):
-                    capped = cap_payload(parsed, MAX_RESPONSE_BYTES)
-                    if capped is not None:
-                        return ToolResult(structured_content=capped, is_error=result.is_error)
-                elif isinstance(parsed, list):
-                    capped = cap_payload({{"result": parsed}}, MAX_RESPONSE_BYTES)
-                    if capped is not None:
-                        return ToolResult(structured_content=capped, is_error=result.is_error)
-                cut = text.encode("utf-8")[:MAX_RESPONSE_BYTES].decode("utf-8", errors="ignore")
-                note = f"\\n... [truncated at {{MAX_RESPONSE_BYTES}} bytes; narrow filters or paginate]"
-                return ToolResult(content=cut + note, is_error=result.is_error)
+                    pass
+                if isinstance(parsed, (dict, list)):
+                    cleaned = redact_secrets(parsed) if REDACT_SECRETS else parsed
+                    wrapped = cleaned if isinstance(cleaned, dict) else {{"result": cleaned}}
+                    if MAX_RESPONSE_BYTES > 0:
+                        capped = cap_payload(wrapped, MAX_RESPONSE_BYTES)
+                        if capped is not None:
+                            return ToolResult(structured_content=capped, is_error=result.is_error)
+                    if REDACT_SECRETS and cleaned != parsed:
+                        return ToolResult(structured_content=wrapped, is_error=result.is_error)
+                elif MAX_RESPONSE_BYTES > 0 and len(text.encode("utf-8")) > MAX_RESPONSE_BYTES:
+                    cut = text.encode("utf-8")[:MAX_RESPONSE_BYTES].decode("utf-8", errors="ignore")
+                    note = f"\\n... [truncated at {{MAX_RESPONSE_BYTES}} bytes; narrow filters or paginate]"
+                    return ToolResult(content=cut + note, is_error=result.is_error)
         return result
 
 

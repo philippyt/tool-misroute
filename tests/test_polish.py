@@ -350,3 +350,50 @@ def test_dev_spec_generalization_fixes():
     d = Tool("delete_pet", route="DELETE /pet/{petId}", destructive=True)
     _, probes = static_siblings([c, u, d])
     assert [p[:2] for p in probes] == [("add_pet", "update_pet")]
+
+    # 5. Structural uploads() ignores JSON properties merely named "binary"
+    qdrant_body = {
+        "type": "object",
+        "properties": {
+            "quantization_config": {"type": "object", "properties": {"binary": {"type": "object"}}},
+            "file": {"type": "string", "format": "binary"},
+        },
+    }
+    assert openapi.uploads(qdrant_body) == ["file"]
+
+    # 6. Path-key pointers ({collection_name}) and verb-last list tools (droplets_list)
+    from misroute.server.polish import split_by_tag
+
+    col_list = Tool(
+        "list_collections",
+        route="GET /collections",
+        output_schema={"type": "array", "items": {"type": "object", "properties": {"name": {}}}},
+        read_only=True,
+    )
+    col_get = Tool(
+        "collection_info",
+        route="GET /collections/{collection_name}",
+        input_schema={
+            "type": "object",
+            "properties": {"collection_name": {"type": "string"}},
+            "required": ["collection_name"],
+        },
+        read_only=True,
+    )
+    drop_list = Tool("droplets_list", route="GET /v2/droplets", read_only=True)
+    drop_get = Tool(
+        "droplets_get",
+        route="GET /v2/droplets/{droplet_id}",
+        input_schema={"type": "object", "properties": {"droplet_id": {"type": "integer"}}, "required": ["droplet_id"]},
+        read_only=True,
+    )
+    ch = infer_chains([col_list, col_get, drop_list, drop_get])
+    assert ch["collection_info"] == ["`list_collections`"]
+    assert ch["droplets_get"] == ["`droplets_list`"]
+
+    # 7. Tag-based toolset splitting
+    doc = {
+        "paths": {"/v2/droplets": {"get": {"tags": ["Droplets"]}}, "/collections": {"get": {"tags": ["Collections"]}}}
+    }
+    sets = split_by_tag([col_list, drop_list], doc)
+    assert set(sets) == {"collections", "droplets"}
