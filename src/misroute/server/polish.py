@@ -841,65 +841,252 @@ def split_by_tag(tools: list[Tool], doc: dict | None = None) -> dict[str, list[T
     return dict(sorted(groups.items()))
 
 
+def _nested_id_sources(tools: list[Tool]) -> dict[str, list[str]]:
+    """Map normalized entity -> ['tool.field.id', ...] for nested object fields that expose an id."""
+    out: dict[str, list[str]] = defaultdict(list)
+
+    def walk(tool_name: str, schema: Any, prefix: str = "") -> None:
+        if not isinstance(schema, dict):
+            return
+        for key in ("allOf", "oneOf", "anyOf"):
+            for part in schema.get(key) or []:
+                walk(tool_name, part, prefix)
+        if schema.get("type") == "array" or "items" in schema:
+            walk(tool_name, schema.get("items"), prefix)
+        props = schema.get("properties") or {}
+        if prefix and "id" in {k.lower() for k in props}:
+            ent = _norm_entity(prefix.rsplit(".", 1)[-1])
+            ref = f"{tool_name}.{prefix}.id"
+            if ent and ref not in out[ent]:
+                out[ent].append(ref)
+        for k, v in props.items():
+            if isinstance(v, dict) and (v.get("properties") or v.get("oneOf") or v.get("allOf") or v.get("anyOf")):
+                walk(tool_name, v, f"{prefix}.{k}" if prefix else k)
+
+    for t in tools:
+        if not t.is_write and t.output_schema:
+            walk(t.name, t.output_schema)
+    return out
+
+
+def _redacted_paths(tool: Tool, source_by: dict[str, Tool] | None = None) -> list[str]:
+    """Return response paths that CapResponseMiddleware will redact (e.g. headerList[].headerValue)."""
+    schemas: list[dict[str, Any]] = []
+    if tool.output_schema:
+        schemas.append(tool.output_schema)
+    if tool.operations and source_by:
+        for op_name in tool.operations.values():
+            op_schema = source_by[op_name].output_schema if op_name in source_by else None
+            if op_schema:
+                schemas.append(op_schema)
+
+    found: list[str] = []
+
+    def walk(schema: Any, prefix: str = "") -> None:
+        if not isinstance(schema, dict):
+            return
+        for key in ("allOf", "oneOf", "anyOf"):
+            for part in schema.get(key) or []:
+                walk(part, prefix)
+        if schema.get("type") == "array" or "items" in schema:
+            walk(schema.get("items"), f"{prefix}[]" if prefix else "")
+            return
+        props = schema.get("properties") or {}
+        low_keys = {k.lower(): k for k in props}
+        if ("issecret" in low_keys or "is_secret" in low_keys) and ("headervalue" in low_keys or "value" in low_keys):
+            val_key = low_keys.get("headervalue") or low_keys["value"]
+            path = f"{prefix}.{val_key}" if prefix else val_key
+            if path not in found:
+                found.append(path)
+        for k, v in props.items():
+            norm = re.sub(r"[-_]", "", k).lower()
+            if norm in (
+                "password",
+                "passord",
+                "passwd",
+                "secret",
+                "clientsecret",
+                "apikey",
+                "accesstoken",
+                "refreshtoken",
+                "privatekey",
+            ):
+                path = f"{prefix}.{k}" if prefix else k
+                if path not in found:
+                    found.append(path)
+            elif isinstance(v, dict):
+                walk(v, f"{prefix}.{k}" if prefix else k)
+
+    for s in schemas:
+        walk(s)
+    return found
+
+
 def build_findings(
     polished: list[Tool],
     plan: dict[str, Any],
     diag: dict[str, Any],
     toolsets: dict[str, list[Tool]] | None = None,
+    source_tools: list[Tool] | None = None,
     oversized_threshold: int = 30,
 ) -> dict[str, Any]:
-    """Build machine-readable findings.json and labelled drafts for an agent to review or act on."""
+    """Build compact, machine-readable findings.json and labelled drafts for an agent to act on."""
     chains = infer_chains(polished)
     by_name = {t.name: t for t in polished}
+    source_by = {t.name: t for t in source_tools} if source_tools else None
+    top_sources: dict[str, list[str]] = defaultdict(list)
+    for t in polished:
+        for ent, hint in _source_entities(t):
+            if ent and hint not in top_sources[ent]:
+                top_sources[ent].append(hint)
+    nested_sources = _nested_id_sources(polished)
 
     drafts: list[dict[str, Any]] = []
+    merged_option_findings: list[dict[str, Any]] = []
     for t in polished:
         name_rule = (
             "merged_selector"
             if t.operations
             else ("route_fallback" if t.op_id and len(t.op_id) >= openapi.NAME_LIMIT else "normalized_op_id")
         )
-        drafts.append(
-            {
-                "tool": t.name,
-                "op_id": t.op_id,
-                "route": t.route,
-                "status": "draft",
-                "name_rule": name_rule,
-                "description": t.description,
-                "pointers": chains.get(t.name, []),
-                "merged_from": dict(t.operations) if t.operations else {},
-                "hints": {
-                    "readOnlyHint": bool(t.read_only),
-                    "destructiveHint": bool(t.destructive),
-                    "idempotentHint": bool(t.idempotent),
-                },
-            }
-        )
+        is_ext_only = bool(t.required) and all(EXTERNAL_REF.search(p) for p in t.required)
+        entry: dict[str, Any] = {
+            "tool": t.name,
+            "op_id": t.op_id,
+            "route": t.route,
+            "status": "draft",
+            "name_rule": name_rule,
+            "current": t.description,
+            "pointers": chains.get(t.name, []),
+            "merged_from": dict(t.operations) if t.operations else {},
+            "hints": {
+                "readOnlyHint": bool(t.read_only),
+                "destructiveHint": bool(t.destructive),
+                "idempotentHint": bool(t.idempotent),
+            },
+        }
+        if is_ext_only:
+            entry["external_key"] = True
+        redacts = _redacted_paths(t, source_by)
+        if redacts:
+            entry["redacts"] = redacts
 
+        # Option-by-option pointer check for merged tools requiring an ID/key
+        if t.operations and not t.is_write and _requires_id(t):
+            by_opt: dict[str, list[str]] = {}
+            for opt in t.operations:
+                ent = _norm_entity(opt)
+                if top_sources.get(ent):
+                    by_opt[opt] = top_sources[ent][:2]
+                elif nested_sources.get(ent):
+                    merged_option_findings.append(
+                        {
+                            "kind": "missing_pointer",
+                            "tools": [t.name],
+                            "source": "static",
+                            "evidence": {
+                                "option": f"{t.selector}='{opt}'",
+                                "nested_sources": nested_sources[ent][:4],
+                                "dead_end": False,
+                            },
+                            "suggested_fix": "add_id_pointer",
+                            "draft": None,
+                        }
+                    )
+                else:
+                    merged_option_findings.append(
+                        {
+                            "kind": "missing_pointer",
+                            "tools": [t.name],
+                            "source": "static",
+                            "evidence": {"option": f"{t.selector}='{opt}'", "nested_sources": [], "dead_end": True},
+                            "suggested_fix": "expose_list_endpoint_or_document_dead_end",
+                            "draft": None,
+                        }
+                    )
+            if by_opt:
+                entry["pointers_by_option"] = by_opt
+        drafts.append(entry)
+
+    # Specific evidence + term_ambiguity grouping for collisions (no duplicated description text)
+    stems_map = {t.name: _domain_stems(t) for t in polished}
+    heads_map = {t.name: _head_stem(t) for t in polished}
+    fields_map = {t.name: _informative_fields(t, source_by) for t in polished}
+    probes = diag.get("probe_candidates") or []
+
+    # Group stem-only collisions sharing a single head noun across >=4 tools into one term_ambiguity finding
+    head_pairs: dict[str, list[tuple[str, str, str]]] = defaultdict(list)
+    for a, b, sig in probes:
+        if sig == "domain stem overlap" and heads_map.get(a) and heads_map.get(a) == heads_map.get(b):
+            head_pairs[heads_map[a] or ""].append((a, b, sig))
+
+    grouped_pairs: set[tuple[str, str]] = set()
     findings: list[dict[str, Any]] = []
-    for a, b, signal in diag.get("probe_candidates") or []:
+    for term, plist in sorted(head_pairs.items()):
+        involved = sorted({x for a, b, _ in plist for x in (a, b)})
+        distinct_entities = {frozenset(stems_map[x]) for x in involved}
+        if len(involved) >= 4 and len(distinct_entities) >= 2:
+            grouped_pairs.update((a, b) for a, b, _ in plist)
+            findings.append(
+                {
+                    "kind": "term_ambiguity",
+                    "term": term,
+                    "tools": involved,
+                    "source": "static",
+                    "evidence": {"shared_stem": term, "pair_count": len(plist)},
+                    "suggested_fix": "gloss",
+                    "draft": None,
+                }
+            )
+
+    for a, b, signal in probes:
+        if (a, b) in grouped_pairs:
+            continue
+        ta, tb = by_name.get(a), by_name.get(b)
+        shared_stems = sorted(stems_map.get(a, set()) & stems_map.get(b, set()))
+        shared_fields = sorted(fields_map.get(a, set()) & fields_map.get(b, set()))
+        desc_a = ta.description if ta else ""
+        desc_b = tb.description if tb else ""
+        # Detect list-of-IDs or sub-resource chain relation
+        is_chain = (
+            ta
+            and tb
+            and bool(ta.required) != bool(tb.required)
+            and shared_stems == sorted(stems_map.get(a, set()) | stems_map.get(b, set()))
+        ) or (a in " ".join(chains.get(b, [])) or b in " ".join(chains.get(a, [])))
+        ev: dict[str, Any] = {
+            "signal": signal,
+            "relation": "chain" if is_chain else "look_alike",
+            "boundary_present": {a: f"`{b}`" in desc_a, b: f"`{a}`" in desc_b},
+        }
+        if shared_stems:
+            ev["shared_stems"] = shared_stems
+        if shared_fields:
+            ev["shared_fields"] = shared_fields[:8]
         findings.append(
             {
                 "kind": "collision",
                 "tools": [a, b],
                 "source": "static",
-                "evidence": {"signal": signal},
-                "suggested_fix": "boundary_clause",
-                "draft": {
-                    a: by_name[a].description if a in by_name else "",
-                    b: by_name[b].description if b in by_name else "",
-                },
+                "evidence": ev,
+                "suggested_fix": "add_chain_pointer" if is_chain else "boundary_clause",
+                "draft": None,
             }
         )
 
     for v in plan.get("verify") or []:
+        op_id = v["op_id"]
+        ev_v: dict[str, Any] = {"reason": v.get("reason", ""), "checked": None}
+        if source_by and op_id in source_by and "no verified primary twin" in ev_v["reason"]:
+            st_op = source_by[op_id]
+            ev_v["params"] = list(st_op.params)
+            ev_v["returned_fields"] = _item_fields(st_op)
         findings.append(
             {
                 "kind": "verify_endpoint",
-                "tools": [v["op_id"]],
+                "tools": [op_id],
                 "source": "static",
-                "evidence": {"reason": v.get("reason", "")},
+                "evidence": ev_v,
                 "suggested_fix": "review_exclusion_or_keep_ops",
                 "draft": None,
             }
@@ -907,6 +1094,8 @@ def build_findings(
 
     for t in polished:
         if not t.is_write and not t.operations and _requires_id(t) and t.name not in chains:
+            if all(EXTERNAL_REF.search(p) for p in t.required):
+                continue
             findings.append(
                 {
                     "kind": "missing_pointer",
@@ -917,6 +1106,7 @@ def build_findings(
                     "draft": None,
                 }
             )
+    findings.extend(merged_option_findings)
 
     for name in diag.get("needs_human_name") or []:
         findings.append(
@@ -926,7 +1116,7 @@ def build_findings(
                 "source": "static",
                 "evidence": {"reason": "trailing_digit_or_uncleaned_name"},
                 "suggested_fix": "rename_tool",
-                "draft": name,
+                "draft": None,
             }
         )
 
